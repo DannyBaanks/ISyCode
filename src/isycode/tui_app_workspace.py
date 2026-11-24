@@ -1032,16 +1032,21 @@ class WorkspaceMixin:
 
 
     def _context_window(self) -> tuple[int | None, str]:
-        """Window of the selected model: the account catalog first, then the
-        vendored models.dev snapshot (exact id match), else unknown."""
+        """Window of the selected model: observed/account/user limit first, then
+        vendored models.dev snapshot, capped by any active session soft limit."""
         from isycode.model_card import catalog_entry
         from isycode.providers import model_context_limit
         provider, model = selected_provider_name(), resolved_chat_model()
         limit, source = model_context_limit(provider, model)
-        if limit:
-            return limit, source
-        entry = catalog_entry(provider, model)
-        context = entry.get("context") if entry else None
-        if type(context) is int and 0 < context <= 10**9:
-            return context, "snapshot"
-        return None, "unknown"
+        if not limit:
+            entry = catalog_entry(provider, model)
+            context = entry.get("context") if entry else None
+            if type(context) is int and 0 < context <= 10**9:
+                limit, source = context, "snapshot"
+            else:
+                return None, "unknown"
+        soft_limits = getattr(self, "_session_soft_context_limits", None)
+        soft = soft_limits.get((provider, model)) if isinstance(soft_limits, dict) else None
+        if type(soft) is int and 0 < soft < limit:
+            return soft, "session-soft-limit"
+        return limit, source

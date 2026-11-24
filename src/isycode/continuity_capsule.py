@@ -35,6 +35,15 @@ SUBAGENT_CAPSULE_CHARS = 6_000
 RECENT_RESULTS = 3             # newest tool results kept as text inside the capsule
 RESULT_PREVIEW_CHARS = 1_200
 REQUEST_PREVIEW_CHARS = 240
+RESERVE_MIN_TOKENS = 16_384
+MIN_SOFT_LIMIT_TOKENS = 16_384
+MIN_CALIBRATION_CHARS = 1_024
+MIN_CALIBRATION_SAMPLES = 2
+MIN_PLAUSIBLE_RATIO = 0.14
+MAX_PLAUSIBLE_RATIO = 0.50
+MIN_TOKENS_PER_CHAR = 0.22
+MAX_TOKENS_PER_CHAR = 0.42
+EMA_ALPHA = 0.3
 
 CAPSULE_HEADER = (
     "Continuity capsule, built by ISyCode from its own records because the full context "
@@ -53,6 +62,73 @@ def history_budget_chars(context_tokens: int | None) -> int:
     window = context_tokens if isinstance(context_tokens, int) and context_tokens > 0 \
         else ASSUMED_WINDOW_TOKENS
     return max(MIN_BUDGET_CHARS, int(window * CHARS_PER_TOKEN * HISTORY_SHARE))
+
+
+def compaction_ceiling_tokens(context_tokens: int | None) -> int | None:
+    """Target input-token ceiling that triggers proactive compaction before hitting the engine limit."""
+    if not isinstance(context_tokens, int) or context_tokens <= 0:
+        return None
+    if context_tokens >= 2 * RESERVE_MIN_TOKENS:
+        reserve = max(RESERVE_MIN_TOKENS, int(context_tokens * 0.12))
+    else:
+        reserve = max(1_024, int(context_tokens * 0.15))
+    return max(1_024, context_tokens - reserve)
+
+
+def request_chars(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> int:
+    """Total text characters of a request including system messages, tool calls and tool schemas."""
+    total = 0
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if isinstance(content, str):
+            total += len(content)
+        elif isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    total += len(str(part.get("text") or ""))
+        if message.get("tool_calls"):
+            total += len(json.dumps(message["tool_calls"], ensure_ascii=False))
+    if tools:
+        total += len(json.dumps(tools, ensure_ascii=False))
+    return total
+
+
+def update_tokens_per_char(previous: tuple[float, int] | None, prompt_tokens: int,
+                           sent_chars: int) -> tuple[float, int] | None:
+    """Update an adaptive EMA tokens-per-char ratio, rejecting media/synthetic outliers."""
+    if (type(prompt_tokens) is not int or prompt_tokens <= 0
+            or type(sent_chars) is not int or sent_chars < MIN_CALIBRATION_CHARS):
+        return previous
+    raw = prompt_tokens / sent_chars
+    if not (MIN_PLAUSIBLE_RATIO <= raw <= MAX_PLAUSIBLE_RATIO):
+        return previous
+    clamped = max(MIN_TOKENS_PER_CHAR, min(MAX_TOKENS_PER_CHAR, raw))
+    if previous is None:
+        return clamped, 1
+    prev_ratio, samples = previous
+    return prev_ratio * (1.0 - EMA_ALPHA) + clamped * EMA_ALPHA, samples + 1
+
+
+def estimate_request_tokens(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, *,
+                            calibration: tuple[float, int] | None = None,
+                            anchor_prompt_tokens: int | None = None,
+                            anchor_request_chars: int | None = None,
+                            anchor_output_tokens: int = 0) -> int:
+    """Project input tokens using real provider usage anchor + calibrated delta when available."""
+    chars = request_chars(messages, tools)
+    calibrated = calibration is not None and calibration[1] >= MIN_CALIBRATION_SAMPLES
+    ratio = calibration[0] if calibrated else (1.0 / CHARS_PER_TOKEN)
+    margin = 1.05 if calibrated else 1.0
+    if (type(anchor_prompt_tokens) is int and anchor_prompt_tokens > 0
+            and type(anchor_request_chars) is int and anchor_request_chars > 0
+            and chars >= anchor_request_chars):
+        delta_chars = chars - anchor_request_chars
+        delta_tokens = int((delta_chars * ratio) * margin + 0.9999)
+        extra_output = anchor_output_tokens if type(anchor_output_tokens) is int and anchor_output_tokens > 0 else 0
+        return anchor_prompt_tokens + extra_output + delta_tokens
+    return max(0, int((chars * ratio) * margin + 0.9999))
 
 
 def _json(value: str) -> Any:
@@ -243,6 +319,8 @@ def shrink_request(messages: list[dict], prompt_index: int, capsule: str,
 
 
 __all__ = [
-    "CAPSULE_HEADER", "ELIDED_TOOL_RESULT", "SUBAGENT_CAPSULE_CHARS", "build_capsule",
-    "capsule_message", "history_budget_chars", "is_capsule", "plan_context", "shrink_request",
+    "CAPSULE_HEADER", "ELIDED_TOOL_RESULT", "MIN_SOFT_LIMIT_TOKENS", "SUBAGENT_CAPSULE_CHARS",
+    "build_capsule", "capsule_message", "compaction_ceiling_tokens", "estimate_request_tokens",
+    "history_budget_chars", "is_capsule", "plan_context", "request_chars", "shrink_request",
+    "update_tokens_per_char",
 ]

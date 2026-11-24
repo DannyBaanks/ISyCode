@@ -273,34 +273,108 @@ def _load_preferences() -> dict[str, Any]:
 
 
 def model_context_limit(provider: str, model: str) -> tuple[int | None, str]:
-    """Return a validated model window and whether it came from a live catalog or user config."""
+    """Return a validated model window and its provenance (live-catalog, user-config, or observed-limit)."""
     provider_rows = _load_preferences()["model_metadata"].get(provider, {})
     entry = provider_rows.get(model) if isinstance(provider_rows, dict) else None
     if isinstance(entry, dict):
         limit = entry.get("context_window")
         if type(limit) is int and 0 < limit <= 10**9:
             source = entry.get("context_source")
-            return limit, source if source in {"live-catalog", "user-config"} else "live-catalog"
+            return limit, source if source in {"live-catalog", "user-config", "observed-limit"} else "live-catalog"
     return None, "unknown"
 
 
+def _extract_catalog_context(entry: dict[str, Any]) -> int | None:
+    """Prefer concrete runtime caps (max_model_len / n_ctx) over optimistic advertised context_length."""
+    candidates = []
+    for key in ("max_model_len", "n_ctx", "context_length", "contextWindow", "context_window"):
+        raw = entry.get(key)
+        if type(raw) is int and 0 < raw <= 10**9:
+            candidates.append(raw)
+    return min(candidates) if candidates else None
+
+
 def record_model_metadata(provider: str, model: str, entry: dict[str, Any]) -> None:
-    """Persist bounded public model metadata outside the workspace; never store credentials."""
+    """Persist bounded public model metadata outside the workspace; never store credentials.
+
+    Never overwrites an explicit ``user-config`` override or a tighter ``observed-limit``
+    learned from an inference engine's own rejection.
+    """
     if provider not in PRESETS or not isinstance(model, str) or not model or len(model) > 256:
         return
-    raw = entry.get("context_length", entry.get("contextWindow", entry.get("context_window")))
-    if type(raw) is not int or not 0 < raw <= 10**9:
+    raw = _extract_catalog_context(entry)
+    if raw is None:
         return
     data = _load_preferences()
     models = data["model_metadata"].setdefault(provider, {})
     if not isinstance(models, dict):
         models = {}
         data["model_metadata"][provider] = models
+    existing = models.get(model)
+    if isinstance(existing, dict):
+        existing_source = existing.get("context_source")
+        existing_window = existing.get("context_window")
+        if existing_source == "user-config" and type(existing_window) is int and existing_window > 0:
+            return
+        if (existing_source == "observed-limit" and type(existing_window) is int
+                and 0 < existing_window <= raw):
+            return
     if model not in models and sum(len(rows) for rows in data["model_metadata"].values()
                                    if isinstance(rows, dict)) >= 512:
         return
     models[model] = {"context_window": raw, "context_source": "live-catalog"}
     _write_preferences(data)
+
+
+def record_observed_context_limit(provider: str, model: str, limit: int) -> int | None:
+    """Persist an explicit context limit reported by the inference engine.
+
+    Only called when the backend states a concrete numeric ceiling (never for ambiguous
+    errors or transient failures). Caps existing higher catalog limits and never raises
+    a tighter ``user-config`` limit.
+    """
+    if (provider not in PRESETS or not isinstance(model, str) or not model or len(model) > 256
+            or type(limit) is not int or not 1_024 <= limit <= 10_000_000):
+        return None
+    data = _load_preferences()
+    models = data["model_metadata"].setdefault(provider, {})
+    if not isinstance(models, dict):
+        models = {}
+        data["model_metadata"][provider] = models
+    existing = models.get(model)
+    if isinstance(existing, dict):
+        existing_source = existing.get("context_source")
+        existing_window = existing.get("context_window")
+        if existing_source == "user-config" and type(existing_window) is int and 0 < existing_window <= limit:
+            return existing_window
+        if existing_source == "observed-limit" and type(existing_window) is int and 0 < existing_window <= limit:
+            return existing_window
+    if model not in models and sum(len(rows) for rows in data["model_metadata"].values()
+                                   if isinstance(rows, dict)) >= 512:
+        return None
+    models[model] = {"context_window": limit, "context_source": "observed-limit"}
+    _write_preferences(data)
+    return limit
+
+
+def heal_observed_context_limit(provider: str, model: str, measured_prompt_tokens: int) -> bool:
+    """Remove a stale ``observed-limit`` when a successful response proves larger capacity."""
+    if (provider not in PRESETS or not isinstance(model, str) or not model
+            or type(measured_prompt_tokens) is not int or measured_prompt_tokens <= 0):
+        return False
+    data = _load_preferences()
+    models = data["model_metadata"].get(provider)
+    if not isinstance(models, dict):
+        return False
+    existing = models.get(model)
+    if not isinstance(existing, dict) or existing.get("context_source") != "observed-limit":
+        return False
+    stored = existing.get("context_window")
+    if type(stored) is not int or measured_prompt_tokens <= stored:
+        return False
+    models.pop(model, None)
+    _write_preferences(data)
+    return True
 
 
 def _write_preferences(data: dict[str, Any]) -> None:

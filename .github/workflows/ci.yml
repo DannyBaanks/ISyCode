@@ -82,7 +82,7 @@ jobs:
           python -m pip install -e '.[test]'
 
       - name: Run test suite
-        run: python -m pytest -q -m "not integration"
+        run: python -m pytest -v -m "not integration" -o faulthandler_timeout=120
 
   test-textual-current:
     # Keep the selection-capable Textual pin verified on a second Python runtime.
@@ -130,7 +130,7 @@ jobs:
           python -c "import textual; print('textual', textual.__version__)"
 
       - name: Run test suite
-        run: python -m pytest -q -m "not integration"
+        run: python -m pytest -v -m "not integration" -o faulthandler_timeout=120
 
   test-windows:
     name: Tests (Windows)
@@ -159,7 +159,7 @@ jobs:
           python -m pip install -e '.[test]'
 
       - name: Run the full Windows test suite
-        run: python -m pytest -q -m "not integration"
+        run: python -m pytest -v -m "not integration" -o faulthandler_timeout=120
 
   test-macos:
     name: Tests (macOS)
@@ -189,7 +189,7 @@ jobs:
           python -m pip install -e '.[test]'
 
       - name: Run the full macOS test suite
-        run: python -m pytest -q -m "not integration"
+        run: python -m pytest -v -m "not integration" -o faulthandler_timeout=120
 
   gate-evidence:
     name: Gate evidence

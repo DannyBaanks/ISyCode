@@ -134,6 +134,10 @@ class QuickStartScreen(ModalScreen[str]):
     #quick-start-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "custom", "Custom setup")]
+    # Textual re-applies this after compose. A screen dismissed between push
+    # and mount may have no children, so querying the OptionList in on_mount
+    # could crash shutdown with NoMatches instead of simply doing nothing.
+    AUTO_FOCUS = "#quick-start-options"
 
     def __init__(self, root: Path, *, provider_ready: bool) -> None:
         super().__init__()
@@ -164,9 +168,6 @@ class QuickStartScreen(ModalScreen[str]):
                 yield Button(tr("Custom setup"), id="quick-start-custom")
                 yield Button(tr("Continue"), id="quick-start-continue", variant="primary")
             yield decision_hint()
-
-    def on_mount(self) -> None:
-        self.query_one("#quick-start-options", OptionList).focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         self.dismiss("quick" if event.option.id == "quick" else "custom")

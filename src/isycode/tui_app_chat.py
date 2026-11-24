@@ -54,9 +54,20 @@ def _recovery_label(kind: str) -> str:
     return {"STREAM": "Stream interrupted", "NETWORK": "Connection lost",
             "TIMEOUT": "Provider timed out", "PROVIDER": "Provider error",
             "RATE_LIMIT": "Provider rate limited"}.get(kind, "Provider failure")
-from isycode.agent_loop import split_history, summary_messages, summary_system_message, total_chars
-from isycode.continuity_capsule import (build_capsule, capsule_message, history_budget_chars,
-                                         plan_context, shrink_request)
+from isycode.agent_loop import compact_turn, split_history, summary_messages, summary_system_message, total_chars
+from isycode.continuity_capsule import (
+    MIN_SOFT_LIMIT_TOKENS,
+    build_capsule,
+    capsule_message,
+    compaction_ceiling_tokens,
+    estimate_request_tokens,
+    history_budget_chars,
+    is_capsule,
+    plan_context,
+    request_chars,
+    shrink_request,
+    update_tokens_per_char,
+)
 from isycode.prompt_expansion import (
     MAX_MENTIONS,
     WORKSPACE_COMMANDS_DIR,
@@ -86,6 +97,7 @@ from isycode.providers import (
     load_provider_key,
     model_slot,
     model_context_limit,
+    record_observed_context_limit,
     resolved_chat_model,
     selected_provider_name,
 )
@@ -102,30 +114,68 @@ CONTENT_PAINT_INTERVAL_S = 1 / 30
 
 class ChatMixin:
     async def _summarize_older(self, provider, owner, older: list[dict],
-                               recent: list[dict], instructions: str = "") -> bool:
-        """Replace ``older`` history with model-written notes sent through the provider owner."""
+                               recent: list[dict], instructions: str = "", *,
+                               context_limit: int | None = None) -> bool:
+        """Replace ``older`` history with model-written notes sent through the provider owner.
+
+        Shrinks oversized summary inputs progressively and learns any explicit context
+        limit reported by the inference engine so compaction itself cannot deadlock.
+        """
         self._append("  " + tr("Compacting · summarizing {len} earlier messages to free up context", len=len(older)),
                      MUTED)
-        summary_request = summary_messages(
-            older, self._conversation_summary, instructions=instructions)
+        eff_limit = context_limit
+        if eff_limit is None:
+            eff_limit, _ = model_context_limit(provider.name, provider.model)
+        shrink_steps = (1.0, 0.7, 0.5, 0.35)
+        max_input_chars = max(12_000, int((eff_limit or 128_000) * 3 * 0.65))
+        response, outcome, reason = None, None, ""
+        base_chars = max(1, total_chars(older))
 
-        async def send():
-            return await self._complete_accounted_chat(provider, summary_request,
-                                                       max_tokens=None)
+        for attempt, factor in enumerate(shrink_steps):
+            target_chars = max(8_000, min(max_input_chars, int(base_chars * factor)))
+            slice_older = list(older)
+            omitted = 0
+            while len(slice_older) > 1 and total_chars(slice_older) > target_chars:
+                slice_older.pop(0)
+                omitted += 1
+            if total_chars(slice_older) > target_chars and slice_older:
+                clipped = dict(slice_older[0])
+                content = str(clipped.get("content") or "")
+                if len(content) > target_chars:
+                    clipped["content"] = content[-target_chars:]
+                slice_older = [clipped]
+            note = (f"[{omitted} oldest messages omitted to fit compaction window]\n" + instructions).strip() if omitted else instructions
+            summary_request = summary_messages(
+                slice_older, self._conversation_summary, instructions=note[:4000])
 
-        try:
-            response, outcome = await owner.execute(provider, {
-                "operation": "chat.summary", "messages": summary_request,
-                "max_tokens": None,
-                "token_limit_field": provider.token_limit_field,
-                "reasoning_effort": provider.reasoning_effort,
-                "temperature_supported": provider.temperature_supported, "tools": None,
-            }, send)
-        except (ProviderError, StreamError, OSError) as exc:
-            response, outcome = None, None
-            reason = type(exc).__name__
-        else:
-            reason = outcome.reason if outcome is not None else ""
+            async def send(req=summary_request):
+                return await self._complete_accounted_chat(provider, req, max_tokens=None)
+
+            try:
+                response, outcome = await owner.execute(provider, {
+                    "operation": "chat.summary", "messages": summary_request,
+                    "max_tokens": None,
+                    "token_limit_field": provider.token_limit_field,
+                    "reasoning_effort": provider.reasoning_effort,
+                    "temperature_supported": provider.temperature_supported, "tools": None,
+                }, send)
+            except (ProviderError, StreamError, OSError) as exc:
+                from isycode.provider_errors import classify_provider_error
+                response, outcome = None, None
+                reason = type(exc).__name__
+                if classify_provider_error(exc)["error_kind"] == "CONTEXT":
+                    explicit = getattr(exc, "context_limit", None)
+                    if type(explicit) is int and 1_024 <= explicit <= 10_000_000:
+                        learned = record_observed_context_limit(provider.name, provider.model, explicit)
+                        if learned:
+                            max_input_chars = max(8_000, int(learned * 3 * 0.60))
+                    if attempt + 1 < len(shrink_steps):
+                        base_chars = min(base_chars, total_chars(slice_older))
+                        continue
+                break
+            else:
+                reason = outcome.reason if outcome is not None else ""
+                break
         self._save_draft()
         summary = (response.get("text") or "").strip() if isinstance(response, dict) else ""
         if outcome is None or outcome.decision != "ALLOW" or not summary:
@@ -166,9 +216,94 @@ class ChatMixin:
                         api_key=load_provider_key(provider_name) or None)
 
     def _context_budget(self) -> int:
-        provider_name = selected_provider_name()
-        limit, _ = model_context_limit(provider_name, resolved_chat_model(provider_name))
+        limit, _ = self._context_window()
         return history_budget_chars(limit)
+
+    def _project_request_tokens(self, provider, messages: list[dict],
+                                tools: list[dict] | None) -> int:
+        key = (provider.name, provider.model)
+        calibrations = getattr(self, "_tokens_per_char_by_model", None)
+        calibration = calibrations.get(key) if isinstance(calibrations, dict) else None
+        same_model = getattr(self, "_last_usage_model", None) == key
+        return estimate_request_tokens(
+            messages, tools,
+            calibration=calibration,
+            anchor_prompt_tokens=getattr(self, "_last_context_input_tokens", None) if same_model else None,
+            anchor_request_chars=getattr(self, "_last_request_chars", None) if same_model else None,
+            anchor_output_tokens=getattr(self, "_last_output_tokens", 0) if same_model else 0,
+        )
+
+    async def _maybe_proactive_compact(self, provider, owner, messages: list[dict],
+                                       turn_start: int, chat_tools: list[dict] | None,
+                                       context_plan: dict) -> tuple[list[dict], int, bool]:
+        """Proactively prune or compact right before hitting the model's effective context ceiling.
+
+        Preserves every executed tool receipt inside ``messages[turn_start:]`` so no
+        side-effecting command is ever repeated.
+        """
+        limit, _ = self._context_window()
+        ceiling = compaction_ceiling_tokens(limit)
+        if ceiling is None:
+            return messages, turn_start, False
+        projected = self._project_request_tokens(provider, messages, chat_tools)
+        if projected < ceiling:
+            return messages, turn_start, False
+
+        head = list(messages[:turn_start])
+        turn = list(messages[turn_start:])
+        turn_budget = max(12_000, int(ceiling * 2.5) - total_chars(head))
+        pruned_turn, elided = compact_turn(turn, budget=turn_budget, keep_recent=2)
+        if elided:
+            candidate = head + pruned_turn
+            if self._project_request_tokens(provider, candidate, chat_tools) < ceiling:
+                self._last_context_input_tokens = None
+                self._last_request_chars = None
+                self._append(
+                    f"  Context trimmed · {elided} older tool result{'s' if elided != 1 else ''} "
+                    "elided before reaching the model limit (already executed, not re-run)", MUTED)
+                return candidate, turn_start, True
+            messages = candidate
+
+        earlier = [message for message in messages[:turn_start] if message.get("role") != "system"]
+        summarized = False
+        if earlier:
+            try:
+                compact_provider = self._compaction_provider()
+            except ProviderError:
+                compact_provider = None
+            if (compact_provider is not None and compact_provider.name == provider.name
+                    and compact_provider.configured()):
+                summarized = await self._summarize_older(
+                    compact_provider, owner, earlier, [], context_limit=limit)
+
+        budget = max(12_000, int(ceiling * 2.5))
+        if summarized and self._conversation_summary:
+            systems = [dict(message) for message in messages[:turn_start]
+                       if message.get("role") == "system" and not is_capsule(message)
+                       and not str(message.get("content", "")).startswith("Notes summarizing the earlier")
+                       and not str(message.get("content", "")).startswith("Untrusted historical tool results")]
+            new_head = systems + [summary_system_message(self._conversation_summary)]
+            turn_part = [dict(message) for message in messages[turn_start:]]
+            turn_part, _ = compact_turn(turn_part, budget=max(12_000, budget - total_chars(new_head)), keep_recent=2)
+            new_messages = new_head + turn_part
+            new_turn_start = len(new_head)
+        else:
+            capsule_earlier = list(context_plan.get("older", [])) + earlier
+            capsule = build_capsule(
+                budget_chars=max(2_000, budget // 4),
+                tool_history=self._tool_history, older_messages=capsule_earlier,
+                summary=self._conversation_summary, tasks=self._agent_tasks,
+                idea_box=self._idea_box)
+            new_messages, new_turn_start, removed = shrink_request(messages, turn_start, capsule, budget)
+            if not removed:
+                return messages, turn_start, False
+            self._append(
+                f"  Auto-compacted · {removed} earlier messages/tool results condensed before "
+                f"reaching {limit:,}-token limit", MUTED)
+
+        self._last_context_input_tokens = None
+        self._last_request_chars = None
+        return new_messages, new_turn_start, True
 
     def _context_plan(self) -> dict:
         return plan_context(self._history, self._tool_history, budget_chars=self._context_budget(),
@@ -967,6 +1102,7 @@ class ChatMixin:
             turn_start = max((index for index, message in enumerate(messages)
                               if message.get("role") == "user"), default=len(messages))
             context_shrunk = False
+            step_index = 0
             try:
                 if provider_supports_tools and self._idea_nudge_timer is None and self._lane_on_screen():
                     self._idea_nudge_timer = self.set_interval(
@@ -995,6 +1131,10 @@ class ChatMixin:
                         self._set_activity(message, CYAN)
                         self._append(message, CYAN, log_only=True)
                     self._apply_idea_nudge(messages, chat_tools)
+                    if steer_trial is None and (step_index > 0 or not (context_plan.get("capsule") or self._conversation_summary)):
+                        messages, turn_start, _ = await self._maybe_proactive_compact(
+                            provider, owner, messages, turn_start, chat_tools, context_plan)
+                    step_index += 1
                     request_material["messages"] = messages
                     self._begin_lane_operation(tr("Waiting for provider response"), kind="provider_wait")
                     self._chat_request_task = asyncio.create_task(owner.execute(
@@ -1041,14 +1181,50 @@ class ChatMixin:
                             continue
                         from isycode.provider_errors import classify_provider_error
                         if (not steered and not context_shrunk
+                                and not (step_content or step_reason)
                                 and classify_provider_error(exc)["error_kind"] == "CONTEXT"):
-                            # ADR 0009: the window was smaller than ISyCode estimated.
-                            # Re-send once with the capsule in place of older context;
-                            # the step dispatched nothing, so no effect can repeat.
+                            # ADR 0009 + zero-trust limit learning: the backend rejected this step
+                            # before any output or tool dispatch of this step ran. Earlier tool
+                            # receipts inside messages[turn_start:] stay intact so side-effecting
+                            # commands are never repeated. Re-send once with the deterministic
+                            # capsule (0 extra LLM calls) and learn the real limit for future turns.
                             context_shrunk = True
                             discard_failed_step(content_mark, reason_mark)
-                            budget = min(self._context_budget(), total_chars(messages) // 2)
-                            earlier = context_plan["older"] + [
+                            sent_chars = request_chars(messages, chat_tools)
+                            explicit_limit = getattr(exc, "context_limit", None)
+                            reported_input = getattr(exc, "prompt_tokens", None)
+                            learned_explicit = None
+                            if type(explicit_limit) is int and 1_024 <= explicit_limit <= 10_000_000:
+                                learned_explicit = record_observed_context_limit(
+                                    provider.name, provider.model, explicit_limit)
+                                if type(reported_input) is int and reported_input > 0:
+                                    calibrations = getattr(self, "_tokens_per_char_by_model", None)
+                                    if isinstance(calibrations, dict):
+                                        key = (provider.name, provider.model)
+                                        updated = update_tokens_per_char(
+                                            calibrations.get(key), reported_input, sent_chars)
+                                        if updated is not None:
+                                            calibrations[key] = updated
+                                self._refresh_usage()
+                            else:
+                                est_sent = self._project_request_tokens(provider, messages, chat_tools)
+                                soft_cap = int(est_sent * 0.90)
+                                if soft_cap >= MIN_SOFT_LIMIT_TOKENS:
+                                    soft_limits = getattr(self, "_session_soft_context_limits", None)
+                                    if isinstance(soft_limits, dict):
+                                        key = (provider.name, provider.model)
+                                        prev_soft = soft_limits.get(key)
+                                        soft_limits[key] = min(prev_soft, soft_cap) if prev_soft else soft_cap
+                                    self._refresh_usage()
+
+                            eff_limit, _ = self._context_window()
+                            ceiling = compaction_ceiling_tokens(eff_limit)
+                            budget_from_limit = (
+                                max(12_000, int(ceiling * 2.5)) if ceiling is not None
+                                else self._context_budget()
+                            )
+                            budget = min(budget_from_limit, max(12_000, total_chars(messages) // 2))
+                            earlier = list(context_plan["older"]) + [
                                 message for message in messages[:turn_start]
                                 if message.get("role") != "system"]
                             capsule = build_capsule(
@@ -1058,8 +1234,16 @@ class ChatMixin:
                                 idea_box=self._idea_box)
                             messages, turn_start, removed = shrink_request(
                                 messages, turn_start, capsule, budget)
-                            self._append(
-                                "  " + tr("Context capsule · the request was larger than the model window; {removed} earlier messages or tool results condensed and sent again · no tool effects repeated", removed=removed), MUTED)
+                            self._last_context_input_tokens = None
+                            self._last_request_chars = None
+                            if learned_explicit is not None:
+                                self._append(
+                                    f"  Real model window detected · {learned_explicit:,} tokens "
+                                    f"(saved) · {removed} earlier messages/tool results condensed "
+                                    "and sent again · no tool effects repeated", MUTED)
+                            else:
+                                self._append(
+                                    "  " + tr("Context capsule · the request was larger than the model window; {removed} earlier messages or tool results condensed and sent again · no tool effects repeated", removed=removed), MUTED)
                             continue
                         # ADR 0008: this step failed before dispatching any tool, so
                         # re-sending its messages cannot repeat an effect. Fixed delay

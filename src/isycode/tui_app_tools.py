@@ -511,6 +511,8 @@ class ToolMixin:
             if self._chat_session_owner is None or not self._active_chat_session_id or not self._sessions_enabled():
                 return tool_call_id, json.dumps({"status": "unavailable"})
             outcome, _ = self._chat_session_owner.manage("auto_title", self._active_chat_session_id, arguments["title"])
+            if outcome.decision == "ALLOW":
+                self._sync_terminal_title(arguments["title"])
             self._paint_work_status()
             return tool_call_id, json.dumps({"status": outcome.decision, "reason": outcome.reason})
         if name == IDEA_BOX_TOOL_NAME:

@@ -4,9 +4,13 @@ Quick Start chains the EXISTING first-run pieces (recurring + Classic +
 the explicit coding-tools confirmation); it grants nothing beyond what
 the user could already click through, and never touches the Security path.
 """
+import asyncio
 import json
 
 import pytest
+
+from textual.css.query import NoMatches
+from textual.widgets import OptionList
 
 from isycode.tui import QuickStartScreen, TUIApp, WorkspaceModeScreen, WorkspaceSetupScreen
 from isycode.tui_screens_approval import ConfirmScreen
@@ -34,6 +38,41 @@ async def test_quick_start_screen_defaults_to_quick_and_escape_is_custom(tmp_pat
         assert isinstance(screen, QuickStartScreen)
         await pilot.press("escape")
         await pilot.pause()
+
+
+@pytest.mark.asyncio
+async def test_quick_start_focus_survives_children_removed_before_mount(tmp_path, monkeypatch):
+    """A closing screen may have no children when its Mount handler runs."""
+    configure(tmp_path, monkeypatch)
+    app = TUIApp()
+    async with app.run_test(size=(100, 30)) as pilot:
+        screen = QuickStartScreen(tmp_path, provider_ready=False)
+        await app.push_screen(screen)
+        screen.remove_children()
+        for _ in range(100):
+            await pilot.pause(0.01)
+            if not screen.query("*"):
+                break
+        assert not screen.query("*")
+        try:
+            screen._on_mount(None)
+        except NoMatches as exc:
+            pytest.fail(f"QuickStart mount queried children after they were removed: {exc}")
+
+
+@pytest.mark.asyncio
+async def test_quick_start_focuses_options_after_compose(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    app = TUIApp()
+    async with app.run_test(size=(100, 30)) as pilot:
+        await app.wait_for_ready()
+        screen = QuickStartScreen(app._workspace_root, provider_ready=True)
+        await app.push_screen(screen)
+        for _ in range(100):
+            await pilot.pause(0.01)
+            if screen.focused is screen.query_one("#quick-start-options", OptionList):
+                break
+        assert screen.focused is screen.query_one("#quick-start-options", OptionList)
 
 
 @pytest.mark.asyncio
