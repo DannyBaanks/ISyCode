@@ -11,6 +11,7 @@ from textual.containers import VerticalScroll
 from textual.widgets import Static, TextArea
 from isycode.localization import tr
 from isycode.tui_dialog import Dialog, DialogAction
+from isycode.tui_theme import CYAN, MUTED
 
 
 def extract_range(text, selection):
@@ -59,6 +60,7 @@ def selectable_markdown(markdown):
     ordered = []
     heading = False
     in_table = False
+    link_href = None
     for token in markdown.parsed:
         kind = token.type
         if kind in {"bullet_list_open", "ordered_list_open"}:
@@ -72,7 +74,7 @@ def selectable_markdown(markdown):
         elif kind == "list_item_open":
             count = ordered[-1] if ordered else None
             prefix = f"{count}. " if count is not None else "• "
-            result.append("  " * max(0, list_depth - 1) + prefix)
+            result.append("  " * max(0, list_depth - 1) + prefix, style=CYAN)
             if count is not None:
                 ordered[-1] += 1
         elif kind == "heading_open":
@@ -81,19 +83,28 @@ def selectable_markdown(markdown):
             heading = False
             result.append("\n\n")
         elif kind == "inline":
-            styles = ["bold" if heading else ""]
+            styles = [f"bold {CYAN}" if heading else ""]
             for child in token.children or []:
                 if child.type in {"strong_open", "em_open", "s_open"}:
                     styles.append({"strong_open": "bold", "em_open": "italic", "s_open": "strike"}[child.type])
                 elif child.type in {"strong_close", "em_close", "s_close"}:
                     if len(styles) > 1:
                         styles.pop()
+                elif child.type == "link_open":
+                    link_href = child.attrGet("href")
+                elif child.type == "link_close":
+                    link_href = None
                 elif child.type in {"softbreak", "hardbreak"}:
                     result.append("\n")
                 elif child.type == "image":
                     result.append(child.content)
                 elif child.type in {"text", "code_inline"}:
-                    result.append(child.content, style=" ".join(style for style in styles if style))
+                    inline_styles = [style for style in styles if style]
+                    if child.type == "code_inline":
+                        inline_styles.append(CYAN)
+                    if link_href:
+                        inline_styles.append(f"underline link {link_href}")
+                    result.append(child.content, style=" ".join(inline_styles))
         elif kind == "paragraph_close":
             result.append("\n" if list_depth else "\n\n")
         elif kind in {"fence", "code_block"}:
@@ -103,7 +114,7 @@ def selectable_markdown(markdown):
             result.append_text(highlighted if highlighted.plain == token.content else Text(token.content))
             result.append("\n")
         elif kind == "blockquote_open":
-            result.append("› ")
+            result.append("› ", style=MUTED)
         elif kind == "hr":
             result.append("────────\n")
         elif kind == "table_open":

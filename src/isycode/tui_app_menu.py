@@ -24,7 +24,7 @@ from isycode.plugins import Plugin, PluginCommand
 from isycode.tui_composer import PromptArea
 from isycode.action_runtime import ProviderNetworkOwner
 from isycode.tui_screens_approval import ReviewConsentScreen
-from rich.markdown import Markdown as RichMarkdown
+from isycode.terminal_links import rich_markdown
 from isycode.streaming import StreamError, async_stream_complete
 from rich.syntax import Syntax
 from rich.text import Text
@@ -80,7 +80,7 @@ async def _subagent_cmd(app: "TUIApp", arg: str) -> None:
     app._append("  " + tr("Subagent · {model_display_label} · {status}", model_display_label=app._model_display_label(result.get('provider', ''), result.get('model', '')), status=result['status']), CYAN)
     if result.get("text"):
         app.query_one(ChatArea).mount(SelectableText(
-            RichMarkdown(result["text"], code_theme="monokai"),
+            rich_markdown(result["text"], root=app._workspace_root),
             selection_text=result["text"]))
         app.query_one(ChatArea).follow_tail()
     elif result.get("error"):
@@ -325,8 +325,8 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
     if result.get("finish_reason") == "length":
         review_text = (f"**{header}**\n\n{critique}\n\n"
                        "> Review hit its 1,200-token output limit; iteration is disabled.")
-        app.query_one(ChatArea).mount(SelectableText(RichMarkdown(
-            review_text, code_theme="monokai"), selection_text=review_text,
+        app.query_one(ChatArea).mount(SelectableText(rich_markdown(
+            review_text, root=app._workspace_root), selection_text=review_text,
             classes="external-review"))
         return
     if not critique.strip():
@@ -334,8 +334,8 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
         return
     chat = app.query_one(ChatArea)
     review_text = f"**{header}**\n\n{critique}"
-    chat.mount(SelectableText(RichMarkdown(
-        review_text, code_theme="monokai"), selection_text=review_text,
+    chat.mount(SelectableText(rich_markdown(
+        review_text, root=app._workspace_root), selection_text=review_text,
         classes="external-review"))
     app._pending_review = (artifact, critique)
     chat.mount(Button(tr("Iterate with this review"), id="review-iterate"))
