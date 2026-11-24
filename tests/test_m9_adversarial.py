@@ -287,27 +287,40 @@ def test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed(tmp_path,
 
     async def scenario(app, pilot):
         accepted = asyncio.Event()
+        writers: list[asyncio.StreamWriter] = []
+        closing = False
 
         async def stall(reader, writer):
-            await reader.readuntil(b"\r\n\r\n")
-            writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n"
-                         b"Transfer-Encoding: chunked\r\n\r\n")
-            await writer.drain()
-            accepted.set()
-            # The request body usually arrives in the same segment as the headers,
-            # so one read() answers with bytes and not with the hang-up. Only an
-            # empty read is the client closing: this test names that fact, so it
-            # waits for it instead of timing a body.
-            # macOS reports a client that closes with unread bytes as a reset, not
-            # as an empty read. Both are the hang-up this test waits for.
+            writers.append(writer)
             try:
-                while await reader.read():
+                await reader.readuntil(b"\r\n\r\n")
+                writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n"
+                             b"Transfer-Encoding: chunked\r\n\r\n")
+                await writer.drain()
+                accepted.set()
+                # The request body usually arrives in the same segment as the headers,
+                # so one read() answers with bytes and not with the hang-up. Only an
+                # empty read is the client closing: this test names that fact, so it
+                # waits for it instead of timing a body.
+                # macOS reports a client that closes with unread bytes as a reset, not
+                # as an empty read. Both are the hang-up this test waits for.
+                try:
+                    while await reader.read():
+                        pass
+                except ConnectionResetError:
                     pass
-            except ConnectionResetError:
-                pass
-            events["hung_up"] = time.monotonic()
+                if not closing:
+                    events["hung_up"] = time.monotonic()
+            finally:
+                if not writer.is_closing():
+                    writer.close()
+                try:
+                    await writer.wait_closed()
+                except OSError:
+                    pass
 
         server = await asyncio.start_server(stall, "127.0.0.1", port)
+        turn = None
         try:
             turn = asyncio.create_task(app._run_chat("hello"))
             await asyncio.wait_for(accepted.wait(), 10)
@@ -321,8 +334,15 @@ def test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed(tmp_path,
                     break
                 await asyncio.sleep(0.05)
         finally:
+            closing = True
+            if turn is not None and not turn.done():
+                turn.cancel()
+                await asyncio.gather(turn, return_exceptions=True)
+            for writer in writers:
+                if not writer.is_closing():
+                    writer.close()
             server.close()
-            await server.wait_closed()
+            await asyncio.wait_for(server.wait_closed(), 5)
         assert stopped <= 0.25                                       # G9-03 UI acknowledgement
         assert events["hung_up"] is not None and events["hung_up"] - pressed <= 2   # socket gone
 
