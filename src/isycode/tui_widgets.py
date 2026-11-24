@@ -14,6 +14,8 @@ from textual.widgets import (
     Tree,
 )
 from textual.events import Click
+from textual.css.query import NoMatches
+from textual.dom import NoScreen
 from textual.widgets._collapsible import CollapsibleTitle
 from textual.widgets.tree import TreeNode
 from textual.app import ComposeResult
@@ -60,6 +62,20 @@ def activate_on_second_click(host, event, key) -> bool:
 
 class PreviewOptionList(OptionList):
     """Show option detail on one click and select only on a second click."""
+
+    def watch_highlighted(self, highlighted: int | None) -> None:
+        # Keep the preview in the same turn as the highlight. The bubbled
+        # OptionHighlighted message can otherwise arrive after a repaint (or
+        # after a test's single pause), leaving the previous provider's detail
+        # visible beside the newly highlighted row.
+        if self.id == "action-list" and highlighted is not None:
+            try:
+                self.app._show_menu_detail(highlighted)
+            except (AttributeError, NoMatches, NoScreen):
+                # The app or its menu may be tearing down while a reactive
+                # highlight is being delivered.
+                pass
+        super().watch_highlighted(highlighted)
 
     async def _on_click(self, event: Click) -> None:
         option_index = event.style.meta.get("option")

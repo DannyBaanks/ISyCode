@@ -115,6 +115,37 @@ def test_provider_single_click_previews_and_resizes_without_switching_provider(t
     asyncio.run(scenario())
 
 
+def test_provider_preview_updates_before_its_highlight_message_is_delivered(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(140, 40)) as pilot:
+            app._open_provider_menu()
+            await pilot.pause()
+            options = app.query_one("#action-list", OptionList)
+            index = next(i for i, e in enumerate(app._menu_filtered)
+                         if e.get("value") == "anthropic")
+            detail = app.query_one("#action-detail", Static)
+            delivered = []
+            original_post = options.post_message
+
+            def delayed_post(message):
+                if isinstance(message, OptionList.OptionHighlighted):
+                    delivered.append(message.option_index)
+                    # Model a busy app queue: the widget has changed, but its
+                    # bubbled highlight message has not reached the app handler.
+                    return True
+                return original_post(message)
+
+            monkeypatch.setattr(options, "post_message", delayed_post)
+            options.highlighted = index
+            assert "Anthropic" in str(detail.render())
+            assert delivered == [index]
+
+    asyncio.run(scenario())
+
+
 def test_model_setting_escape_returns_to_settings_and_keeps_active_model(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     async def scenario():

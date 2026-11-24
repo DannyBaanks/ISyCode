@@ -1727,7 +1727,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 self._settings_category = names[event.option_index]
                 self._render_options(self.query_one("#action-search", Input).value.casefold())
         if event.option_list.id == "action-list":
-            self._show_menu_detail(event.option_index)
+            # A queued highlight can arrive after a newer selection or a menu
+            # refresh. Never let that stale message restore the old detail.
+            self._show_menu_detail(event.option_list.highlighted)
 
     def _close_menu(self) -> None:
         self.query_one("#action-menu", Vertical).display = False
