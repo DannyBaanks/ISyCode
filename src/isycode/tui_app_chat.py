@@ -4,6 +4,8 @@ The phases keep the same statements. TUIApp inherits this mixin.
 """
 from __future__ import annotations
 
+from isycode.agent_runtime import provider_step, tool_message
+
 import asyncio
 from typing import Any, TYPE_CHECKING
 
@@ -1138,8 +1140,8 @@ class ChatMixin:
                     step_index += 1
                     request_material["messages"] = messages
                     self._begin_lane_operation(tr("Waiting for provider response"), kind="provider_wait")
-                    self._chat_request_task = asyncio.create_task(owner.execute(
-                        provider, request_material, send_provider_request))
+                    self._chat_request_task = asyncio.create_task(provider_step(
+                        owner, provider, request_material, send_provider_request))
                     try:
                         if steer_trial is not None:
                             done_requests, _ = await asyncio.wait([self._chat_request_task], timeout=120)
@@ -1423,9 +1425,7 @@ class ChatMixin:
                                     tool_result,
                                 )
                                 self._save_draft()
-                        messages.append({
-                            "role": "tool", "tool_call_id": call_id, "content": tool_result,
-                        })
+                        messages.append(tool_message(call_id, tool_result))
                         if (isinstance(call_function, dict)
                                 and call_function.get("name") == "workspace_read_image"):
                             try:
