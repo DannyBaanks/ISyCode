@@ -5,6 +5,8 @@ import asyncio
 import hashlib
 import json
 import secrets
+import time
+import math
 from pathlib import Path
 
 from isycode.agent_runtime import AgentTurn, TurnPorts
@@ -171,7 +173,7 @@ class Interactions:
 
 
 class TelegramService:
-    def __init__(self, store: TelegramStore, transport, runner_factory=NativeRunner):
+    def __init__(self, store: TelegramStore, transport, runner_factory=NativeRunner, *, pace=1.0):
         self.store, self.transport, self.runner_factory = store, transport, runner_factory
         self.peer = Peer(store.profile, **store.setting('peer', {}))
         if not self.peer.valid():
@@ -183,6 +185,9 @@ class TelegramService:
         self._tasks = []
         self.running = False
         self._cancelled = set()
+        self._send_lock = asyncio.Lock()
+        self._send_after = 0.0
+        self._pace = max(0.0, float(pace))
 
     def _cancel(self, task):
         if task not in self._cancelled and not task.done():
@@ -197,17 +202,32 @@ class TelegramService:
         owner.authorize('telegram.receive', self.peer)
         return owner
 
-    async def send_owned(self, root, rendered):
-        owner = self.guard(root)
-        material = json.dumps({'text': rendered.text, 'buttons': rendered.buttons,
-                               'filename': rendered.filename, 'document_sha256': hashlib.sha256(rendered.document or b'').hexdigest()},
-                              sort_keys=True).encode()
-        request = owner.authorize('telegram.send', self.peer, material)
-        receipt = await self.transport.send(self.peer.chat_id, rendered)
-        if receipt.chat_id != self.peer.chat_id or type(receipt.message_id) is not int or receipt.message_id <= 0:
-            raise TelegramError('unverified_delivery')
-        owner.receipt(request, str(receipt.message_id).encode())
-        return receipt
+    async def send_owned(self, root, rendered, *, message_id=None):
+        async with self._send_lock:
+            wait = self._send_after - time.monotonic()
+            if wait > self._pace + .1:
+                raise TelegramError('rate_limited', max(1, math.ceil(wait)))
+            if wait > 0:
+                await asyncio.sleep(wait)
+            owner = self.guard(root)
+            material = json.dumps({'text': rendered.text, 'buttons': rendered.buttons,
+                                   'filename': rendered.filename, 'message_id': message_id,
+                                   'document_sha256': hashlib.sha256(rendered.document or b'').hexdigest()},
+                                  sort_keys=True).encode()
+            request = owner.authorize('telegram.send', self.peer, material)
+            self._send_after = time.monotonic() + self._pace
+            try:
+                receipt = (await self.transport.send(self.peer.chat_id, rendered) if message_id is None
+                           else await self.transport.edit(self.peer.chat_id, message_id, rendered))
+            except TelegramError as error:
+                if error.retry_after:
+                    self._send_after = max(self._send_after, time.monotonic() + error.retry_after)
+                raise
+            if (receipt.chat_id != self.peer.chat_id or type(receipt.message_id) is not int
+                    or receipt.message_id <= 0 or (message_id is not None and receipt.message_id != message_id)):
+                raise TelegramError('unverified_delivery')
+            owner.receipt(request, str(receipt.message_id).encode())
+            return receipt
 
     def select(self, session_id):
         self.reviews.invalidate()
@@ -398,17 +418,39 @@ class TelegramService:
             self.active[item.turn_id] = (item, task)
 
     async def deliver_once(self):
-        roots = {row['turn_id']: Path(row['workspace']) for row in self.store.queue()}
+        rows = {row['turn_id']: row for row in self.store.queue()}
+        blocked = set()
+        progress = {'turn.start': 'Turno iniciado', 'provider.request': 'Consultando proveedor',
+                    'provider.result': 'Proveedor respondió', 'tool.start': 'Herramienta en ejecución',
+                    'session.saved': 'Sesión guardada', 'turn.finish': 'Turno finalizado'}
         for event in self.store.pending_deliveries():
-            root = roots.get(event.turn_id)
-            if root is None:
+            row = rows.get(event.turn_id)
+            if row is None or event.turn_id in blocked:
                 continue
+            root = Path(row['workspace'])
             try:
                 last = None
-                for rendered in self.renderer.event(event.payload):
-                    last = await self.send_owned(root, rendered)
+                kind = event.payload['kind']
+                if kind in progress:
+                    details = {key: value for key, value in event.payload.items() if key != 'kind'}
+                    # Keep the complete event in SQLite; the progress block is a bounded summary only.
+                    status = progress[kind] + ' · ' + json.dumps(details, ensure_ascii=False)[:1000]
+                    text = self.renderer.text(f'{root.name} · sesión {row["session_id"][:8]} · turno {event.turn_id[:8]}\n{status}')[0]
+                    previous = self.store.progress_message(event.turn_id, event.sequence)
+                    if previous is not None:
+                        try:
+                            last = await self.send_owned(root, text, message_id=previous)
+                        except TelegramError as error:
+                            if error.code != 'telegram_rejected':
+                                raise
+                    if last is None:
+                        last = await self.send_owned(root, text)
+                else:
+                    for rendered in self.renderer.event(event.payload):
+                        last = await self.send_owned(root, rendered)
                 self.store.ack_delivery(event.id, last.message_id if last else 0)
             except (TelegramError, PermissionError, OSError, ValueError, RuntimeError) as error:
+                blocked.add(event.turn_id)
                 self.store.retry_delivery(event.id, getattr(error, 'retry_after', 0) or min(300, 2 ** min(event.attempts + 1, 8)))
 
     async def _receive(self):

@@ -16,6 +16,7 @@ class Transport:
     def __init__(self):
         self.sent = []
         self.offline = False
+        self.edits = []
     async def get_me(self):
         return 123
     async def ensure_polling(self):
@@ -28,6 +29,12 @@ class Transport:
             raise TelegramError('transport_failure')
         self.sent.append(render)
         return SendReceipt(chat, len(self.sent))
+
+    async def edit(self, chat, message_id, render):
+        if self.offline:
+            raise TelegramError('transport_failure')
+        self.edits.append((message_id, render))
+        return SendReceipt(chat, message_id)
 
 
 def update(i, text, user=456):
@@ -85,7 +92,7 @@ def test_native_session_fifo_edit_review_and_delivery_retry(setup):
                     'arguments': json.dumps({'path': 'file.txt', 'old_text': 'before', 'new_text': 'after'})}}]}
         return {'text': 'second answer'}
     factory = partial(NativeRunner, provider_factory=lambda *args: Provider(name='openai', api_key='fake'), transport=provider)
-    service = TelegramService(store, transport, factory)
+    service = TelegramService(store, transport, factory, pace=0)
     async def run():
         await service.handle_update(update(1, '/nueva project'))
         sid = service.selected
@@ -121,6 +128,7 @@ def test_native_session_fifo_edit_review_and_delivery_retry(setup):
         transport.offline = False
         await service.deliver_once()
         assert not store.pending_deliveries()
+        assert transport.edits and any("Turno finalizado" in rendered.text for _, rendered in transport.edits)
         await service.stop()
     asyncio.run(run())
 
@@ -133,7 +141,7 @@ def test_cancel_and_restart_never_replay_running_turn(setup):
         async def run(self):
             entered.set()
             await asyncio.Event().wait()
-    service = TelegramService(store, transport, Runner)
+    service = TelegramService(store, transport, Runner, pace=0)
     async def run():
         await service.handle_update(update(1, '/nueva project'))
         await service.handle_update(update(2, 'first'))
@@ -145,7 +153,7 @@ def test_cancel_and_restart_never_replay_running_turn(setup):
         await service.work_once()
         assert store.queue()[1]['state'] == 'queued'
         await service.stop()
-        restarted = TelegramService(store, transport, Runner)
+        restarted = TelegramService(store, transport, Runner, pace=0)
         store.recover()
         await restarted.work_once()
         assert not restarted.active
@@ -171,7 +179,7 @@ def test_questions_rejection_native_reopen_and_divergence(setup):
             return {'tool_calls': [{'id': 'write', 'function': {'name': 'workspace_write', 'arguments': '{"path":"file.txt","content":"changed"}'}}]}
         return {'text': 'done'}
     factory = partial(NativeRunner, provider_factory=lambda *args: Provider(name='openai', api_key='fake'), transport=provider)
-    service = TelegramService(store, transport, factory)
+    service = TelegramService(store, transport, factory, pace=0)
     async def run():
         other = native_sessions(root, authority)
         outcome, sid = other.manage('state', None, '{}')
@@ -225,7 +233,7 @@ def test_two_workspaces_and_local_revocation(setup, tmp_path):
         async def run(self):
             entered.append(self.item.workspace)
             await asyncio.Event().wait()
-    service = TelegramService(store, transport, Runner)
+    service = TelegramService(store, transport, Runner, pace=0)
     async def run():
         await service.handle_update(update(1, '/nueva project'))
         await service.handle_update(update(2, 'first'))
@@ -261,7 +269,7 @@ def test_native_flow_command_while_transport_disconnected_is_not_replayed(setup)
         return {'tool_calls': [{'id': 'command', 'function': {'name': 'workspace_run', 'arguments': json.dumps({
             'argv': [sys.executable, '-c', "import pathlib,time; p=pathlib.Path('marker.txt'); p.write_text((p.read_text() if p.exists() else '')+'once'); print('tick', flush=True); time.sleep(.3)"], 'cwd': str(root), 'timeout_s': 10})}}]}
     factory = partial(NativeRunner, provider_factory=lambda *args: Provider(name='openai', api_key='fake'), transport=provider)
-    service = TelegramService(store, transport, factory)
+    service = TelegramService(store, transport, factory, pace=0)
     async def run():
         await service.handle_update(update(1, '/nueva project'))
         await service.handle_update(update(2, 'execute controlled command'))
@@ -272,7 +280,7 @@ def test_native_flow_command_while_transport_disconnected_is_not_replayed(setup)
         await wait_for(lambda: store.queue()[0]['state'] == 'completed')
         assert marker.read_text() == 'once'
         await service.stop()
-        restarted = TelegramService(store, transport, factory)
+        restarted = TelegramService(store, transport, factory, pace=0)
         store.recover()
         await restarted.work_once()
         assert not restarted.active and calls == ['provider']
@@ -283,18 +291,18 @@ def test_native_flow_command_while_transport_disconnected_is_not_replayed(setup)
 
 def test_start_foreground_lock_identity_and_stop(setup):
     store, root, authority, transport = setup
-    service = TelegramService(store, transport)
+    service = TelegramService(store, transport, pace=0)
     async def run():
         await service.start()
         assert service.running
         with pytest.raises((OSError, ValueError)):
-            await TelegramService(store, transport).start()
+            await TelegramService(store, transport, pace=0).start()
         store.set_setting('stop_requested', True)
         await wait_for(lambda: not service.running)
         await service.stop()
         class Wrong(Transport):
             async def get_me(self): return 999
         with pytest.raises(PermissionError):
-            await TelegramService(store, Wrong()).start()
+            await TelegramService(store, Wrong(), pace=0).start()
         with store.service_lock(): pass
     asyncio.run(run())

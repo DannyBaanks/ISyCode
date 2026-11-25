@@ -251,7 +251,16 @@ class TelegramStore:
         with self.db() as db:
             return [Delivery(str(row['id']), row['turn'], row['id'],
                     {**json.loads(row['payload']), 'kind': row['kind']}, row['attempts'])
-                    for row in db.execute('SELECT * FROM events WHERE delivered=0 AND retry_at<=? ORDER BY id LIMIT 100', (time.time(),))]
+                    for row in db.execute('''SELECT * FROM events e WHERE delivered=0 AND retry_at<=?
+                        AND NOT EXISTS (SELECT 1 FROM events old WHERE old.turn=e.turn AND old.id<e.id
+                        AND old.delivered=0 AND old.retry_at>?) ORDER BY id LIMIT 100''', (time.time(), time.time()))]
+
+    def progress_message(self, turn_id, before_sequence):
+        with self.db() as db:
+            row = db.execute("""SELECT message_id FROM events WHERE turn=? AND id<? AND delivered=1
+                AND message_id>0 AND kind IN ('turn.start','provider.request','provider.result','tool.start',
+                    'session.saved','turn.finish') ORDER BY id DESC LIMIT 1""", (turn_id, before_sequence)).fetchone()
+            return row[0] if row else None
 
     def ack_delivery(self, identity, telegram_message_id):
         with self.db() as db:
