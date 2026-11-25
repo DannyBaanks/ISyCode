@@ -141,7 +141,7 @@ def _looks_like_file_path(candidate: str) -> bool:
 
 def _resolve_lexical(raw_path: str, root: Path | None) -> str:
     if _WINDOWS_DRIVE_RE.match(raw_path):
-        return raw_path
+        return os.path.normpath(raw_path) if os.name == "nt" else raw_path
     if raw_path.startswith("/"):
         return os.path.normpath(raw_path)
     if root is not None:
@@ -172,15 +172,20 @@ def parse_local_file_link(href: str, *, root: Path | None = None) -> FileLink | 
             parsed = urlsplit(raw)
         except ValueError:
             return None
-        host = (parsed.hostname or "").casefold()
-        if host not in {"", "localhost"}:
+        netloc = parsed.netloc or ""
+        if len(netloc) == 2 and netloc[0].isalpha() and netloc[1] == ":":
+            # Tolerate 2-slash Windows drive URIs like file://C:/repo/main.py
+            path_part = netloc + unquote(parsed.path or "")
+        else:
+            host = (parsed.hostname or "").casefold()
+            if host not in {"", "localhost"}:
+                return None
+            path_part = unquote(parsed.path or "")
+            # Windows file:///C:/foo -> C:/foo
+            if len(path_part) >= 3 and path_part[0] == "/" and path_part[2] == ":" and path_part[1].isalpha():
+                path_part = path_part[1:]
+        if not path_part or path_part.endswith(("/", "\\")):
             return None
-        path_part = unquote(parsed.path or "")
-        if not path_part or path_part.endswith("/"):
-            return None
-        # Windows file:///C:/foo -> C:/foo
-        if len(path_part) >= 3 and path_part[0] == "/" and path_part[2] == ":" and path_part[1].isalpha():
-            path_part = path_part[1:]
         location = _parse_fragment_location(parsed.fragment)
         if location is None:
             colon = _COLON_LOC_RE.match(path_part)

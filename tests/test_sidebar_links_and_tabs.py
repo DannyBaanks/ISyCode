@@ -35,7 +35,7 @@ def test_parse_local_file_link_handles_uris_locations_and_rejects_unsafe(tmp_pat
     root = tmp_path / "repo"
     root.mkdir()
 
-    uri = parse_local_file_link(f"file://{(root / 'saludar.mb').as_posix()}#L12C4")
+    uri = parse_local_file_link(f"{(root / 'saludar.mb').as_uri()}#L12C4")
     assert uri is not None
     assert uri.path == str((root / "saludar.mb"))
     assert uri.location == SourceLocation(line=12, column=4)
@@ -59,7 +59,10 @@ def test_parse_local_file_link_handles_uris_locations_and_rejects_unsafe(tmp_pat
     assert makefile is not None and makefile.name == "Makefile"
 
     win = parse_local_file_link("file:///C:/repo/main.py#L9")
-    assert win is not None and win.path == "C:/repo/main.py" and win.location == SourceLocation(9, 1)
+    assert win is not None and win.path.replace("\\", "/") == "C:/repo/main.py" and win.location == SourceLocation(9, 1)
+
+    win_two_slash = parse_local_file_link("file://C:/repo/main.py#L9")
+    assert win_two_slash is not None and win_two_slash.path.replace("\\", "/") == "C:/repo/main.py" and win_two_slash.location == SourceLocation(9, 1)
 
     # Reject web URLs, remote file hosts, queries, control chars, trailing slash, prose
     for bad in (
@@ -203,7 +206,7 @@ def test_chat_hyperlink_opens_sidebar_tabs_jumps_to_line_and_navigates_markdown(
             # Mount an assistant turn containing clickable local file links
             app._dismiss_idle()
             chat = app.query_one(ChatArea)
-            md = f"Mira [saludar.py](file://{code_file.as_posix()}#L3) y [GUIA.md](GUIA.md)."
+            md = f"Mira [saludar.py]({code_file.as_uri()}#L3) y [GUIA.md](GUIA.md)."
             msg = SelectableText(rich_markdown(md, root=root), selection_text=md, classes="assistant-turn")
             await chat.mount(msg)
             app._record_conversation_files(md)
