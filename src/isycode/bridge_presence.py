@@ -44,6 +44,7 @@ _NAME_PREFIXES = (
     ("claude_code", "Claude"),
     ("claude", "Claude"),
     ("chatgpt", "ChatGPT"),
+    ("antigravity", "Antigravity"),
     ("codex", "Codex"),
     ("opencode", "OpenCode"),
     ("grok", "Grok"),

@@ -76,12 +76,15 @@ def _fit(text: str, width: int) -> str:
 def usage_panel(messages: list[dict[str, Any]], width: int, rate_line: str, *,
                 provider_limit_tokens: int | None = None,
                 reported_tokens: int | None = None,
-                limit_source: str = "unknown"):
-    """Three right-aligned rows for the composer: context, a fill bar, rate and tokens.
+                limit_source: str = "unknown",
+                quota_line: str = ""):
+    """Three right-aligned rows for the composer: context, a fill bar, rate/tokens (or quota).
 
     `~` before the used count marks a local estimate; `≈` before the window marks
     a window taken from the offline models.dev snapshot instead of the account.
     An unknown window draws an empty bar with `?` and is never divided by.
+    When ``quota_line`` is supplied (e.g. Antigravity 5h/weekly remaining quota),
+    it is shown cleanly on the bottom row when idle or appended as a fourth line.
     """
     from rich.text import Text
 
@@ -117,9 +120,15 @@ def usage_panel(messages: list[dict[str, Any]], width: int, rate_line: str, *,
     bar.append(tail, style=color if percent is not None else "#6b7280")
     panel.append(bar)
     panel.append("\n")
-    if len(rate_line) > width:  # keep the token count (and its +?) over the rate
-        rate_line = rate_line.split(" · ")[-1]
-    panel.append(_fit(rate_line, width), style="#9aa3ad")
+    if quota_line:
+        display_bottom = quota_line
+        if len(display_bottom) > width:
+            display_bottom = display_bottom.split(" · ")[0]
+        panel.append(_fit(display_bottom, width), style="#77d8b0")
+    else:
+        if len(rate_line) > width:  # keep the token count (and its +?) over the rate
+            rate_line = rate_line.split(" · ")[-1]
+        panel.append(_fit(rate_line, width), style="#9aa3ad")
     return panel
 
 

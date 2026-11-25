@@ -328,6 +328,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._idea_nudge_due = False
         self._idea_nudge_timer = None
         self._usage = UsageLedger()
+        self._antigravity_quota: dict[str, Any] | None = None
+        self._antigravity_quota_at: float = 0.0
         self._throughput = ThroughputMeter()
         self._presence_rows = None
         self._model_line = ""
@@ -1497,6 +1499,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         rtk_label = savings_label(self._workspace_root)
         if "~0 tok" not in rtk_label:
             text += " · " + rtk_label
+        if selected_provider_name() == "antigravity" and getattr(self, "_antigravity_quota", None):
+            from isycode.antigravity_connector import format_quota_line
+            qline = format_quota_line(self._antigravity_quota, resolved_chat_model("antigravity"))
+            if qline:
+                text += " · " + qline
         return text
 
     def _refresh_usage(self) -> None:
@@ -1506,8 +1513,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         widget = self.query_one("#usage-status", Static)
         limit, source = self._context_window()
         total = self._usage.input_tokens + self._usage.output_tokens
+        quota_line = ""
+        if selected_provider_name() == "antigravity" and getattr(self, "_antigravity_quota", None):
+            from isycode.antigravity_connector import format_quota_line
+            quota_line = format_quota_line(self._antigravity_quota, resolved_chat_model("antigravity"))
         if (total == 0 and not self._history and self._throughput.last_rate is None
-                and not self._usage.requests and not self._usage.unknown_requests):
+                and not self._usage.requests and not self._usage.unknown_requests
+                and not quota_line):
             # Nothing has run yet. Three rows of zeros are noise, not telemetry.
             # A recorded request keeps its panel even when the provider did not
             # report its counters, because an unknown count is real information.
@@ -1517,7 +1529,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._history, widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
             provider_limit_tokens=limit, limit_source=source,
-            reported_tokens=getattr(self, "_last_context_input_tokens", None)))
+            reported_tokens=getattr(self, "_last_context_input_tokens", None),
+            quota_line=quota_line))
 
     def _current_session_title(self) -> str | None:
         sid = self._active_chat_session_id
@@ -1599,6 +1612,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._throughput.measuring = False
         self._refresh_usage()
         self._save_draft()
+        if (provider.name == "antigravity"
+                and (_time.monotonic() - getattr(self, "_antigravity_quota_at", 0.0)) >= 60.0):
+            self.run_worker(self._refresh_antigravity_quota(report=False),
+                            group="antigravity-quota", exclusive=True)
         return response
 
 

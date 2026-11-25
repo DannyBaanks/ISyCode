@@ -13,6 +13,8 @@ from rich.cells import cell_len
 
 import os
 import asyncio
+import time as _time
+from pathlib import Path
 from textual.css.query import NoMatches
 from isycode.config import (
     ConfigurationError,
@@ -136,6 +138,12 @@ class ProviderMixin:
                 tr("OpenAI & ChatGPT · choose connection method…"),
                 "provider_auth_methods", "openai",
                 tr("Switch between API key and ChatGPT subscription, or disconnect."),
+                translate=False))
+        if active == "antigravity":
+            entries.append(self._entry(
+                tr("Google Antigravity · sign-in & 5h/weekly quota…"),
+                "antigravity_auth_methods", "antigravity",
+                tr("Sign in with Google OAuth, check 5h/weekly subscription quota, or disconnect."),
                 translate=False))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
@@ -327,6 +335,130 @@ class ProviderMixin:
             if tasks: await asyncio.gather(*tasks, return_exceptions=True)
             if owner is not None: await owner.cancel()
 
+    def _open_antigravity_auth_methods(self) -> None:
+        from isycode.antigravity_connector import format_quota_line
+        qline = format_quota_line(getattr(self, "_antigravity_quota", None),
+                                  resolved_chat_model("antigravity"))
+        quota_detail = qline or tr("Queries official agy /usage inside ISyCode's isolated home (requires host grant).")
+        self._render_menu("antigravity_auth_methods", "Google Antigravity · OAuth subscription", [
+            self._entry("Sign in with Google Antigravity · browser OAuth", "antigravity_auth_browser"),
+            self._entry("Use saved Antigravity sign-in · checked on request", "antigravity_auth_saved"),
+            self._entry("Check 5h & weekly subscription quota", "antigravity_quota", "", quota_detail, translate=False),
+            self._entry("Disconnect Antigravity account…", "antigravity_auth_logout"),
+            self._entry("Uses official agy ACP in an isolated home. ISyCode never reads OAuth tokens; tools stay behind IsySentinel.", "info"),
+        ])
+
+    async def _connect_antigravity(self, *, logout: bool = False) -> None:
+        from isycode.provider_auth import ANTIGRAVITY_AUTH_HOSTS, ProviderAuthOwner
+        from isycode.provider_auth_screens import SubscriptionLoginScreen
+        owner = None
+        tasks = []
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            owner = ProviderAuthOwner(
+                self._workspace_root, authority, self._action_approvals, provider="antigravity")
+            request = owner.request("logout" if logout else "login", "browser")
+            identity = request.parameters["connector"]
+            if not await self._await_screen(ConfirmScreen(
+                    "Disconnect Google Antigravity?" if logout else "Connect Google Antigravity subscription?",
+                    tr("Runs official agy ACP at {executable}. Private isolated home: {home}. Contacts accounts.google.com and daily-cloudcode-pa.googleapis.com. ISyCode never extracts or copies OAuth tokens, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply.",
+                       executable=identity["executable"], home=identity["home"]),
+                    "Disconnect" if logout else "Connect Antigravity")):
+                return
+            authority.set_grant("provider.authenticate", enabled=True, targets=["antigravity"],
+                                executables=[owner.executable], network_hosts=list(ANTIGRAVITY_AUTH_HOSTS))
+            if not logout:
+                grant = authority.effective_policy().get("grants", {}).get("provider.request", {})
+                hosts = sorted(set(grant.get("network_hosts", ())) | set(ANTIGRAVITY_AUTH_HOSTS))
+                authority.set_grant("provider.request", enabled=True, network_hosts=hosts)
+            outcome, challenge = await owner.begin(request, self._action_approvals.issue(request))
+            if outcome.decision != "ALLOW":
+                self._append("  " + tr("Antigravity sign-in blocked · {value}", value=outcome.reason[:160]), YELLOW)
+                return
+            if logout:
+                self._antigravity_quota = None
+                self._refresh_usage()
+                self._append("  " + tr("Antigravity account disconnected. API keys are unchanged."), GREEN)
+                return
+            if challenge and challenge.get("already_authenticated"):
+                outcome, account = await owner.finish()
+            else:
+                screen = SubscriptionLoginScreen(challenge)
+                visible = asyncio.create_task(self._await_screen(screen)); tasks.append(visible)
+                await screen.ready.wait()
+                finished = asyncio.create_task(owner.finish()); tasks.append(finished)
+                done, _ = await asyncio.wait({visible, finished}, return_when=asyncio.FIRST_COMPLETED)
+                if finished not in done:
+                    self._append("  " + tr("Antigravity sign-in cancelled."), MUTED)
+                    return
+                outcome, account = await finished
+                if screen.is_mounted:
+                    screen.dismiss(None)
+                await visible
+            if outcome.decision == "ALLOW" and account:
+                self._append("  " + tr("Antigravity sign-in verified · plan {plan} · 5h & weekly limits apply",
+                                       plan=account["plan"]), GREEN)
+                self._select_provider("antigravity", "auto")
+                self.run_worker(self._refresh_antigravity_quota(report=False),
+                                group="antigravity-quota", exclusive=True)
+                self._open_scoped_models("antigravity")
+            else:
+                self._append("  " + tr("Antigravity sign-in not completed · {value}", value=outcome.reason[:160]), YELLOW)
+        except (OSError, ValueError, ProviderError, WorkspaceAuthorityError) as exc:
+            self._append("  " + tr("Antigravity connection unavailable ({name}). Install official agy CLI and check Authority grants.",
+                                   name=type(exc).__name__), YELLOW)
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            if owner is not None:
+                await owner.cancel()
+
+    async def _refresh_antigravity_quota(self, *, report: bool = False) -> dict | None:
+        """Query 5h and weekly Antigravity subscription quota through ProviderNetworkOwner."""
+        from isycode.antigravity_connector import fetch_antigravity_quota, format_reset_countdown
+        try:
+            provider = Provider(name="antigravity", model=resolved_chat_model("antigravity"))
+            identity = provider.connector_identity
+            owner = ProviderNetworkOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            quota, outcome = await owner.execute(
+                provider,
+                {"operation": "quota.read", "provider": "antigravity", "model": provider.model},
+                lambda: fetch_antigravity_quota(identity["executable"], Path(identity["home"])),
+            )
+        except (OSError, ValueError, ProviderError, WorkspaceAuthorityError) as exc:
+            if report:
+                self._append("  " + tr("Antigravity quota unavailable ({name}).", name=type(exc).__name__), YELLOW)
+            return None
+        if outcome.decision != "ALLOW":
+            if report:
+                self._append("  " + tr("Antigravity quota check blocked · {value}",
+                                       value=(outcome.reason or outcome.decision)[:160]), YELLOW)
+            return None
+        self._antigravity_quota_at = _time.monotonic()
+        if not isinstance(quota, dict) or not quota.get("ok"):
+            if report:
+                self._append("  " + tr("Antigravity quota could not be read. Verify your Google sign-in first."), YELLOW)
+            return None
+        self._antigravity_quota = quota
+        self._refresh_usage()
+        if report:
+            self._append(tr("Google Antigravity · subscription quota"), CYAN)
+            groups: dict[str, list[str]] = {}
+            for bucket in quota.get("buckets", ()):
+                gname = str(bucket.get("group") or bucket.get("family") or "Models")
+                win = "5h" if bucket.get("window") == "5h" else "7d" if bucket.get("window") == "weekly" else str(bucket.get("window") or "")
+                pct = round(float(bucket.get("pct", 0.0)))
+                cd = format_reset_countdown(str(bucket.get("reset_time", "")))
+                piece = f"{win} {pct}% ({cd})" if cd else f"{win} {pct}%"
+                groups.setdefault(gname, []).append(piece)
+            for gname, pieces in groups.items():
+                self._append(f"  {gname}: {' · '.join(pieces)}", MUTED)
+        return quota
+
     def _open_credentials_menu(self) -> None:
         selected = selected_provider_name()
         entries = []
@@ -334,7 +466,7 @@ class ProviderMixin:
         # added before the provider is chosen, which is how a new machine starts.
         keyed = [key for _, key, _, _ in PROVIDER_SCREEN
                  if key in PRESETS and PRESETS[key].get("key_required", True)
-                 and PRESETS[key].get("api") != "codex"]
+                 and PRESETS[key].get("api") not in {"codex", "antigravity"}]
         keyed.sort(key=lambda key: key != selected)
         for service in keyed:
             state = provider_credential_state(service)
@@ -913,6 +1045,14 @@ class ProviderMixin:
         if value in {"openai", "chatgpt"}:
             self._open_auth_methods()
             return
+        if value == "antigravity":
+            if active == "antigravity":
+                self._open_scoped_models("antigravity")
+                self.run_worker(self._refresh_antigravity_quota(report=False),
+                                group="antigravity-quota", exclusive=True)
+                return
+            self._open_antigravity_auth_methods()
+            return
         if value == "xai":
             if active == "xai":
                 self._open_models_with_key("xai")
@@ -1019,6 +1159,30 @@ class ProviderMixin:
     def _menu_auth_saved(self, entry: dict[str, str | bool]) -> None:
         self._select_provider("chatgpt")
         self._open_scoped_models("chatgpt")
+        return
+
+    def _menu_antigravity_auth_methods(self, entry: dict[str, str | bool]) -> None:
+        self._open_antigravity_auth_methods()
+        return
+
+    def _menu_antigravity_auth_browser(self, entry: dict[str, str | bool]) -> None:
+        kind = entry["kind"]
+        self._close_menu()
+        self.run_worker(self._connect_antigravity(logout=kind == "antigravity_auth_logout"),
+                        group="provider-login", exclusive=True)
+        return
+
+    def _menu_antigravity_auth_saved(self, entry: dict[str, str | bool]) -> None:
+        self._select_provider("antigravity")
+        self._open_scoped_models("antigravity")
+        self.run_worker(self._refresh_antigravity_quota(report=False),
+                        group="antigravity-quota", exclusive=True)
+        return
+
+    def _menu_antigravity_quota(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self.run_worker(self._refresh_antigravity_quota(report=True),
+                        group="antigravity-quota", exclusive=True)
         return
 
     def _menu_providers_open(self, entry: dict[str, str | bool]) -> None:

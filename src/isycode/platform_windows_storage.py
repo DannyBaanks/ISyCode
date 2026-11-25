@@ -90,30 +90,25 @@ class WindowsStorage:
             security.SDDL_REVISION_1)
 
     def lock(self, fd: int, *, blocking: bool = True) -> None:
-        # Lock the same byte even if the caller has already read/appended.
-        position = os.lseek(fd, 0, os.SEEK_CUR)
-        try:
-            while True:
-                os.lseek(fd, 0, os.SEEK_SET)
-                try:
-                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
-                    return
-                except OSError as exc:
-                    if exc.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
-                        raise
-                    if not blocking:
-                        raise BlockingIOError(errno.EAGAIN, 'private state is in use') from exc
-                    time.sleep(0.05)
-        finally:
-            os.lseek(fd, position, os.SEEK_SET)
+        # Use the native byte-range API, not the CRT's process-wide emulation.
+        # The latter can deadlock a concurrent open/fsync against a waiter.
+        handle = msvcrt.get_osfhandle(fd)
+        flags = win32con.LOCKFILE_EXCLUSIVE_LOCK
+        if not blocking:
+            flags |= win32con.LOCKFILE_FAIL_IMMEDIATELY
+        while True:
+            try:
+                win32file.LockFileEx(handle, flags, 0, 1, win32file.OVERLAPPED())
+                return
+            except pywintypes.error as exc:
+                if exc.winerror != 33:  # ERROR_LOCK_VIOLATION
+                    raise OSError(exc.winerror, str(exc)) from exc
+                if not blocking:
+                    raise BlockingIOError(errno.EAGAIN, 'private state is in use') from exc
+                time.sleep(0.05)
 
     def unlock(self, fd: int) -> None:
-        position = os.lseek(fd, 0, os.SEEK_CUR)
-        try:
-            os.lseek(fd, 0, os.SEEK_SET)
-            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-        finally:
-            os.lseek(fd, position, os.SEEK_SET)
+        win32file.UnlockFileEx(msvcrt.get_osfhandle(fd), 0, 1, win32file.OVERLAPPED())
 
     def protect(self, path: Path) -> None:
         if not self._real_chain(path):

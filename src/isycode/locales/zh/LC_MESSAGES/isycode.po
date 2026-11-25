@@ -6626,3 +6626,81 @@ msgstr "分享给模型"
 
 msgid "Trust folder"
 msgstr "信任文件夹"
+
+msgid "Antigravity account disconnected. API keys are unchanged."
+msgstr "Antigravity 账户已断开连接。API 密钥保持不变。"
+
+msgid "Antigravity connection unavailable ({name}). Install official agy CLI and check Authority grants."
+msgstr "Antigravity 连接不可用（{name}）。请安装官方 agy CLI 并检查 Authority 授权。"
+
+msgid "Antigravity quota check blocked · {value}"
+msgstr "Antigravity 配额查询已阻止 · {value}"
+
+msgid "Antigravity quota could not be read. Verify your Google sign-in first."
+msgstr "无法读取 Antigravity 配额。请先验证你的 Google 登录状态。"
+
+msgid "Antigravity quota unavailable ({name})."
+msgstr "Antigravity 配额不可用（{name}）。"
+
+msgid "Antigravity sign-in blocked · {value}"
+msgstr "Antigravity 登录已阻止 · {value}"
+
+msgid "Antigravity sign-in cancelled."
+msgstr "已取消 Antigravity 登录。"
+
+msgid "Antigravity sign-in not completed · {value}"
+msgstr "Antigravity 登录未完成 · {value}"
+
+msgid "Antigravity sign-in verified · plan {plan} · 5h & weekly limits apply"
+msgstr "Antigravity 登录已验证 · 方案 {plan} · 适用 5 小时和每周配额限制"
+
+msgid "Google Antigravity · sign-in & 5h/weekly quota…"
+msgstr "Google Antigravity · 登录与 5 小时/每周配额…"
+
+msgid "Google Antigravity · subscription quota"
+msgstr "Google Antigravity · 订阅配额"
+
+msgid "Queries official agy /usage inside ISyCode's isolated home (requires host grant)."
+msgstr "在 ISyCode 的隔离主目录中查询官方 agy /usage（需要主机授权）。"
+
+msgid "Runs official agy ACP at {executable}. Private isolated home: {home}. Contacts accounts.google.com and daily-cloudcode-pa.googleapis.com. ISyCode never extracts or copies OAuth tokens, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply."
+msgstr "在 {executable} 运行官方 agy ACP。私密隔离主目录：{home}。将连接 accounts.google.com 和 daily-cloudcode-pa.googleapis.com。ISyCode 绝不提取或复制 OAuth 令牌，所有工作区工具仍受 IsySentinel 保护。适用方案配额（5 小时和每周）。"
+
+msgid "Sign in with Google Antigravity"
+msgstr "使用 Google Antigravity 登录"
+
+msgid "Sign in with Google OAuth, check 5h/weekly subscription quota, or disconnect."
+msgstr "使用 Google OAuth 登录、查看 5 小时/每周订阅配额或断开连接。"
+
+msgid "Subscription 5h & weekly quota is available when Google Antigravity is selected."
+msgstr "仅在选择 Google Antigravity 时可查看 5 小时与每周订阅配额。"
+
+msgid "Google Antigravity · OAuth subscription"
+msgstr "Google Antigravity · OAuth 订阅"
+
+msgid "Sign in with Google Antigravity · browser OAuth"
+msgstr "使用 Google Antigravity 登录 · 浏览器 OAuth"
+
+msgid "Use saved Antigravity sign-in · checked on request"
+msgstr "使用已保存的 Antigravity 登录 · 请求时验证"
+
+msgid "Check 5h & weekly subscription quota"
+msgstr "查看 5 小时和每周订阅配额"
+
+msgid "Disconnect Antigravity account…"
+msgstr "断开 Antigravity 账户…"
+
+msgid "Uses official agy ACP in an isolated home. ISyCode never reads OAuth tokens; tools stay behind IsySentinel."
+msgstr "在隔离主目录中使用官方 agy ACP。ISyCode 绝不读取 OAuth 令牌；所有工具仍由 IsySentinel 管控。"
+
+msgid "Google OAuth subscription · Gemini & plan models"
+msgstr "Google OAuth 订阅 · Gemini 与方案模型"
+
+msgid "Disconnect Google Antigravity?"
+msgstr "断开 Google Antigravity 连接？"
+
+msgid "Connect Google Antigravity subscription?"
+msgstr "连接 Google Antigravity 订阅？"
+
+msgid "Connect Antigravity"
+msgstr "连接 Antigravity"

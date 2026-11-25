@@ -13,6 +13,9 @@ from isycode.workspace_setup import state_root
 
 AUTH_HOSTS = ('auth.openai.com', 'chatgpt.com')
 CHATGPT_ENDPOINT = 'https://chatgpt.com/backend-api/codex'
+ANTIGRAVITY_AUTH_HOSTS = ('accounts.google.com', 'daily-cloudcode-pa.googleapis.com')
+ANTIGRAVITY_ENDPOINT = 'https://daily-cloudcode-pa.googleapis.com'
+SUBSCRIPTION_PROVIDERS = ('chatgpt', 'antigravity')
 
 
 def auth_methods(name: str) -> list[dict]:
@@ -23,6 +26,8 @@ def auth_methods(name: str) -> list[dict]:
         return [dict(id='api_key', label='OpenAI API key', billing='OpenAI API quota'),
                 dict(id='browser', label='ChatGPT subscription · browser', billing='ChatGPT plan limits'),
                 dict(id='device', label='ChatGPT subscription · device code', billing='ChatGPT plan limits')]
+    if name == 'antigravity':
+        return [dict(id='browser', label='Google Antigravity · browser OAuth', billing='Antigravity subscription limits')]
     if not PRESETS[name].get('key_required', True):
         return [dict(id='local', label='Local endpoint', billing='Local compute')]
     return [dict(id='api_key', label='API key', billing='Provider API quota')]
@@ -30,6 +35,26 @@ def auth_methods(name: str) -> list[dict]:
 
 def connector_home() -> Path:
     return (state_root() / 'accounts' / 'chatgpt-codex').absolute()
+
+
+def antigravity_home() -> Path:
+    return (state_root() / 'accounts' / 'antigravity').absolute()
+
+
+def subscription_home(provider: str) -> Path:
+    if provider == 'chatgpt':
+        return connector_home()
+    if provider == 'antigravity':
+        return antigravity_home()
+    raise ValueError(f'Unsupported subscription provider: {provider}')
+
+
+def subscription_auth_hosts(provider: str) -> tuple[str, ...]:
+    if provider == 'chatgpt':
+        return AUTH_HOSTS
+    if provider == 'antigravity':
+        return ANTIGRAVITY_AUTH_HOSTS
+    raise ValueError(f'Unsupported subscription provider: {provider}')
 
 
 def codex_executable() -> str:
@@ -42,6 +67,16 @@ def codex_executable() -> str:
     return str(path)
 
 
+def antigravity_executable() -> str:
+    candidate = os.environ.get('ISYCODE_AGY_EXECUTABLE') or shutil.which('agy')
+    if not candidate:
+        raise ValueError('Official Antigravity CLI (agy) is not installed')
+    path = Path(candidate).expanduser().resolve(strict=True)
+    if not path.is_file() or not os.access(path, os.X_OK):
+        raise ValueError('Official Antigravity CLI (agy) is not executable')
+    return str(path)
+
+
 def connector_identity(executable: str | None = None) -> dict:
     return {'auth_method': 'chatgpt', 'executable': executable or codex_executable(),
             'home': str(connector_home()), 'credential_store': 'keyring',
@@ -49,18 +84,44 @@ def connector_identity(executable: str | None = None) -> dict:
             'hosts': list(AUTH_HOSTS)}
 
 
-def connector_scope_matches(grant: dict, identity: dict) -> bool:
-    return (grant.get('enabled') is True and 'chatgpt' in grant.get('targets', [])
+def antigravity_identity(executable: str | None = None) -> dict:
+    return {'auth_method': 'antigravity', 'executable': executable or antigravity_executable(),
+            'home': str(antigravity_home()), 'credential_store': 'official-cli',
+            'environment_access': False, 'protocol': 'antigravity-acp-v1',
+            'hosts': list(ANTIGRAVITY_AUTH_HOSTS)}
+
+
+def subscription_identity(provider: str, executable: str | None = None) -> dict:
+    if provider == 'chatgpt':
+        return connector_identity(executable)
+    if provider == 'antigravity':
+        return antigravity_identity(executable)
+    raise ValueError(f'Unsupported subscription provider: {provider}')
+
+
+def connector_scope_matches(grant: dict, identity: dict, *, target: str | None = None) -> bool:
+    provider = target or identity.get('auth_method') or 'chatgpt'
+    hosts = subscription_auth_hosts(provider)
+    return (grant.get('enabled') is True and provider in grant.get('targets', [])
             and identity.get('executable') in grant.get('executables', [])
-            and set(AUTH_HOSTS).issubset(grant.get('network_hosts', [])))
+            and set(hosts).issubset(grant.get('network_hosts', [])))
 
 
 class ProviderAuthOwner:
     """Manage only an official connector login, with no token reads or API fallback."""
-    def __init__(self, root, authority, approvals, *, executable=None, connector_factory=None):
+    def __init__(self, root, authority, approvals, *, executable=None, connector_factory=None,
+                 provider: str = 'chatgpt'):
+        if provider not in SUBSCRIPTION_PROVIDERS:
+            raise ValueError('Unsupported subscription provider')
         self.root = Path(root).resolve(strict=True)
         self.authority, self.approvals = authority, approvals
-        self.executable = executable or codex_executable()
+        self.provider = provider
+        if executable is not None:
+            self.executable = executable
+        elif provider == 'antigravity':
+            self.executable = antigravity_executable()
+        else:
+            self.executable = codex_executable()
         self.connector_factory = connector_factory
         self.gate = ProductActionGate(self.root, authority, owner_id='provider_auth')
         self.connector = None
@@ -68,22 +129,24 @@ class ProviderAuthOwner:
         self.challenge = None
 
     def request(self, operation: str, method: str = 'device') -> ActionRequest:
-        if operation not in {'login', 'logout'} or method not in {'browser', 'device'}:
+        allowed_methods = {'browser'} if self.provider == 'antigravity' else {'browser', 'device'}
+        if operation not in {'login', 'logout'} or method not in allowed_methods:
             raise ValueError('Unsupported authentication operation')
-        return ActionRequest('provider.authenticate', self.root, 'chatgpt',
+        return ActionRequest('provider.authenticate', self.root, self.provider,
                              {'operation': operation, 'method': method,
-                              'connector': connector_identity(self.executable)},
+                              'connector': subscription_identity(self.provider, self.executable)},
                              execution_owner='provider_auth')
 
     def _scope_valid(self) -> bool:
         try:
             grant = self.authority.effective_policy()['grants'].get('provider.authenticate', {})
-            return connector_scope_matches(grant, connector_identity(self.executable))
+            return connector_scope_matches(
+                grant, subscription_identity(self.provider, self.executable), target=self.provider)
         except (OSError, ValueError):
             return False
 
     def _result(self, request, status, decision='ALLOW'):
-        result = f'chatgpt:{status}'
+        result = f'{self.provider}:{status}'
         if decision != 'ALLOW':
             return ActionOutcome('Subscription account unchanged.', decision, None, status)
         receipt = ActionReceipt('rcpt_' + os.urandom(8).hex(), request.action_id, request.digest,
@@ -121,13 +184,19 @@ class ProviderAuthOwner:
             reason = '; '.join(check.reason for check in decision.checks if not check.passed)
             return ActionOutcome('Authentication denied.', 'DENY', None, reason), None
         await self.cancel()
+        home = subscription_home(self.provider)
         if self.connector_factory is None:
-            from isycode.codex_connector import CodexConnector
-            factory = CodexConnector
+            if self.provider == 'antigravity':
+                from isycode.antigravity_connector import AntigravityConnector
+                self.connector = AntigravityConnector(
+                    self.executable, home, timeout_s=300,
+                    allow_browser_capture=(request.parameters['operation'] == 'login'))
+            else:
+                from isycode.codex_connector import CodexConnector
+                self.connector = CodexConnector(self.executable, home, timeout_s=300)
         else:
-            factory = self.connector_factory
+            self.connector = self.connector_factory(self.executable, home, timeout_s=300)
         self.active_request = request
-        self.connector = factory(self.executable, connector_home(), timeout_s=300)
         try:
             await self._while_granted(self.connector.__aenter__())
             if request.parameters['operation'] == 'logout':
@@ -173,7 +242,7 @@ class ProviderAuthOwner:
             account = await connector.account()
             if not self._scope_valid():
                 return self._result(request, 'connector grant revoked', 'DENY'), None
-            if not account.get('authenticated') or account.get('method') != 'chatgpt':
+            if not account.get('authenticated') or account.get('method') != self.provider:
                 return self._result(request, 'subscription login not established', 'ERROR'), None
             return self._result(request, 'signed-in'), account
         except asyncio.CancelledError:
