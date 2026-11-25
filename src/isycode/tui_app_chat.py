@@ -57,6 +57,15 @@ def _recovery_label(kind: str) -> str:
             "TIMEOUT": "Provider timed out", "PROVIDER": "Provider error",
             "RATE_LIMIT": "Provider rate limited"}.get(kind, "Provider failure")
 from isycode.agent_loop import compact_turn, split_history, summary_messages, summary_system_message, total_chars
+from isycode.opencode_compaction import (
+    KEEP_RECENT_TOKENS,
+    NUDGE_PROMPT,
+    SHRINK_STEPS,
+    has_template_headings,
+    prune_tool_outputs,
+    split_conversation_tokens,
+    strip_checkpoint_wrappers,
+)
 from isycode.continuity_capsule import (
     MIN_SOFT_LIMIT_TOKENS,
     build_capsule,
@@ -118,38 +127,38 @@ CONTENT_PAINT_INTERVAL_S = 1 / 30
 class ChatMixin:
     async def _summarize_older(self, provider, owner, older: list[dict],
                                recent: list[dict], instructions: str = "", *,
-                               context_limit: int | None = None) -> bool:
-        """Replace ``older`` history with model-written notes sent through the provider owner.
+                               context_limit: int | None = None,
+                               recent_context: str = "",
+                               enforce_template: bool = False) -> bool:
+        """Replace ``older`` history with an OpenCode v2 structured checkpoint via the provider owner.
 
-        Shrinks oversized summary inputs progressively and learns any explicit context
-        limit reported by the inference engine so compaction itself cannot deadlock.
+        Flattens exchanges (including tool calls and truncated tool results), preserves
+        the prior checkpoint at the front, drops only whole oldest exchanges across
+        ``(1.0, 0.7, 0.5, 0.35)`` on context overflow while learning any explicit window
+        limit, and issues at most one corrective nudge if the model returns empty text,
+        attempts tool calls, or (when ``enforce_template=True``) omits the template headings.
         """
         self._append("  " + tr("Compacting · summarizing {len} earlier messages to free up context", len=len(older)),
                      MUTED)
         eff_limit = context_limit
         if eff_limit is None:
             eff_limit, _ = model_context_limit(provider.name, provider.model)
-        shrink_steps = (1.0, 0.7, 0.5, 0.35)
+        shrink_steps = (1.0, *SHRINK_STEPS)
         max_input_chars = max(12_000, int((eff_limit or 128_000) * 3 * 0.65))
         response, outcome, reason = None, None, ""
-        base_chars = max(1, total_chars(older))
+        base_chars = max(1, total_chars(older) + len(self._conversation_summary))
+        clean_instructions = (instructions or "")[:4000]
+        last_summary_request: list[dict[str, str]] | None = None
 
         for attempt, factor in enumerate(shrink_steps):
             target_chars = max(8_000, min(max_input_chars, int(base_chars * factor)))
-            slice_older = list(older)
-            omitted = 0
-            while len(slice_older) > 1 and total_chars(slice_older) > target_chars:
-                slice_older.pop(0)
-                omitted += 1
-            if total_chars(slice_older) > target_chars and slice_older:
-                clipped = dict(slice_older[0])
-                content = str(clipped.get("content") or "")
-                if len(content) > target_chars:
-                    clipped["content"] = content[-target_chars:]
-                slice_older = [clipped]
-            note = (f"[{omitted} oldest messages omitted to fit compaction window]\n" + instructions).strip() if omitted else instructions
             summary_request = summary_messages(
-                slice_older, self._conversation_summary, instructions=note[:4000])
+                older,
+                self._conversation_summary,
+                instructions=clean_instructions,
+                target_chars=target_chars,
+            )
+            last_summary_request = summary_request
 
             async def send(req=summary_request):
                 return await self._complete_accounted_chat(provider, req, max_tokens=None)
@@ -173,41 +182,108 @@ class ChatMixin:
                         if learned:
                             max_input_chars = max(8_000, int(learned * 3 * 0.60))
                     if attempt + 1 < len(shrink_steps):
-                        base_chars = min(base_chars, total_chars(slice_older))
+                        base_chars = min(base_chars, max(1, len(summary_request[1]["content"])))
                         continue
                 break
             else:
                 reason = outcome.reason if outcome is not None else ""
+                if (outcome is not None and outcome.decision == "ALLOW"
+                        and isinstance(response, dict) and last_summary_request is not None):
+                    raw_text = (response.get("text") or "").strip()
+                    called_tools = bool(response.get("tool_calls"))
+                    needs_nudge = (
+                        (not raw_text)
+                        or called_tools
+                        or (enforce_template and not has_template_headings(raw_text))
+                    )
+                    if needs_nudge:
+                        nudge_request = [
+                            *last_summary_request,
+                            {"role": "assistant", "content": raw_text},
+                            {"role": "user", "content": NUDGE_PROMPT},
+                        ]
+
+                        async def send_nudge(req=nudge_request):
+                            return await self._complete_accounted_chat(provider, req, max_tokens=None)
+
+                        try:
+                            nudge_resp, nudge_outcome = await owner.execute(provider, {
+                                "operation": "chat.summary", "messages": nudge_request,
+                                "max_tokens": None,
+                                "token_limit_field": provider.token_limit_field,
+                                "reasoning_effort": provider.reasoning_effort,
+                                "temperature_supported": provider.temperature_supported, "tools": None,
+                            }, send_nudge)
+                        except (ProviderError, StreamError, OSError):
+                            nudge_resp, nudge_outcome = None, None
+                        if (nudge_outcome is not None and nudge_outcome.decision == "ALLOW"
+                                and isinstance(nudge_resp, dict)
+                                and not nudge_resp.get("tool_calls")
+                                and (nudge_resp.get("text") or "").strip()):
+                            response, outcome = nudge_resp, nudge_outcome
+                            reason = outcome.reason
+                        elif called_tools:
+                            response = {"text": ""}
+                            reason = "model attempted tool calls during compaction"
                 break
         self._save_draft()
-        summary = (response.get("text") or "").strip() if isinstance(response, dict) else ""
+        summary = strip_checkpoint_wrappers((response.get("text") or "").strip()) if isinstance(response, dict) else ""
         if outcome is None or outcome.decision != "ALLOW" or not summary:
             # Keep working: the older messages are simply not sent this turn.
             self._append("  " + tr("Compaction skipped · {value}; earlier messages are left out of this request", value=reason[:160] or tr("no summary returned")), YELLOW)
             return False
         self._conversation_summary = sanitize_historical_text(summary)
+        self._conversation_recent_context = sanitize_historical_text(recent_context) if recent_context else ""
         self._save_draft()
-        self._history[:len(older)] = []
+        if older and len(older) <= len(self._history) and all(
+            self._history[idx].get("role") == older[idx].get("role")
+            and self._history[idx].get("content") == older[idx].get("content")
+            for idx in range(len(older))
+        ):
+            self._history[:len(older)] = []
         self._append("  " + tr("Compacted · earlier messages summarized; the saved conversation keeps the full transcript"), MUTED)
         return True
 
     async def _compact_conversation(self, instructions: str = "") -> None:
-        """/compact: summarize everything except the latest exchange now."""
+        """/compact: summarize older exchanges using OpenCode v2 token-budgeted compaction."""
         if self._loop_task and self._loop_task is not asyncio.current_task() \
                 and not self._loop_task.done():
             self._append("  " + tr("Still working · finish or cancel the current reply first."), YELLOW)
             return
-        older, recent = split_history(self._history, budget=0)
+        older, recent, recent_text = split_conversation_tokens(
+            self._history,
+            keep_tokens=KEEP_RECENT_TOKENS,
+            previous_summary=self._conversation_summary,
+        )
         if not older:
             self._append("  " + tr("Nothing to compact yet."), MUTED)
             return
         try:
             provider = self._compaction_provider()
+            if not provider.configured():
+                active_name = selected_provider_name()
+                provider = Provider(
+                    name=active_name,
+                    model=resolved_chat_model(active_name),
+                    api_key=load_provider_key(active_name) or None,
+                )
         except ProviderError as exc:
             self._append(f"  {self._provider_failure(exc, 'Compaction')}", RED)
             return
         owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
-        await self._summarize_older(provider, owner, older, recent, instructions)
+        # When recent messages remain in self._history, they are already sent verbatim
+        # right after the checkpoint; only attach <recent-context> when all exchanges
+        # were folded into the checkpoint.
+        recent_snapshot = recent_text if not recent else ""
+        await self._summarize_older(
+            provider,
+            owner,
+            older,
+            recent,
+            instructions,
+            recent_context=recent_snapshot,
+            enforce_template=True,
+        )
 
     @staticmethod
     def _compaction_provider() -> Provider:
@@ -254,6 +330,19 @@ class ChatMixin:
 
         head = list(messages[:turn_start])
         turn = list(messages[turn_start:])
+        pruned_outputs_turn, pruned_count = prune_tool_outputs(turn, keep_recent=2)
+        if pruned_count:
+            candidate = head + pruned_outputs_turn
+            if self._project_request_tokens(provider, candidate, chat_tools) < ceiling:
+                self._last_context_input_tokens = None
+                self._last_request_chars = None
+                self._append(
+                    f"  Context trimmed · {pruned_count} older tool result{'s' if pruned_count != 1 else ''} "
+                    "truncated before reaching the model limit (already executed, not re-run)", MUTED)
+                return candidate, turn_start, True
+            turn = pruned_outputs_turn
+            messages = candidate
+
         turn_budget = max(12_000, int(ceiling * 2.5) - total_chars(head))
         pruned_turn, elided = compact_turn(turn, budget=turn_budget, keep_recent=2)
         if elided:
@@ -268,8 +357,9 @@ class ChatMixin:
             messages = candidate
 
         earlier = [message for message in messages[:turn_start] if message.get("role") != "system"]
+        full_earlier = list(context_plan.get("older", [])) + earlier
         summarized = False
-        if earlier:
+        if full_earlier:
             try:
                 compact_provider = self._compaction_provider()
             except ProviderError:
@@ -277,15 +367,20 @@ class ChatMixin:
             if (compact_provider is not None and compact_provider.name == provider.name
                     and compact_provider.configured()):
                 summarized = await self._summarize_older(
-                    compact_provider, owner, earlier, [], context_limit=limit)
+                    compact_provider, owner, full_earlier, [], context_limit=limit)
 
         budget = max(12_000, int(ceiling * 2.5))
         if summarized and self._conversation_summary:
+            if isinstance(context_plan, dict) and "older" in context_plan:
+                context_plan["older"] = []
             systems = [dict(message) for message in messages[:turn_start]
                        if message.get("role") == "system" and not is_capsule(message)
                        and not str(message.get("content", "")).startswith("Notes summarizing the earlier")
                        and not str(message.get("content", "")).startswith("Untrusted historical tool results")]
-            new_head = systems + [summary_system_message(self._conversation_summary)]
+            new_head = systems + [summary_system_message(
+                self._conversation_summary,
+                recent_context=getattr(self, "_conversation_recent_context", ""),
+            )]
             turn_part = [dict(message) for message in messages[turn_start:]]
             turn_part, _ = compact_turn(turn_part, budget=max(12_000, budget - total_chars(new_head)), keep_recent=2)
             new_messages = new_head + turn_part
@@ -1108,7 +1203,10 @@ class ChatMixin:
             elif self._conversation_summary:
                 leading = next((index for index, message in enumerate(messages)
                                 if message.get("role") != "system"), len(messages))
-                messages.insert(leading, summary_system_message(self._conversation_summary))
+                messages.insert(leading, summary_system_message(
+                    self._conversation_summary,
+                    recent_context=getattr(self, "_conversation_recent_context", ""),
+                ))
             if notes:
                 leading = next((index for index, message in enumerate(messages)
                                 if message.get("role") != "system"), len(messages))

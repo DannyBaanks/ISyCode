@@ -30,6 +30,7 @@ class ConversationLane:
         self.history: list = []
         self.tool_history: list = []
         self.conversation_summary = ""
+        self.conversation_recent_context = ""
         self.usage = UsageLedger()
         self.last_context_input_tokens = None
         self.throughput = ThroughputMeter()
@@ -84,6 +85,7 @@ LANE_FIELDS = (
     ("_history", "history"),
     ("_tool_history", "tool_history"),
     ("_conversation_summary", "conversation_summary"),
+    ("_conversation_recent_context", "conversation_recent_context"),
     ("_usage", "usage"),
     ("_last_context_input_tokens", "last_context_input_tokens"),
     ("_throughput", "throughput"),

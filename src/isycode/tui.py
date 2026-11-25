@@ -336,6 +336,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._model_line_style = MUTED
         # Model-written notes replacing history that no longer fits the budget.
         self._conversation_summary = ""
+        self._conversation_recent_context = ""
         self._chat_turn_task: asyncio.Task | None = None
         self._pending_steering: list[str] = []
         self._queued_messages: list[str] = []
