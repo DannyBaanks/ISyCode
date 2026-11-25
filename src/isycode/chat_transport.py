@@ -18,11 +18,19 @@ def uses_anthropic(provider: Any) -> bool:
 async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: int | None = None,
                             on_chunk: Callable[[str, str], None] | None = None,
                             tools: list[dict] | None = None) -> dict:
-    if PRESETS.get(getattr(provider, 'name', ''), {}).get('api') == 'codex':
+    api = PRESETS.get(getattr(provider, 'name', ''), {}).get('api')
+    if api == 'codex':
         from pathlib import Path
         from isycode.codex_connector import CodexConnector
         identity = provider.connector_identity
         async with CodexConnector(identity['executable'], Path(identity['home'])) as connector:
+            return await connector.complete(provider.model, messages, tools, on_chunk,
+                                            effort=provider.reasoning_effort)
+    if api == 'antigravity':
+        from pathlib import Path
+        from isycode.antigravity_connector import AntigravityConnector
+        identity = provider.connector_identity
+        async with AntigravityConnector(identity['executable'], Path(identity['home'])) as connector:
             return await connector.complete(provider.model, messages, tools, on_chunk,
                                             effort=provider.reasoning_effort)
     if uses_anthropic(provider):

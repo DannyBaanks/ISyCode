@@ -921,17 +921,38 @@ class ChatMixin:
                 api_key=load_provider_key(provider_name) or None)
 
             self._active_chat_provider = (provider.name, provider.model)
-            from isycode.image_attachments import accepts_images
+            from isycode.flowsight_bridge import build_blind_image_guidance, flowsight_mcp_running
+            from isycode.image_attachments import accepts_images, labels_in_messages
             base_messages = [dict(message) for message in messages]
             image_turn = "[IMAGE#" in text
             known_blind = image_turn and accepts_images(provider.name, provider.model) is False
             image_sent = image_turn and not known_blind
             image_fallback_used = False
+
+            def _blind_guidance_for_labels(labels: list[str]) -> str:
+                staged = self._image_attachments.stage_for_labels(labels)
+                if not staged:
+                    return ""
+                fs_running = flowsight_mcp_running(getattr(self, "_mcp_local", None))
+                fs_configured = fs_running
+                if not fs_configured:
+                    try:
+                        from isycode.mcp_local import load_config as load_mcp_config
+                        fs_configured = "flowsight" in load_mcp_config()
+                    except (OSError, ValueError):
+                        fs_configured = False
+                return build_blind_image_guidance(
+                    staged,
+                    mcp_running=fs_running,
+                    mcp_configured=fs_configured,
+                )
+
             if known_blind:
                 self._append(
                     "  " + tr("Picture not sent · this model does not take images. The question goes as text."),
                     YELLOW)
-                messages = self._image_attachments.without_images(base_messages)
+                guidance = _blind_guidance_for_labels(labels_in_messages(base_messages))
+                messages = self._image_attachments.without_images(base_messages, blind_guidance=guidance)
             else:
                 messages = self._image_attachments.prepare(messages, provider.name, provider.model)
 
@@ -1183,7 +1204,8 @@ class ChatMixin:
                             if error_kind == "IMAGES":
                                 record_image_result(provider.name, provider.model, False)
                             discard_failed_step(content_mark, reason_mark)
-                            messages = self._image_attachments.without_images(messages)
+                            guidance = _blind_guidance_for_labels(labels_in_messages(messages))
+                            messages = self._image_attachments.without_images(messages, blind_guidance=guidance)
                             self._append(
                                 "  " + tr("Picture not accepted · sending the question as text."), YELLOW)
                             continue
@@ -1447,6 +1469,12 @@ class ChatMixin:
                             self._append(
                                 "  " + tr("Picture not sent · this model does not take images. The question goes as text."),
                                 YELLOW)
+                            guidance = _blind_guidance_for_labels([img_label])
+                            if guidance:
+                                messages.append({
+                                    "role": "user",
+                                    "content": f"Image loaded by workspace_read_image ({img_path}) could not be sent natively.\n\n{guidance}",
+                                })
                             continue
                         messages.append({
                             "role": "user",

@@ -3,7 +3,7 @@ import asyncio
 from urllib.parse import urlsplit
 
 from isycode.localization import tr
-from isycode.provider_auth import AUTH_HOSTS
+from isycode.provider_auth import ANTIGRAVITY_AUTH_HOSTS, AUTH_HOSTS
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -11,13 +11,14 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
 
-def _approved_login_url(value: object) -> str | None:
+def _approved_login_url(value: object, *, allowed_hosts: tuple[str, ...] | None = None) -> str | None:
     """Return only official HTTPS sign-in URLs suitable for browser opening."""
     if not isinstance(value, str) or not value or len(value) > 4096:
         return None
+    hosts = allowed_hosts if allowed_hosts is not None else AUTH_HOSTS
     try:
         parsed = urlsplit(value)
-        if (parsed.scheme != 'https' or parsed.hostname not in AUTH_HOSTS
+        if (parsed.scheme != 'https' or parsed.hostname not in hosts
                 or parsed.username is not None or parsed.password is not None
                 or parsed.port not in (None, 443) or '\\' in value
                 or any(char.isspace() for char in value)):
@@ -40,12 +41,15 @@ class SubscriptionLoginScreen(ModalScreen[None]):
     BINDINGS = [Binding('escape','cancel','Cancel')]
     def __init__(self, challenge):
         super().__init__()
-        self.challenge=challenge
-        self.login_url = _approved_login_url(challenge.get('url'))
-        self.ready=asyncio.Event()
+        self.challenge = challenge
+        self.provider = challenge.get('provider', 'chatgpt')
+        allowed_hosts = (ANTIGRAVITY_AUTH_HOSTS[0],) if self.provider == 'antigravity' else AUTH_HOSTS
+        self.login_url = _approved_login_url(challenge.get('url'), allowed_hosts=allowed_hosts)
+        self.ready = asyncio.Event()
     def compose(self) -> ComposeResult:
+        title = tr('Sign in with Google Antigravity') if self.provider == 'antigravity' else tr('Sign in with ChatGPT')
         with Vertical(id='subscription-card', classes='isy-dialog'):
-            yield Static(tr('Sign in with ChatGPT'), classes='isy-dialog-title', markup=False)
+            yield Static(title, classes='isy-dialog-title', markup=False)
             with VerticalScroll(id='subscription-copy', classes='isy-dialog-body'):
                 yield Static(tr('Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines.'),markup=False)
                 if self.login_url:

@@ -1125,21 +1125,24 @@ class ProviderAuthSystembility:
     name = "ProviderAuthBoundary"
 
     @staticmethod
-    def identity_valid(identity):
-        from isycode.provider_auth import connector_identity, connector_home
+    def identity_valid(identity, target=None):
+        from isycode.provider_auth import SUBSCRIPTION_PROVIDERS, subscription_home, subscription_identity
         try:
+            provider = target or identity.get("auth_method")
+            if provider not in SUBSCRIPTION_PROVIDERS:
+                return False
             executable = identity.get("executable")
             path = Path(executable).resolve(strict=True)
             if str(path) != executable or not path.is_file() or not os.access(path, os.X_OK):
                 return False
-            expected = connector_identity(executable)
+            expected = subscription_identity(provider, executable)
             if set(identity) != set(expected):
                 return False
             if any(identity[key] != value for key, value in expected.items() if key != "hosts"):
                 return False
             if tuple(identity.get("hosts", ())) != tuple(expected["hosts"]):
                 return False
-            home = connector_home()
+            home = subscription_home(provider)
             if home.resolve(strict=False) != home:
                 return False
             return not any(p.is_symlink() for p in (home, *home.parents))
@@ -1150,10 +1153,16 @@ class ProviderAuthSystembility:
         if request.action_id != "provider.authenticate":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        valid = (request.target == "chatgpt" and set(params) == {"operation", "method", "connector"}
+        if request.target == "chatgpt":
+            allowed_methods = {"browser", "device"}
+        elif request.target == "antigravity":
+            allowed_methods = {"browser"}
+        else:
+            allowed_methods = set()
+        valid = (bool(allowed_methods) and set(params) == {"operation", "method", "connector"}
                  and params.get("operation") in {"login", "logout"}
-                 and params.get("method") in {"browser", "device"}
-                 and self.identity_valid(params.get("connector", {})))
+                 and params.get("method") in allowed_methods
+                 and self.identity_valid(params.get("connector", {}), target=request.target))
         return SystembilityResult(self.name, valid, "authentication binds official executable, private keyring and fixed hosts")
 
 
@@ -1212,9 +1221,16 @@ class ProviderNetworkSystembility:
             return SystembilityResult(self.name, False, "provider endpoint port is invalid")
         if host != request.target.casefold().rstrip("."):
             return SystembilityResult(self.name, False, "provider endpoint host does not match the granted target")
-        if request.parameters.get("provider") == "chatgpt":
+        provider_name = request.parameters.get("provider")
+        if provider_name == "chatgpt":
             from isycode.provider_auth import CHATGPT_ENDPOINT
-            if url != CHATGPT_ENDPOINT or not ProviderAuthSystembility.identity_valid(request.parameters.get("connector", {})):
+            if url != CHATGPT_ENDPOINT or not ProviderAuthSystembility.identity_valid(
+                    request.parameters.get("connector", {}), target="chatgpt"):
+                return SystembilityResult(self.name, False, "subscription inference requires a bound official connector")
+        elif provider_name == "antigravity":
+            from isycode.provider_auth import ANTIGRAVITY_ENDPOINT
+            if url != ANTIGRAVITY_ENDPOINT or not ProviderAuthSystembility.identity_valid(
+                    request.parameters.get("connector", {}), target="antigravity"):
                 return SystembilityResult(self.name, False, "subscription inference requires a bound official connector")
         return SystembilityResult(self.name, True, "provider endpoint is secure and host-bound")
 
@@ -2820,8 +2836,9 @@ class ProviderNetworkOwner:
             if parsed.port:
                 host += f":{parsed.port}"
             connector = getattr(provider, "connector_identity", None)
-            if provider.name == "chatgpt":
-                if not isinstance(request_material, dict) or not ProviderAuthSystembility.identity_valid(connector):
+            if provider.name in {"chatgpt", "antigravity"}:
+                if (not isinstance(request_material, dict)
+                        or not ProviderAuthSystembility.identity_valid(connector, target=provider.name)):
                     raise ValueError("invalid subscription connector identity")
                 request_material = {**request_material, "connector": connector}
             material = json.dumps(request_material, ensure_ascii=False, sort_keys=True,
@@ -2831,7 +2848,7 @@ class ProviderNetworkOwner:
                 "provider.request", self.root, host,
                 {"provider": provider.name, "model": provider.model,
                  "url": url, "payload_digest": material_digest,
-                 **({"connector": connector} if provider.name == "chatgpt" else {})},
+                 **({"connector": connector} if provider.name in {"chatgpt", "antigravity"} else {})},
                 execution_owner="provider_network")
         except (AttributeError, TypeError, ValueError, OSError):
             return None, ActionOutcome("Provider request denied.", "DENY", None,
