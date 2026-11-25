@@ -38,6 +38,12 @@ class StateIndex:
             pass
         return base / "isycode"
 
+    def telegram_path(self, profile: str) -> Path:
+        import re
+        if not isinstance(profile, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", profile):
+            raise ValueError("invalid Telegram profile")
+        return self._root / "telegram" / profile
+
     def state_root(self) -> Path:
         return self._root
 
