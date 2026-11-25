@@ -156,6 +156,12 @@ def test_model_setting_escape_returns_to_settings_and_keeps_active_model(tmp_pat
             app._select_menu_entry(next(e for e in app._menu_entries if e["kind"] == "models_open"))
             await pilot.pause()
             from isycode.tui_screens_harness import ModelsScreen
+            # The picker push is deferred until after refresh; one pause can
+            # finish before that callback on a busy Windows runner.
+            for _ in range(200):
+                if isinstance(app.screen, ModelsScreen):
+                    break
+                await pilot.pause(0.05)
             assert isinstance(app.screen, ModelsScreen)
             await pilot.press("escape")
             await pilot.pause()
