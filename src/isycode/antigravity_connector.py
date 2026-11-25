@@ -574,7 +574,7 @@ class AntigravityConnector:
 
     def _environment(self) -> dict[str, str]:
         allowed = {"SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LANG", "LC_ALL",
-                   "LC_CTYPE", "TZ", "TMPDIR", "TEMP", "TMP", "DBUS_SESSION_BUS_ADDRESS",
+                   "LC_CTYPE", "TZ", "TMPDIR", "TEMP", "TMP",
                    "XDG_RUNTIME_DIR", "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE",
                    "CURL_CA_BUNDLE", "NODE_EXTRA_CA_CERTS"}
         proxies = {"http_proxy", "https_proxy", "all_proxy", "no_proxy"}
@@ -586,9 +586,19 @@ class AntigravityConnector:
             base_path = str(Path(system_root) / "System32") if system_root else ""
         else:
             base_path = os.defpath
+            # Isolate agy from the host desktop keyring so each account slot keeps
+            # its own OAuth session inside self.home/.config/antigravity (agy-dash pattern).
+            env["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/nonexistent"
 
         if self._extra_path_dir is not None:
             env["PATH"] = f"{self._extra_path_dir}{os.pathsep}{base_path}"
+            if os.name != "nt":
+                # agy acp refuses to start OAuth without a display variable, even when
+                # browser launch is intercepted in memory by our xdg-open shim.
+                env["DISPLAY"] = os.environ.get("DISPLAY") or ":0"
+                wayland = os.environ.get("WAYLAND_DISPLAY")
+                if wayland:
+                    env["WAYLAND_DISPLAY"] = wayland
         else:
             nobrowser = self._ensure_nobrowser_shim()
             env["PATH"] = f"{nobrowser}{os.pathsep}{base_path}"
@@ -707,15 +717,18 @@ class AntigravityConnector:
         try:
             return await asyncio.wait_for(exchange(), limit)
         except asyncio.CancelledError:
-            await self.close()
+            if not self._closed:
+                await self.close()
             raise
         except asyncio.TimeoutError:
-            await self.close()
+            if not self._closed:
+                await self.close()
             raise AntigravityConnectorError("Antigravity request deadline expired") from None
         except AntigravityConnectorError:
             raise
         except Exception:
-            await self.close()
+            if not self._closed:
+                await self.close()
             raise AntigravityConnectorError("Antigravity request failed") from None
         finally:
             self._pending.pop(request_id, None)
@@ -792,8 +805,12 @@ class AntigravityConnector:
                     if "error" in msg:
                         err = msg["error"]
                         code = err.get("code") if isinstance(err, dict) else None
+                        err_msg = str(err.get("message", "")).lower() if isinstance(err, dict) else ""
                         if code == -32000:
                             future.set_exception(AntigravityConnectorError("Antigravity requires Google sign-in"))
+                        elif code == -32603 and ("no browser" in err_msg or "graphical display" in err_msg):
+                            future.set_exception(AntigravityConnectorError(
+                                "Antigravity could not start browser OAuth (display environment missing)"))
                         else:
                             future.set_exception(AntigravityConnectorError("Antigravity rejected the request"))
                     elif not isinstance(msg["result"], dict):
@@ -804,10 +821,12 @@ class AntigravityConnector:
             raise
         except AntigravityConnectorError as exc:
             self._failure = exc
-            await self.close()
+            if not self._closed:
+                await self.close()
         except Exception:
             self._failure = AntigravityConnectorError("Antigravity protocol failed or requested an unauthorized action")
-            await self.close()
+            if not self._closed:
+                await self.close()
 
     def _cleanup_ephemeral_artifacts(self) -> None:
         """Delete transient conversation/log artifacts created by ``agy``; never touch auth."""

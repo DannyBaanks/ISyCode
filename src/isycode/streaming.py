@@ -33,6 +33,27 @@ def _default_stream_timeout() -> float | None:
         return 120.0
 
 DEFAULT_STREAM_TIMEOUT_S = _default_stream_timeout()
+_HEADER_NAME_RE = re.compile(r"^[A-Za-z0-9-]+$")
+_RESERVED_HEADERS = frozenset({
+    "host", "authorization", "content-type", "content-length",
+    "accept", "accept-encoding", "connection", "transfer-encoding",
+})
+
+
+def _validated_extra_headers(extra_headers: dict[str, str] | None) -> list[tuple[str, str]]:
+    """Validate optional request headers against CRLF/control injection and reserved names."""
+    if not extra_headers:
+        return []
+    validated: list[tuple[str, str]] = []
+    for raw_name, raw_value in extra_headers.items():
+        if (not isinstance(raw_name, str) or not isinstance(raw_value, str)
+                or not _HEADER_NAME_RE.fullmatch(raw_name)
+                or raw_name.casefold() in _RESERVED_HEADERS
+                or len(raw_name) > 64 or len(raw_value) > 512
+                or any(ord(ch) < 32 or ord(ch) == 127 for ch in raw_value)):
+            raise StreamError("provider request contains an invalid HTTP header")
+        validated.append((raw_name, raw_value))
+    return validated
 
 
 class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -120,6 +141,7 @@ def stream_complete(
     timeout_s: float | None = DEFAULT_STREAM_TIMEOUT_S,
     on_chunk: Callable[[str, str], None] | None = None,
     chat_template_kwargs: dict | None = None,
+    extra_headers: dict[str, str] | None = None,
 ) -> dict:
     """Stream a chat completion. Returns collected result.
 
@@ -140,13 +162,18 @@ def stream_complete(
         body["reasoning_effort"] = reasoning_effort
     if chat_template_kwargs is not None:
         body["chat_template_kwargs"] = chat_template_kwargs
+    headers_map = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+    for h_name, h_value in _validated_extra_headers(extra_headers):
+        headers_map[h_name] = h_value
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/chat/completions",
         data=json.dumps(body).encode(),
         method="POST",
-        headers={"Authorization": f"Bearer {api_key}",
-                 "Content-Type": "application/json",
-                 "Accept": "text/event-stream"},
+        headers=headers_map,
     )
     content_parts: list[str] = []
     reasoning_parts: list[str] = []
@@ -251,6 +278,7 @@ async def async_stream_complete(
     tools: list[dict] | None = None,
     include_usage: bool = False,
     chat_template_kwargs: dict | None = None,
+    extra_headers: dict[str, str] | None = None,
 ) -> dict:
     """Stream a completion over an asyncio-owned socket that its task can cancel."""
     parsed = urlparse(base_url)
@@ -260,6 +288,7 @@ async def async_stream_complete(
         raise StreamError("provider URL must not contain embedded credentials")
     if any(char in api_key for char in "\r\n"):
         raise StreamError("provider credential contains invalid HTTP header characters")
+    validated_extra = _validated_extra_headers(extra_headers)
     try:
         reviewed = review_destination(base_url)
     except EgressDenied as exc:
@@ -413,6 +442,7 @@ async def async_stream_complete(
                 return True
 
     try:
+        extra_block = "".join(f"{name}: {value}\r\n" for name, value in validated_extra)
         writer.write(
             f"POST {request_path} HTTP/1.1\r\n"
             f"Host: {host_header}\r\n"
@@ -421,6 +451,7 @@ async def async_stream_complete(
             "Accept: text/event-stream\r\n"
             "Accept-Encoding: identity\r\n"
             "Connection: close\r\n"
+            f"{extra_block}"
             f"Content-Length: {len(payload)}\r\n\r\n".encode("ascii") + payload)
         await bounded(writer.drain())
         status_line = await bounded(reader.readline())

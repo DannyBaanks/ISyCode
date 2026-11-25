@@ -4,11 +4,12 @@ from urllib.parse import urlsplit
 
 from isycode.localization import tr
 from isycode.provider_auth import ANTIGRAVITY_AUTH_HOSTS, AUTH_HOSTS
+from isycode.tui_dialog import Dialog, DialogAction
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static
+from textual.widgets import Button, Input, Static
 
 
 def _approved_login_url(value: object, *, allowed_hosts: tuple[str, ...] | None = None) -> str | None:
@@ -43,11 +44,13 @@ class SubscriptionLoginScreen(ModalScreen[None]):
         super().__init__()
         self.challenge = challenge
         self.provider = challenge.get('provider', 'chatgpt')
+        self.slot = challenge.get('slot') or 'primary'
         allowed_hosts = (ANTIGRAVITY_AUTH_HOSTS[0],) if self.provider == 'antigravity' else AUTH_HOSTS
         self.login_url = _approved_login_url(challenge.get('url'), allowed_hosts=allowed_hosts)
         self.ready = asyncio.Event()
     def compose(self) -> ComposeResult:
-        title = tr('Sign in with Google Antigravity') if self.provider == 'antigravity' else tr('Sign in with ChatGPT')
+        base_title = tr('Sign in with Google Antigravity') if self.provider == 'antigravity' else tr('Sign in with ChatGPT')
+        title = f'{base_title} [{self.slot}]' if self.slot and self.slot != 'primary' else base_title
         with Vertical(id='subscription-card', classes='isy-dialog'):
             yield Static(title, classes='isy-dialog-title', markup=False)
             with VerticalScroll(id='subscription-copy', classes='isy-dialog-body'):
@@ -81,3 +84,47 @@ class SubscriptionLoginScreen(ModalScreen[None]):
         if event.button.id == 'subscription-cancel':
             self.dismiss(None)
     def action_cancel(self): self.dismiss(None)
+
+
+class AccountSlotScreen(Dialog):
+    """Prompt for a new isolated subscription slot name (e.g. pro2, work)."""
+
+    dialog_width = 'normal'
+    dialog_height = 'fit'
+    dialog_cancel_result = None
+    dialog_default_action = 'account-slot-save'
+
+    def __init__(self, provider_label: str, suggested: str = 'pro2') -> None:
+        super().__init__()
+        self.provider_label = provider_label
+        self.suggested = suggested
+
+    def dialog_heading(self) -> str:
+        return tr('Add account slot · {provider}', provider=self.provider_label)
+
+    def dialog_note(self) -> str:
+        return tr('Short label (letters, digits, - or _). Credentials stay isolated in this slot.')
+
+    def compose_body(self) -> ComposeResult:
+        yield Input(value=self.suggested, placeholder='pro2', id='account-slot-input')
+
+    def dialog_actions(self) -> tuple[DialogAction, ...]:
+        return (
+            DialogAction('account-slot-cancel', tr('Cancel')),
+            DialogAction('account-slot-save', tr('Add & sign in'), variant='primary', focused=True),
+        )
+
+    def on_mount(self) -> None:
+        field = self.query_one('#account-slot-input', Input)
+        field.focus()
+        field.cursor_position = len(field.value)
+
+    def dismiss_action(self, action_id: str) -> None:
+        if action_id == 'account-slot-save':
+            self.dismiss(self.query_one('#account-slot-input', Input).value)
+        else:
+            self.dismiss(None)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == 'account-slot-input':
+            self.dismiss(event.value)

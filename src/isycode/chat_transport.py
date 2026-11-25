@@ -40,9 +40,14 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
             provider.api_key, provider.model, messages, max_tokens=max_tokens,
             effort=provider.reasoning_effort, on_chunk=on_chunk, tools=tools,
             base_url=provider.base_url, timeout_s=DEFAULT_STREAM_TIMEOUT_S)
+    from urllib.parse import urlsplit
     from isycode.reasoning_options import thinking_options
     thinking = thinking_options(provider.name, provider.model, provider.reasoning_effort)
     extra = {"chat_template_kwargs": thinking} if thinking is not None else {}
+    if provider.name == "xai":
+        from isycode.grok_session import SESSION_HOST, session_headers
+        if (urlsplit(provider.base_url).hostname or "").casefold() == SESSION_HOST:
+            extra["extra_headers"] = session_headers()
     return await async_stream_complete(
         provider.base_url, provider.api_key, provider.model, messages, max_tokens=max_tokens,
         token_limit_field=provider.token_limit_field,
