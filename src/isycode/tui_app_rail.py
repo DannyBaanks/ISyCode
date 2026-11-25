@@ -20,14 +20,28 @@ from isycode.decision_view import verified_receipt_line
 from isycode.contracts import CatalogSnapshot
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import (
     Static,
     Input,
     Button,
+    OptionList,
     Tree,
 )
+from textual.widgets.option_list import Option
 from rich.text import Text
+from isycode.file_preview import guess_syntax_language
+from isycode.sidebar_files import (
+    ConversationFileTracker,
+    FileLink,
+    SidebarTabManager,
+    SourceLocation,
+    format_conversation_file_row,
+    parse_local_file_link,
+)
+from isycode.terminal_links import rich_markdown
+from isycode.tui_copy import CopyTextArea
+from isycode.tui_widgets import SelectableText
 from isycode.lsp import (
     discover_servers,
     language_server_catalog,
@@ -105,6 +119,8 @@ class RailMixin:
             pass
         available = max(22, terminal_width - 52)
         preferred = self._rail_width if terminal_width >= 100 else self._rail_compact_width
+        if getattr(self, "_rail_view", "overview") == "doc" and terminal_width >= 100:
+            preferred = max(preferred, min(52, terminal_width // 2))
         requested = min(preferred, available)
         self.query_one(SidePanel).styles.width = requested
 
@@ -497,6 +513,12 @@ class RailMixin:
         self.query_one("#file-preview-meta", Static).update("")
         self.query_one("#file-copy-path", Button).disabled = True
         self.query_one("#file-open-preview", Button).disabled = True
+        try:
+            open_tab = self.query_one("#file-open-tab", Button)
+            open_tab.disabled = True
+            open_tab.display = False
+        except (NoMatches, NoScreen):
+            pass
         self._workspace_generation += 1
         generation = self._workspace_generation
         tree = self.query_one("#workspace-tree", Tree)
@@ -510,7 +532,10 @@ class RailMixin:
         if relative_dir == ".":
             relative_dir = ""
         current_label = self._file_browser_alias + " · " + browser_root.name + (f"/{relative_dir}" if relative_dir else "")
-        tree.root.set_label(f"📁 {current_label}/")
+        from isycode.tui_theme import ascii_only
+        dir_glyph = ">" if ascii_only() else "▸"
+        file_glyph = "-" if ascii_only() else "·"
+        tree.root.set_label(f"{dir_glyph} {current_label}/")
         tree.root.data = {"path": logical_path, "kind": "directory"}
         self._file_path = logical_path
         self.query_one("#file-preview", Static).update(tr("Checking Workspace Authority and IsySentinel…"))
@@ -543,10 +568,8 @@ class RailMixin:
             if not name:
                 continue
             child_path = str(Path(logical_path) / name)
-            from isycode.operation_style import operation_icon
-            from isycode.tui_theme import ascii_only
             label = (f"{name}/" if entry.get("kind") == "directory"
-                     else operation_icon("workspace_read", ascii_only=ascii_only()) + f" {name}")
+                     else f"{file_glyph} {name}")
             tree.root.add(label, allow_expand=entry.get("kind") == "directory", data={"path": child_path, "kind": entry.get("kind"),
                                        "bytes": entry.get("bytes", 0)})
         self._search_mode = False
@@ -570,6 +593,12 @@ class RailMixin:
         self.query_one("#file-preview-meta", Static).update("")
         self.query_one("#file-copy-path", Button).disabled = True
         self.query_one("#file-open-preview", Button).disabled = True
+        try:
+            open_tab = self.query_one("#file-open-tab", Button)
+            open_tab.disabled = True
+            open_tab.display = False
+        except (NoMatches, NoScreen):
+            pass
         tree = self.query_one("#workspace-tree", Tree)
         tree.root.remove_children()
         tree.root.set_label(f"Searching: {query}")
@@ -595,13 +624,16 @@ class RailMixin:
             return
         tree.root.set_label(f"Results for: {query}")
         tree.root.data = {"path": str(browser_root), "kind": "directory"}
+        from isycode.tui_theme import ascii_only
+        dir_glyph = ">" if ascii_only() else "▸"
+        file_glyph = "-" if ascii_only() else "·"
         for hit in payload.get("matches", []):
             if not isinstance(hit, dict) or not isinstance(hit.get("path"), str):
                 continue
             relative = hit["path"]
             full_path = browser_root / relative
             kind = hit.get("kind") if hit.get("kind") in {"directory", "file"} else "file"
-            icon = "📁" if kind == "directory" else "📄"
+            icon = dir_glyph if kind == "directory" else file_glyph
             tree.root.add(f"{icon} {relative}", data={"path": str(full_path), "kind": kind})
         limit_note = " · scan limit reached" if payload.get("truncated") else ""
         skipped_note = ""
@@ -639,6 +671,10 @@ class RailMixin:
             self._selected_file_path = None
             self.query_one("#file-copy-path", Button).disabled = True
             self.query_one("#file-open-preview", Button).disabled = True
+            try:
+                self.query_one("#file-open-tab", Button).disabled = True
+            except (NoMatches, NoScreen):
+                pass
             self._search_mode = False
             self._search_query = ""
             self.query_one("#file-search", Input).value = ""
@@ -651,6 +687,9 @@ class RailMixin:
         try:
             self.query_one("#file-copy-path", Button).disabled = False
             self.query_one("#file-open-preview", Button).disabled = False
+            open_tab = self.query_one("#file-open-tab", Button)
+            open_tab.disabled = False
+            open_tab.display = True
         except (NoMatches, NoScreen):
             pass
         if getattr(self, "_sidebar_file_preview", False):
@@ -670,6 +709,9 @@ class RailMixin:
             try:
                 self.query_one("#file-copy-path", Button).disabled = False
                 self.query_one("#file-open-preview", Button).disabled = False
+                open_tab = self.query_one("#file-open-tab", Button)
+                open_tab.disabled = False
+                open_tab.display = True
             except (NoMatches, NoScreen):
                 pass
             if getattr(self, "_sidebar_file_preview", False):
@@ -772,10 +814,361 @@ class RailMixin:
         self._set_rail_view("overview")
         self.query_one("#skills-tree", Tree).focus()
 
+    def _sidebar_tabs_state(self) -> SidebarTabManager:
+        tabs = getattr(self, "_sidebar_tabs", None)
+        if tabs is None:
+            tabs = SidebarTabManager()
+            self._sidebar_tabs = tabs
+        return tabs
+
+    def _conversation_files_state(self) -> ConversationFileTracker:
+        tracker = getattr(self, "_conversation_files", None)
+        if tracker is None:
+            tracker = ConversationFileTracker()
+            self._conversation_files = tracker
+        return tracker
+
+    def _resolve_read_owner_for_path(self, raw_path: str):
+        """Pick the authorized folder owner that contains ``raw_path`` (fail closed via owner)."""
+        from isycode.action_runtime import LocalWorkspaceReadOwner
+        default_owner = self._workspace_read_owner()
+        candidate = Path(raw_path)
+        if not candidate.is_absolute():
+            return default_owner, str(default_owner.root / candidate)
+        seen_roots: set[str] = set()
+        roots: list[Path] = [default_owner.root]
+        ws_root = getattr(self, "_workspace_root", None)
+        if ws_root is not None:
+            roots.append(Path(ws_root))
+        try:
+            store = self._folder_store()
+            for entry in store.list_folders():
+                alias = entry.get("alias")
+                if isinstance(alias, str):
+                    try:
+                        roots.append(store.resolve(alias))
+                    except (OSError, ValueError):
+                        pass
+        except Exception:
+            pass
+        for root in roots:
+            key = str(root)
+            if key in seen_roots:
+                continue
+            seen_roots.add(key)
+            try:
+                candidate.relative_to(root)
+            except ValueError:
+                continue
+            if root == default_owner.root:
+                return default_owner, str(candidate)
+            return LocalWorkspaceReadOwner(root, WorkspaceAuthority(root)), str(candidate)
+        return default_owner, str(candidate)
+
+    def _open_file_link(self, href: str) -> None:
+        """Open a clicked local file hyperlink directly in a sidebar document tab."""
+        link = parse_local_file_link(href, root=getattr(self, "_workspace_root", None))
+        if link is None:
+            return
+        self.run_worker(
+            self._open_sidebar_document(link.path, location=link.location),
+            group="sidebar-doc",
+            exclusive=True,
+        )
+
+    async def _open_sidebar_document(
+        self,
+        uri: str,
+        *,
+        location: SourceLocation | None = None,
+        focus: bool = True,
+    ) -> bool:
+        """Read ``uri`` strictly through LocalWorkspaceReadOwner + IsySentinel and show it as a sidebar tab."""
+        if self._workspace is None:
+            return False
+        self._workspace_generation += 1
+        generation = self._workspace_generation
+        try:
+            owner, target_path = self._resolve_read_owner_for_path(uri)
+            read = await asyncio.to_thread(
+                owner.execute, "workspace.files.read", {"path": target_path},
+            )
+            if generation != self._workspace_generation:
+                return False
+            if read.decision != "ALLOW" or read.receipt is None:
+                raise WorkspaceUnavailable(
+                    "File contents are unavailable. Grant workspace read access in Settings · Authority & Security."
+                )
+            if not read.receipt.verify(
+                self._workspace_request("workspace.files.read", target_path, owner=owner),
+                read.text,
+            ):
+                raise WorkspaceUnavailable(
+                    "The local read receipt did not verify; contents were blocked."
+                )
+            result = json.loads(read.text)
+            raw_text = result.get("text")
+            binary_error: str | None = None
+            if not isinstance(raw_text, str):
+                binary_error = tr("Preview unavailable: file is binary or not valid UTF-8.")
+                content = binary_error
+                size_bytes = 0
+            else:
+                content = raw_text
+                size_bytes = len(raw_text.encode("utf-8"))
+            try:
+                relative = Path(target_path).relative_to(owner.root).as_posix() or owner.root.name
+            except ValueError:
+                relative = Path(target_path).name or target_path
+            title = Path(target_path).name or relative
+            is_markdown = Path(target_path).suffix.lower() in {".md", ".markdown", ".mdown", ".mkdn"}
+            tab = self._sidebar_tabs_state().open_or_update(
+                path=target_path,
+                title=title,
+                relative=relative,
+                content=content,
+                size_bytes=size_bytes,
+                receipt_id=read.receipt.receipt_id,
+                is_markdown=is_markdown,
+                location=location,
+                binary_error=binary_error,
+            )
+            self._selected_file_path = target_path
+            self._record_conversation_files(paths=[target_path], location=location)
+            self._set_rail_view("doc")
+            self._paint_active_doc_tab(focus=focus)
+            self._set_activity(
+                tr("{relative} · {size} bytes", relative=tab.relative, size=tab.size_bytes),
+                MUTED,
+            )
+            return True
+        except (WorkspaceUnavailable, json.JSONDecodeError, OSError, ValueError) as exc:
+            if generation == self._workspace_generation:
+                message = (
+                    str(exc) if isinstance(exc, WorkspaceUnavailable)
+                    else f"Workspace read failed closed ({type(exc).__name__})."
+                )
+                self._set_activity(message[:180], YELLOW)
+                try:
+                    self.notify(message, severity="warning")
+                except Exception:
+                    pass
+            return False
+
+    def _select_sidebar_tab(self, tab_id: str) -> None:
+        tab = self._sidebar_tabs_state().activate(tab_id)
+        if tab is None:
+            return
+        self._selected_file_path = tab.path
+        self._set_rail_view("doc")
+        self._paint_active_doc_tab(focus=True)
+
+    def _close_sidebar_tab(self, tab_id: str) -> None:
+        next_tab = self._sidebar_tabs_state().close(tab_id)
+        self._refresh_doc_tabs()
+        if next_tab is None:
+            if getattr(self, "_rail_view", "overview") == "doc":
+                self._set_rail_view("files")
+            return
+        if getattr(self, "_rail_view", "overview") == "doc":
+            self._selected_file_path = next_tab.path
+            self._paint_active_doc_tab(focus=False)
+
+    def _scroll_sidebar_tabs(self, direction: int) -> None:
+        tabs = self._sidebar_tabs_state()
+        if direction < 0:
+            tabs.scroll_left()
+        else:
+            tabs.scroll_right()
+        self._refresh_doc_tabs()
+
+    def _refresh_doc_tabs(self) -> None:
+        tabs = self._sidebar_tabs_state()
+        try:
+            strip = self.query_one("#rail-doc-strip", Horizontal)
+            container = self.query_one("#rail-doc-tabs", Horizontal)
+            prev_btn = self.query_one("#rail-tab-prev", Button)
+            next_btn = self.query_one("#rail-tab-next", Button)
+        except (NoMatches, NoScreen):
+            return
+        if not tabs.tabs:
+            strip.display = False
+            container.remove_children()
+            return
+        strip.display = True
+        try:
+            panel_width = self.query_one(SidePanel).size.width or 36
+        except (NoMatches, NoScreen):
+            panel_width = 36
+        visible, can_left, can_right = tabs.visible_window(max(16, panel_width - 8))
+        prev_btn.display = can_left
+        next_btn.display = can_right
+        from isycode.tui_theme import ascii_only
+        close_glyph = "x" if ascii_only() else "×"
+        active_view_doc = getattr(self, "_rail_view", "overview") == "doc"
+        container.remove_children()
+        for tab in visible:
+            is_active = active_view_doc and tab.tab_id == tabs.active_id
+            label = _fit_cells(tab.title, 18) if cell_len(tab.title) > 18 else tab.title
+            tab_btn = Button(
+                label,
+                classes="rail-doc-tab rail-lit" if is_active else "rail-doc-tab",
+            )
+            tab_btn.compact = True
+            tab_btn.tooltip = tab.relative
+            tab_btn._sidebar_tab_action = "select"
+            tab_btn._sidebar_tab_id = tab.tab_id
+            close_btn = Button(
+                close_glyph,
+                classes="rail-doc-close",
+            )
+            close_btn.compact = True
+            close_btn._sidebar_tab_action = "close"
+            close_btn._sidebar_tab_id = tab.tab_id
+            container.mount(tab_btn)
+            container.mount(close_btn)
+
+    def _paint_active_doc_tab(self, *, focus: bool = False) -> None:
+        tab = self._sidebar_tabs_state().active_tab
+        if tab is None:
+            return
+        try:
+            meta = self.query_one("#doc-meta", Static)
+            code_area = self.query_one("#doc-code", CopyTextArea)
+            md_scroll = self.query_one("#doc-markdown-scroll", VerticalScroll)
+            md_widget = self.query_one("#doc-markdown", SelectableText)
+        except (NoMatches, NoScreen):
+            return
+        rel_label = f"{tab.relative} · L{tab.location.line}" if tab.location is not None else tab.relative
+        meta.update(
+            tr(
+                "{relative} · {size} bytes · UTF-8\n{verified_receipt_line}",
+                relative=rel_label,
+                size=tab.size_bytes,
+                verified_receipt_line=verified_receipt_line(tab.receipt_id),
+            )
+        )
+        if tab.is_markdown and not tab.binary_error:
+            code_area.display = False
+            md_scroll.display = True
+            md_widget.set_selectable_content(
+                rich_markdown(tab.content, root=self._workspace_root),
+                tab.content,
+            )
+            if focus:
+                md_widget.focus()
+        else:
+            md_scroll.display = False
+            code_area.display = True
+            lang = None if tab.binary_error else guess_syntax_language(tab.path, tab.content)
+            try:
+                code_area.language = lang
+            except Exception:
+                code_area.language = None
+            code_area.load_text(tab.content)
+            if tab.location is not None and not tab.binary_error:
+                max_row = max(0, code_area.document.line_count - 1)
+                row = min(max(0, tab.location.line - 1), max_row)
+                col = max(0, tab.location.column - 1)
+                code_area.cursor_location = (row, col)
+                self.call_after_refresh(code_area.scroll_cursor_visible, center=True)
+            if focus:
+                code_area.focus()
+
+    def _open_sidebar_chooser(self) -> None:
+        """Open the Codex-style '+' chooser inside the Files view."""
+        self._set_rail_view("files")
+        try:
+            chooser = self.query_one("#sidebar-chooser", Vertical)
+            chooser.display = True
+        except (NoMatches, NoScreen):
+            pass
+        self._refresh_conversation_files()
+        try:
+            files_list = self.query_one("#conversation-files-list", OptionList)
+            if files_list.display and files_list.option_count:
+                files_list.focus()
+            else:
+                self.query_one("#sidebar-new-chat", Button).focus()
+        except (NoMatches, NoScreen):
+            pass
+
+    def _record_conversation_files(
+        self,
+        text: str = "",
+        *,
+        paths: list[str] | tuple[str, ...] = (),
+        location: SourceLocation | None = None,
+    ) -> None:
+        tracker = self._conversation_files_state()
+        root = getattr(self, "_workspace_root", None)
+        changed = False
+        if text:
+            changed = tracker.record_markdown(text, root=root) or changed
+        for item in paths:
+            if isinstance(item, str) and item.strip():
+                changed = tracker.record_path(item, root=root, location=location) or changed
+        if changed:
+            self._refresh_conversation_files()
+
+    def _reset_conversation_files(self) -> None:
+        self._conversation_files_state().clear()
+        self._conversation_file_rows: list[FileLink] = []
+        self._refresh_conversation_files()
+
+    def _refresh_conversation_files(self) -> None:
+        tracker = self._conversation_files_state()
+        entries = tracker.entries
+        self._conversation_file_rows = list(entries)
+        try:
+            header = self.query_one("#conversation-files-header", Static)
+            option_list = self.query_one("#conversation-files-list", OptionList)
+        except (NoMatches, NoScreen):
+            return
+        if not entries:
+            header.display = False
+            option_list.display = False
+            option_list.clear_options()
+            return
+        header.update(tr("Files {count}", count=len(entries)))
+        header.display = True
+        option_list.display = True
+        try:
+            panel_width = max(20, (self.query_one(SidePanel).size.width or 36) - 4)
+        except (NoMatches, NoScreen):
+            panel_width = 32
+        from isycode.tui_theme import ascii_only
+        use_ascii = ascii_only()
+        root = getattr(self, "_workspace_root", None)
+        option_list.clear_options()
+        for idx, link in enumerate(entries):
+            option_list.add_option(
+                Option(
+                    format_conversation_file_row(link, root=root, width=panel_width, ascii_only=use_ascii),
+                    id=f"convfile-{idx}",
+                )
+            )
+
+    def _open_conversation_file_at(self, index: int) -> None:
+        rows = getattr(self, "_conversation_file_rows", [])
+        if index < 0 or index >= len(rows):
+            return
+        link = rows[index]
+        self.run_worker(
+            self._open_sidebar_document(link.path, location=link.location),
+            group="sidebar-doc",
+            exclusive=True,
+        )
+
     def _set_rail_view(self, view: str) -> None:
         self._rail_visible = True
         self._rail_visibility_override = True
         self._rail_auto_hidden = False
+        if view == "doc" and self._sidebar_tabs_state().active_tab is None:
+            view = "files"
+        if view not in {"overview", "files", "doc"}:
+            view = "overview"
+        self._rail_view = view
         side_panel = self.query_one(SidePanel)
         side_panel.display = True
         if self.size.width < 100 and getattr(self, "_dedicated_space", False):
@@ -786,14 +1179,22 @@ class RailMixin:
             self._apply_rail_width(self.size.width)
         self.call_after_refresh(self._paint_workspace_chrome)
         self.call_after_refresh(self._update_model_button_visibility)
+        show_overview = view == "overview"
         show_files = view == "files"
-        self._rail_view = "files" if show_files else "overview"
-        self.query_one("#overview-view").display = not show_files
+        show_doc = view == "doc"
+        self.query_one("#overview-view").display = show_overview
         self.query_one("#files-view").display = show_files
+        try:
+            self.query_one("#doc-view").display = show_doc
+        except (NoMatches, NoScreen):
+            pass
         overview = self.query_one("#show-overview", Button)
         files = self.query_one("#show-files", Button)
-        overview.set_class(not show_files, "rail-lit")
+        overview.set_class(show_overview, "rail-lit")
         files.set_class(show_files, "rail-lit")
+        self._refresh_doc_tabs()
+        if show_files:
+            self._refresh_conversation_files()
 
     def _menu_branch(self, entry: dict[str, str | bool]) -> None:
         value = entry["value"]

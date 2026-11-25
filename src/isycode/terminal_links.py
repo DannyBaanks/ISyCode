@@ -8,17 +8,34 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 from rich.markdown import Markdown as RichMarkdown
 from rich.text import Text
 
+from isycode.sidebar_files import FileLink, parse_local_file_link
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, YELLOW
 
 _PR_RE = re.compile(r"\bPR\s+#?(\d{1,7})\b", re.IGNORECASE)
 _URL_RE = re.compile(r"https?://[^\s<>()\[\]\"']+")
-_TOKEN_RE = re.compile(r"(?P<pr>\bPR\s+#?\d{1,7}\b)|(?P<url>https?://[^\s<>()\[\]\"']+)",
-                       re.IGNORECASE)
+_BARE_FILE_EXTS = (
+    r"py|pyi|md|markdown|mb|rs|ts|tsx|js|jsx|mjs|cjs|json|jsonl|toml|ya?ml|"
+    r"tcss|css|scss|html?|xml|svg|sh|bash|zsh|zig|go|c|h|cc|cpp|hpp|cs|java|kt|sql|txt|cfg|ini|env"
+)
+_FILE_REF_BODY = (
+    r"file://[^\s<>()\[\]\"']+"
+    r"|(?:(?:\.\.?/|[~/]|[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9_+-]{1,12}(?::\d+(?::\d+)?|#L\d+(?:C\d+)?(?:-L\d+(?:C\d+)?)?)?)"
+    r"|(?:[A-Za-z0-9_.-]+\.[A-Za-z0-9_+-]{1,12}(?::\d+(?::\d+)?|#L\d+(?:C\d+)?(?:-L\d+(?:C\d+)?)?))"
+    r"|(?:[A-Za-z0-9_.-]+\.(?:" + _BARE_FILE_EXTS + r")(?![A-Za-z0-9_.-]))"
+)
+_FILE_REF_RE = re.compile(r"(?<![A-Za-z0-9_./:@-])(?:" + _FILE_REF_BODY + r")")
+_TOKEN_RE = re.compile(
+    r"(?P<pr>\bPR\s+#?\d{1,7}\b)"
+    r"|(?P<url>https?://[^\s<>()\[\]\"']+)"
+    r"|(?P<file>(?<![A-Za-z0-9_./:@-])(?:" + _FILE_REF_BODY + r"))",
+    re.IGNORECASE,
+)
 _MD_LINK_RE = re.compile(r"\[[^\]]+\]\([^)]+\)")
 _FENCE_RE = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)")
 _INLINE_CODE_RE = re.compile(r"(`[^`\n]*`)")
@@ -79,6 +96,20 @@ def repository_web_url(root: Path | str) -> str | None:
     return None
 
 
+def classify_link(href: str, *, root: Path | str | None = None) -> tuple[str, Any] | None:
+    """Classify a rendered link href as ``('external', url)`` or ``('file', FileLink)``."""
+    if not isinstance(href, str) or not href.strip():
+        return None
+    cleaned = href.strip()
+    if cleaned.lower().startswith(("http://", "https://")):
+        return ("external", cleaned)
+    root_path = Path(root) if root is not None else None
+    file_link = parse_local_file_link(cleaned, root=root_path)
+    if file_link is not None:
+        return ("file", file_link)
+    return None
+
+
 def _linkify_segment(segment: str, repo_url: str | None) -> str:
     protected: list[str] = []
 
@@ -100,9 +131,23 @@ def _linkify_segment(segment: str, repo_url: str | None) -> str:
         while raw and raw[-1] in ".,;:!?":
             trailing = raw[-1] + trailing
             raw = raw[:-1]
-        return f"[{raw}]({raw}){trailing}"
+        return protect(f"[{raw}]({raw})") + trailing
 
     segment = _URL_RE.sub(autolink, segment)
+
+    def autolink_file(match: re.Match) -> str:
+        if match.start() and segment[match.start() - 1] in "<](":
+            return match.group(0)
+        raw = match.group(0)
+        trailing = ""
+        while raw and raw[-1] in ".,;:!?":
+            trailing = raw[-1] + trailing
+            raw = raw[:-1]
+        if not raw or parse_local_file_link(raw) is None:
+            return match.group(0)
+        return protect(f"[{raw}]({raw})") + trailing
+
+    segment = _FILE_REF_RE.sub(autolink_file, segment)
     for index, value in enumerate(protected):
         segment = segment.replace(f"\x00{index}\x00", value)
     return segment
@@ -121,10 +166,32 @@ def linkify_markdown(text: str, repo_url: str | None = None) -> str:
     return "".join(pieces)
 
 
+def _encode_markdown_file_links(text: str) -> str:
+    """Escape local ``file://`` Markdown link destinations past markdown-it's BAD_PROTO_RE.
+
+    ``markdown-it-py`` strips ``file:`` links as literal text. Rewriting validated
+    local ``file://`` links to ``isyfile://`` lets the parser keep the link tokens,
+    and ``selectable_markdown`` restores ``file://`` on the Rich ``Style``.
+    """
+    def _replace(match: re.Match) -> str:
+        full = match.group(0)
+        split = full.find("](")
+        if split < 0:
+            return full
+        label = full[1:split]
+        dest = full[split + 2:-1]
+        if dest.lower().startswith("file://") and parse_local_file_link(dest) is not None:
+            return f"[{label}](isyfile://{dest[7:]})"
+        return full
+
+    return _MD_LINK_RE.sub(_replace, text)
+
+
 def rich_markdown(text: str, *, root: Path | str | None = None) -> RichMarkdown:
     """Markdown with autolinks and the repository's PR anchors."""
     repo_url = repository_web_url(root) if root is not None else None
-    return RichMarkdown(linkify_markdown(text, repo_url), code_theme="monokai")
+    linked = _encode_markdown_file_links(linkify_markdown(text, repo_url))
+    return RichMarkdown(linked, code_theme="monokai")
 
 
 def _append_linked(result: Text, text: str, repo_url: str | None, style: str) -> None:
@@ -134,7 +201,7 @@ def _append_linked(result: Text, text: str, repo_url: str | None, style: str) ->
             continue
         raw = match.group(0)
         trailing = ""
-        if match.group("url"):
+        if match.group("url") or match.group("file"):
             while raw and raw[-1] in ".,;:!?":
                 trailing = raw[-1] + trailing
                 raw = raw[:-1]
@@ -143,6 +210,8 @@ def _append_linked(result: Text, text: str, repo_url: str | None, style: str) ->
             number = re.search(r"\d+", match.group("pr")).group(0)
             label, target = f"PR #{number}", f"{repo_url}/pull/{number}"
         elif match.group("url"):
+            label = target = raw
+        elif match.group("file") and parse_local_file_link(raw) is not None:
             label = target = raw
         else:
             result.append(raw, style=style)
@@ -172,4 +241,11 @@ def semantic_plain(text: str, *, root: Path | str | None = None) -> Text:
     return result
 
 
-__all__ = ["linkify_markdown", "repository_web_url", "rich_markdown", "semantic_plain"]
+__all__ = [
+    "FileLink",
+    "classify_link",
+    "linkify_markdown",
+    "repository_web_url",
+    "rich_markdown",
+    "semantic_plain",
+]

@@ -587,6 +587,9 @@ class SessionMixin:
                     rich_markdown(content, root=self._workspace_root),
                     selection_text=content,
                 ))
+                record = getattr(self, "_record_conversation_files", None)
+                if callable(record):
+                    record(content)
                 chat.follow_tail()
 
             if not saving:
@@ -929,6 +932,9 @@ class SessionMixin:
         current = self._foreground_lane()
         busy = current.loop_task is not None and current.loop_task is not asyncio.current_task() and not current.loop_task.done()
         if not busy and not current.history and not current.lines and not current.session_id:
+            reset_files = getattr(self, "_reset_conversation_files", None)
+            if callable(reset_files):
+                reset_files()
             self._show_chat_again()
             self._append("  " + tr("New conversation."), MUTED)
             if self._sessions_enabled() and self._chat_session_owner is not None:
@@ -940,6 +946,9 @@ class SessionMixin:
             return
         self._capture_running_session()
         self._show_lane(open_lane(self, None))
+        reset_files = getattr(self, "_reset_conversation_files", None)
+        if callable(reset_files):
+            reset_files()
         self._append("  " + tr("New conversation."), MUTED)
         if self._sessions_enabled() and self._chat_session_owner is not None:
             outcome, sid = self._chat_session_owner.manage("state", None, json.dumps(self._session_state()))
@@ -1532,6 +1541,9 @@ class SessionMixin:
                     classes="assistant-turn")
                 self._paint_role_turn(answer, role_name)
                 chat.mount(answer)
+                record = getattr(self, "_record_conversation_files", None)
+                if callable(record) and text:
+                    record(text)
             elif kind == "reasoning":
                 block = ThoughtBlock()
                 block.set_text(text)

@@ -548,6 +548,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             "#workspace-folders": "Folders",
             "#file-copy-path": "Copy path",
             "#file-open-preview": ("Open preview", "file rail"),
+            "#file-open-tab": "Tab",
+            "#sidebar-new-chat": "+ New side chat",
+            "#doc-copy-path": "Copy path",
+            "#doc-expand-modal": "Expand",
+            "#doc-close-tab": "Close",
             "#lsp-install-hint": "Install commands",
             "#save-provider-key": "Save key",
             "#cancel-provider-key": "Cancel",
@@ -557,7 +562,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             try:
                 button = self.query_one(widget_id, Button)
                 button.label = tr(msgid, context=context)
-                if widget_id == "#file-up":
+                if widget_id in {"#file-up", "#doc-close-tab"}:
                     fit_rail_button(button, str(button.label))
             except (NoMatches, NoScreen, ScreenStackError):
                 continue
@@ -570,6 +575,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             "#action-hint": "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search",
             "#key-entry-label": "API key is stored outside this project.",
             "#file-preview": "Select a file to preview it.",
+            "#sidebar-chooser-title": "Open in sidebar",
+            "#rail-footer-hint": "enter open · esc back · ↑/↓ move · ^b hide",
         }
         for widget_id, msgid in statics.items():
             try:
@@ -578,6 +585,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 self.query_one(widget_id, Static).update(tr(msgid))
             except (NoMatches, NoScreen, ScreenStackError):
                 continue
+        if hasattr(self, "_refresh_conversation_files"):
+            self._refresh_conversation_files()
         try:
             self.query_one(PromptArea).placeholder = tr(PromptArea.DEFAULT_PLACEHOLDER)
             self.query_one("#idea-box").border_title = tr("Idea · Space expand")
@@ -823,6 +832,40 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._show_identity()
         elif button_id in {"show-overview", "show-files"}:
             self._set_rail_view("files" if button_id == "show-files" else "overview")
+        elif button_id == "rail-tab-add":
+            self._open_sidebar_chooser()
+        elif button_id == "rail-tab-prev":
+            self._scroll_sidebar_tabs(-1)
+        elif button_id == "rail-tab-next":
+            self._scroll_sidebar_tabs(1)
+        elif button_id == "sidebar-new-chat":
+            try:
+                self.query_one("#sidebar-chooser").display = False
+            except (NoMatches, NoScreen):
+                pass
+            self._start_new_conversation()
+        elif getattr(event.button, "_sidebar_tab_action", None) == "select":
+            tab_id = getattr(event.button, "_sidebar_tab_id", None)
+            if isinstance(tab_id, str):
+                self._select_sidebar_tab(tab_id)
+        elif getattr(event.button, "_sidebar_tab_action", None) == "close":
+            tab_id = getattr(event.button, "_sidebar_tab_id", None)
+            if isinstance(tab_id, str):
+                self._close_sidebar_tab(tab_id)
+        elif button_id == "doc-copy-path":
+            tab = self._sidebar_tabs_state().active_tab
+            if tab is not None:
+                path = tab.path.removeprefix("file://")
+                self.run_worker(self._request_clipboard_copy(path, "file_path"), group="clipboard-user")
+        elif button_id == "doc-expand-modal":
+            tab = self._sidebar_tabs_state().active_tab
+            if tab is not None:
+                from isycode.file_preview import FilePreviewScreen
+                self.push_screen(FilePreviewScreen(tab.path, tab.content))
+        elif button_id == "doc-close-tab":
+            tab = self._sidebar_tabs_state().active_tab
+            if tab is not None:
+                self._close_sidebar_tab(tab.tab_id)
         elif button_id == "sidebar-button":
             self.action_toggle_sidebar()
         elif button_id == "sessions-button":
@@ -888,6 +931,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         elif button_id == "file-open-preview":
             if self._selected_file_path:
                 self.run_worker(self._preview_file(self._selected_file_path, modal=True), group="file-preview")
+        elif button_id == "file-open-tab":
+            if self._selected_file_path:
+                self.run_worker(
+                    self._open_sidebar_document(self._selected_file_path),
+                    group="sidebar-doc",
+                    exclusive=True,
+                )
         elif button_id == "file-up":
             if self._workspace is None:
                 return
@@ -1109,6 +1159,26 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if getattr(self, "_rail_visible", False) and getattr(self, "size", None) and self.size.width < 100:
             self.action_toggle_sidebar()
             return
+        if getattr(self, "_rail_visible", False) and getattr(self, "_rail_view", "overview") == "doc":
+            focused = self.focused
+            in_side_panel = False
+            node = focused
+            while node is not None:
+                if isinstance(node, SidePanel):
+                    in_side_panel = True
+                    break
+                node = node.parent
+            if in_side_panel:
+                self._set_rail_view("files")
+                try:
+                    files_list = self.query_one("#conversation-files-list", OptionList)
+                    if files_list.display and files_list.option_count:
+                        files_list.focus()
+                    else:
+                        self.query_one("#workspace-tree", Tree).focus()
+                except (NoMatches, NoScreen):
+                    pass
+                return
         if self._review_request_task and not self._review_request_task.done():
             self._review_request_task.cancel()
             self._set_activity(tr("Stopping external review…"), YELLOW)
@@ -1148,6 +1218,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             return
         if event.option_list.id == "queued-options":
             self._select_queued_message(event.option_index)
+            return
+        if event.option_list.id == "conversation-files-list":
+            self._open_conversation_file_at(event.option_index)
             return
         if event.option_list.id == 'slash-suggestions':
             self._complete_slash(event.option_index)
@@ -2913,6 +2986,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
     def _mount_user_turn(self, text: str, sent_at: str | None = None) -> None:
         """Paint one user message as a rounded card and leave the idle board."""
         self._active_lane().lines.append(("user", text, sent_at))
+        record = getattr(self, "_record_conversation_files", None)
+        if callable(record):
+            record(text)
         if not self._lane_on_screen():
             return
         self._dismiss_idle()

@@ -6626,3 +6626,27 @@ msgstr "分享给模型"
 
 msgid "Trust folder"
 msgstr "信任文件夹"
+
+msgid "+ New side chat"
+msgstr "+ 新建侧边对话"
+
+msgid "Expand"
+msgstr "展开"
+
+msgid "Files {count}"
+msgstr "文件 {count}"
+
+msgid "Open in sidebar"
+msgstr "在侧栏中打开"
+
+msgid "Preview unavailable: file is binary or not valid UTF-8."
+msgstr "无法预览：文件为二进制或不是有效的 UTF-8。"
+
+msgid "Tab"
+msgstr "标签页"
+
+msgid "enter open · esc back · ↑/↓ move · ^b hide"
+msgstr "enter 打开 · esc 返回 · ↑/↓ 移动 · ^b 隐藏"
+
+msgid "{relative} · {size} bytes"
+msgstr "{relative} · {size} 字节"

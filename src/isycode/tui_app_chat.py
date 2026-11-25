@@ -391,6 +391,9 @@ class ChatMixin:
             outcome = await asyncio.to_thread(owner.execute, "workspace.files.read", {"path": path})
             if outcome.decision == "ALLOW" and outcome.receipt is not None:
                 files.append((path, read_result_text(outcome.text)))
+                record = getattr(self, "_record_conversation_files", None)
+                if callable(record):
+                    record(paths=[path])
                 self._append("  " + tr("Attached @{path} · receipt {receipt_id}", path=path, receipt_id=outcome.receipt.receipt_id), MUTED)
             else:
                 self._append("  " + tr("@{path} not attached · {value}", path=path, value=outcome.reason[:160]), YELLOW)
@@ -985,6 +988,10 @@ class ChatMixin:
 
             def finish_step() -> None:
                 nonlocal block
+                if step_content:
+                    record = getattr(self, "_record_conversation_files", None)
+                    if callable(record):
+                        record("".join(step_content))
                 lane = self._active_lane()
                 current = block
                 if self._lane_on_screen():

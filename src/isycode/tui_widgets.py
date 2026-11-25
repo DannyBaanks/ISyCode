@@ -38,7 +38,15 @@ from isycode.tui_theme import (
     static_content,
 )
 from isycode.localization import tr
-from isycode.tui_copy import extract_range, exact_selected_text, open_copy_menu, selectable_markdown, remember_copy_selection
+from isycode.sidebar_files import parse_local_file_link
+from isycode.tui_copy import (
+    CopyTextArea,
+    extract_range,
+    exact_selected_text,
+    open_copy_menu,
+    selectable_markdown,
+    remember_copy_selection,
+)
 from rich.markdown import Markdown as RichMarkdown
 from isycode.terminal_links import semantic_plain
 
@@ -425,6 +433,11 @@ class SidePanel(Vertical):
         with Horizontal(id="rail-tabs"):
             yield Button(tr("Overview"), id="show-overview")
             yield Button(tr("Files"), id="show-files")
+            yield Button("+", id="rail-tab-add")
+        with Horizontal(id="rail-doc-strip"):
+            yield Button("‹", id="rail-tab-prev")
+            yield Horizontal(id="rail-doc-tabs")
+            yield Button("›", id="rail-tab-next")
         yield Button("", id="rail-identity", compact=True)
         with QuietVerticalScroll(id="overview-view"):
             with Vertical(id="rail-card"):
@@ -459,6 +472,11 @@ class SidePanel(Vertical):
             yield Button(tr("Refresh integrations"), id="refresh-openisy")
             yield Button(tr("No plan pending"), id="review-plan", disabled=True)
         with Vertical(id="files-view"):
+            with Vertical(id="sidebar-chooser"):
+                yield Static(tr("Open in sidebar"), id="sidebar-chooser-title", classes="rail-section-label")
+                yield Button(tr("+ New side chat"), id="sidebar-new-chat")
+            yield Static(tr("Files {count}", count=0), id="conversation-files-header", classes="rail-section-label")
+            yield OptionList(id="conversation-files-list")
             with Horizontal(id="file-controls"):
                 yield _rail_file_button(tr("↑ Up"), fit=True, id="file-up")
                 yield _rail_file_button(tr("Refresh", context="file rail"), id="file-refresh")
@@ -469,15 +487,33 @@ class SidePanel(Vertical):
                 yield _rail_file_button(tr("Copy path"), id="file-copy-path", disabled=True)
                 yield _rail_file_button(tr("Open preview", context="file rail"),
                                         id="file-open-preview", disabled=True)
+            yield _rail_file_button(tr("Tab"), id="file-open-tab", disabled=True)
             with Vertical(id="file-preview-box"):
                 yield Static("", id="file-preview-meta", markup=False)
                 with VerticalScroll(id="file-preview-scroll"):
                     yield SelectableText(tr("Select a file to preview it."), id="file-preview", classes="rail-copy", markup=False)
+        with Vertical(id="doc-view"):
+            yield Static("", id="doc-meta", markup=False)
+            with Horizontal(id="doc-actions"):
+                yield _rail_file_button(tr("Copy path"), id="doc-copy-path")
+                yield _rail_file_button(tr("Expand"), id="doc-expand-modal")
+                yield _rail_file_button(tr("Close"), fit=True, id="doc-close-tab")
+            yield CopyTextArea("", id="doc-code", read_only=True, show_line_numbers=True, theme="monokai")
+            with VerticalScroll(id="doc-markdown-scroll"):
+                yield SelectableText("", id="doc-markdown", classes="rail-doc-markdown")
+        yield Static(tr("enter open · esc back · ↑/↓ move · ^b hide"),
+                     id="rail-footer-hint", classes="rail-footer-hint")
 
     def on_mount(self) -> None:
         for button in self.query(Button):
             button.compact = True
         self.query_one("#show-overview", Button).add_class("rail-lit")
+        self.query_one("#rail-doc-strip").display = False
+        self.query_one("#doc-view").display = False
+        self.query_one("#sidebar-chooser").display = False
+        self.query_one("#conversation-files-header").display = False
+        self.query_one("#conversation-files-list").display = False
+        self.query_one("#file-open-tab").display = False
 
 
 class ToolActivityGroup(ExpandableBox):
@@ -887,6 +923,7 @@ class SelectableText(Static):
 
     def on_mouse_down(self, event):
         remember_copy_selection(self)
+        self._link_press_pos = (event.screen_x, event.screen_y)
 
     async def _on_click(self, event) -> None:
         event.prevent_default()
@@ -897,6 +934,21 @@ class SelectableText(Static):
             self.render()
             whole = container.copy_text() if container is not None else self._selection_plain
             open_copy_menu(self, whole)
+            return
+        if event.chain == 1:
+            press_pos = getattr(self, "_link_press_pos", None)
+            self._link_press_pos = None
+            stationary = press_pos is None or press_pos == (event.screen_x, event.screen_y)
+            if stationary and not exact_selected_text(self.screen):
+                style = getattr(event, "style", None)
+                meta = getattr(style, "meta", None) or {}
+                href = meta.get("isy_link") or getattr(style, "link", None)
+                if isinstance(href, str) and href:
+                    root = getattr(self.app, "_workspace_root", None)
+                    if parse_local_file_link(href, root=root) is not None:
+                        open_link = getattr(self.app, "_open_file_link", None)
+                        if callable(open_link):
+                            open_link(href)
 
     def render(self):
         original = static_content(self)
