@@ -69,6 +69,9 @@ _ENTRIES = [
     ("broker.logs", "Semantic broker", "Read broker logs", "read", True),
     ("broker.stop", "Semantic broker", "Stop a semantic broker", "process", True),
     ("broker.remove", "Semantic broker", "Remove a broker container/image", "destructive", True),
+    ("telegram.connect", "Telegram", "Connect a locally paired personal bot", "external", False),
+    ("telegram.receive", "Telegram", "Accept instructions from the paired private chat", "external", False),
+    ("telegram.send", "Telegram", "Export workspace events to the paired private chat", "external", False),
     ("mobile.host.start", "Mobile Host", "Start the local Mobile Host", "network", True),
     ("mobile.host.stop", "Mobile Host", "Stop the local Mobile Host", "process", False),
     # A valid single-use PIN is the human-presence proof for this exchange.

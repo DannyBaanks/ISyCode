@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 93,
-    "effectful": 68,
-    "owner_valid": 72,
+    "actions": 96,
+    "effectful": 71,
+    "owner_valid": 75,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 18,
@@ -880,6 +880,54 @@
       "variants": [],
       "status": "OWNER_VALID",
       "secure_reachability": "NOT_DEMONSTRATED"
+    },
+    {
+      "action": "telegram.connect",
+      "effect": "external",
+      "approval_required": false,
+      "owners": [
+        "telegram"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "TelegramBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "telegram.receive",
+      "effect": "external",
+      "approval_required": false,
+      "owners": [
+        "telegram"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "TelegramBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "telegram.send",
+      "effect": "external",
+      "approval_required": false,
+      "owners": [
+        "telegram"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "TelegramBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
     },
     {
       "action": "mobile.host.start",
@@ -1764,6 +1812,24 @@
       "status": "COVERED"
     },
     {
+      "action": "telegram.connect",
+      "callsite": "TelegramOwner.authorize",
+      "owner": "telegram",
+      "status": "COVERED"
+    },
+    {
+      "action": "telegram.receive",
+      "callsite": "TelegramOwner.authorize",
+      "owner": "telegram",
+      "status": "COVERED"
+    },
+    {
+      "action": "telegram.send",
+      "callsite": "TelegramOwner.authorize",
+      "owner": "telegram",
+      "status": "COVERED"
+    },
+    {
       "action": "mobile.host.start",
       "callsite": "MobileHostOwner.authorize_and_launch",
       "owner": "mobile_host",
@@ -2017,91 +2083,91 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2634,
+      "line": 2662,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2760,
+      "line": 2788,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "workspace.files.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 3114,
+      "line": 3142,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute_image_read",
       "action": "workspace.files.read",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2415,
+      "line": 2443,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2487,
+      "line": 2515,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2557,
+      "line": 2585,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2643,
+      "line": 2671,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2694,
+      "line": 2722,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2702,
+      "line": 2730,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2768,
+      "line": 2796,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "grit.claims.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2830,
+      "line": 2858,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2918,
+      "line": 2946,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 760,
+      "line": 762,
       "callable": "isycode.action_runtime.WorkspaceTransactionSystembility.evaluate",
       "action": "workspace.files.write",
       "owner": "workspace_write"
@@ -2192,21 +2258,21 @@
     },
     {
       "file": "isycode/credential_owner.py",
-      "line": 54,
+      "line": 55,
       "callable": "isycode.credential_owner.CredentialOwner.add_request",
       "action": "credentials.add",
       "owner": "credentials"
     },
     {
       "file": "isycode/credential_owner.py",
-      "line": 93,
+      "line": 94,
       "callable": "isycode.credential_owner.CredentialOwner.revoke_request",
       "action": "credentials.revoke",
       "owner": "credentials"
     },
     {
       "file": "isycode/credential_owner.py",
-      "line": 155,
+      "line": 156,
       "callable": "isycode.credential_owner.CredentialUseOwner.use_request",
       "action": "credentials.use",
       "owner": "credential_use"
@@ -2422,6 +2488,13 @@
       "owner": "tailscale_serve"
     },
     {
+      "file": "isycode/telegram/owner.py",
+      "line": 64,
+      "callable": "isycode.telegram.owner.TelegramOwner.request",
+      "action": null,
+      "owner": "telegram"
+    },
+    {
       "file": "isycode/tui_app_authority.py",
       "line": 953,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
@@ -2472,14 +2545,14 @@
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 103,
+      "line": 105,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 185,
+      "line": 187,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -2558,7 +2631,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2918,
+      "line": 2946,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2606,6 +2679,13 @@
       "owner": "tailscale_serve"
     },
     {
+      "file": "isycode/telegram/owner.py",
+      "line": 64,
+      "callable": "isycode.telegram.owner.TelegramOwner.request",
+      "action": null,
+      "owner": "telegram"
+    },
+    {
       "file": "isycode/tui_app_authority.py",
       "line": 953,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
@@ -2614,7 +2694,7 @@
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 185,
+      "line": 187,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
