@@ -6626,3 +6626,81 @@ msgstr "Compartir con el modelo"
 
 msgid "Trust folder"
 msgstr "Confiar en carpeta"
+
+msgid "Antigravity account disconnected. API keys are unchanged."
+msgstr "Cuenta de Antigravity desconectada. Las API keys siguen sin cambios."
+
+msgid "Antigravity connection unavailable ({name}). Install official agy CLI and check Authority grants."
+msgstr "Conexión de Antigravity no disponible ({name}). Instala el CLI oficial agy y revisa los permisos de Authority."
+
+msgid "Antigravity quota check blocked · {value}"
+msgstr "Consulta de cuota de Antigravity bloqueada · {value}"
+
+msgid "Antigravity quota could not be read. Verify your Google sign-in first."
+msgstr "No se pudo leer la cuota de Antigravity. Verifica primero tu inicio de sesión con Google."
+
+msgid "Antigravity quota unavailable ({name})."
+msgstr "Cuota de Antigravity no disponible ({name})."
+
+msgid "Antigravity sign-in blocked · {value}"
+msgstr "Inicio de sesión de Antigravity bloqueado · {value}"
+
+msgid "Antigravity sign-in cancelled."
+msgstr "Inicio de sesión de Antigravity cancelado."
+
+msgid "Antigravity sign-in not completed · {value}"
+msgstr "Inicio de sesión de Antigravity no completado · {value}"
+
+msgid "Antigravity sign-in verified · plan {plan} · 5h & weekly limits apply"
+msgstr "Inicio de sesión de Antigravity verificado · plan {plan} · aplican límites de 5h y semanal"
+
+msgid "Google Antigravity · sign-in & 5h/weekly quota…"
+msgstr "Google Antigravity · inicio de sesión y cuota 5h/semanal…"
+
+msgid "Google Antigravity · subscription quota"
+msgstr "Google Antigravity · cuota de suscripción"
+
+msgid "Queries official agy /usage inside ISyCode's isolated home (requires host grant)."
+msgstr "Consulta el /usage oficial de agy dentro del directorio aislado de ISyCode (requiere permiso de host)."
+
+msgid "Runs official agy ACP at {executable}. Private isolated home: {home}. Contacts accounts.google.com and daily-cloudcode-pa.googleapis.com. ISyCode never extracts or copies OAuth tokens, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply."
+msgstr "Ejecuta el agy ACP oficial en {executable}. Directorio privado aislado: {home}. Contacta a accounts.google.com y daily-cloudcode-pa.googleapis.com. ISyCode nunca extrae ni copia tokens OAuth, y todas las herramientas del workspace siguen detrás de IsySentinel. Aplican límites del plan (5h y semanal)."
+
+msgid "Sign in with Google Antigravity"
+msgstr "Iniciar sesión con Google Antigravity"
+
+msgid "Sign in with Google OAuth, check 5h/weekly subscription quota, or disconnect."
+msgstr "Inicia sesión con Google OAuth, revisa tu cuota de 5h/semanal o desconecta la cuenta."
+
+msgid "Subscription 5h & weekly quota is available when Google Antigravity is selected."
+msgstr "La cuota de suscripción de 5h y semanal está disponible cuando Google Antigravity está seleccionado."
+
+msgid "Google Antigravity · OAuth subscription"
+msgstr "Google Antigravity · suscripción OAuth"
+
+msgid "Sign in with Google Antigravity · browser OAuth"
+msgstr "Iniciar sesión con Google Antigravity · OAuth en navegador"
+
+msgid "Use saved Antigravity sign-in · checked on request"
+msgstr "Usar sesión guardada de Antigravity · se verifica al enviar"
+
+msgid "Check 5h & weekly subscription quota"
+msgstr "Consultar cuota de suscripción (5h y semanal)"
+
+msgid "Disconnect Antigravity account…"
+msgstr "Desconectar cuenta de Antigravity…"
+
+msgid "Uses official agy ACP in an isolated home. ISyCode never reads OAuth tokens; tools stay behind IsySentinel."
+msgstr "Usa el agy ACP oficial en un directorio aislado. ISyCode nunca lee tokens OAuth; las herramientas siguen detrás de IsySentinel."
+
+msgid "Google OAuth subscription · Gemini & plan models"
+msgstr "Suscripción Google OAuth · Gemini y modelos del plan"
+
+msgid "Disconnect Google Antigravity?"
+msgstr "¿Desconectar Google Antigravity?"
+
+msgid "Connect Google Antigravity subscription?"
+msgstr "¿Conectar suscripción de Google Antigravity?"
+
+msgid "Connect Antigravity"
+msgstr "Conectar Antigravity"
