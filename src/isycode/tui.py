@@ -1747,6 +1747,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 self._account_models_attempted = attempted | {name}
                 self._account_models_loading = True
                 self.run_worker(self._load_account_models(name), exclusive=True, group="provider-models")
+            trigger_quota = getattr(self, "_maybe_refresh_provider_quota", None)
+            if callable(trigger_quota):
+                trigger_quota(name)
         self._menu_mode = mode
         self._menu_title = display_title
         self._menu_entries = entries

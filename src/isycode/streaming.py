@@ -251,6 +251,7 @@ async def async_stream_complete(
     tools: list[dict] | None = None,
     include_usage: bool = False,
     chat_template_kwargs: dict | None = None,
+    provider_name: str = "",
 ) -> dict:
     """Stream a completion over an asyncio-owned socket that its task can cancel."""
     parsed = urlparse(base_url)
@@ -444,6 +445,12 @@ async def async_stream_complete(
             if b":" in header_line:
                 key, value = header_line.decode("latin-1").split(":", 1)
                 headers[key.strip().casefold()] = value.strip()
+        if provider_name and headers:
+            try:
+                from isycode.provider_quotas import record_http_rate_limits
+                record_http_rate_limits(provider_name, headers, model=model)
+            except Exception:
+                pass
         if status != 200:
             from isycode.provider_errors import error_signals
             error_body = b""

@@ -249,6 +249,13 @@ async def anthropic_stream_complete(api_key: str | None, model: str, messages: l
         request["betas"] = betas
     try:
         async with client.beta.messages.stream(**request) as stream:
+            resp_headers = getattr(getattr(stream, "response", None), "headers", None)
+            if resp_headers:
+                try:
+                    from isycode.provider_quotas import record_http_rate_limits
+                    record_http_rate_limits("anthropic", dict(resp_headers), model=model)
+                except Exception:
+                    pass
             async for event in stream:
                 if event.type == "content_block_delta" and on_chunk is not None:
                     if event.delta.type == "thinking_delta" and event.delta.thinking:

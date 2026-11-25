@@ -6728,3 +6728,27 @@ msgstr "连接 Google Antigravity 订阅？"
 
 msgid "Connect Antigravity"
 msgstr "连接 Antigravity"
+
+msgid "Quota"
+msgstr "配额"
+
+msgid "Checking quota…"
+msgstr "正在查询配额…"
+
+msgid "Not reported yet"
+msgstr "暂未上报"
+
+msgid "Shown when this provider exposes quota or rate-limit headers."
+msgstr "当此提供商公开配额或速率限制响应头时自动显示。"
+
+msgid "Plan"
+msgstr "套餐"
+
+msgid "This model"
+msgstr "此模型"
+
+msgid "Account"
+msgstr "账户"
+
+msgid "Credits"
+msgstr "额度"
