@@ -359,6 +359,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "tailscale_login": frozenset({"TailscaleExecutableBoundary"}),
     "tailscale_serve": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary",
                                    "TailscalePrivateServeBoundary"}),
+    "telegram": frozenset({"TelegramBoundary"}),
     "mobile_host": frozenset({"MobileHostBoundary"}),
     "workspace_command": frozenset({"CommandProcessBoundary"}),
     "workspace_git": frozenset({"GitBoundary"}),
@@ -408,6 +409,7 @@ OWNER_ACTIONS = {
     "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}),
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
+    "telegram": frozenset({"telegram.connect", "telegram.receive", "telegram.send"}),
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
     "workspace_command": frozenset({"workspace.command.run"}),
     "workspace_git": GIT_ACTIONS,
@@ -1284,7 +1286,7 @@ class CredentialBoundarySystembility:
 
         params = request.parameters
         service = params.get("service")
-        known = isinstance(service, str) and (service in PRESETS or service == "isyco-gateway")
+        known = isinstance(service, str) and (service in PRESETS or service in {"isyco-gateway", "isycode-telegram"})
         if request.action_id == "credentials.add":
             labels_ok = all(
                 isinstance(params.get(key), str) and 1 <= len(params[key]) <= 96
@@ -1294,9 +1296,15 @@ class CredentialBoundarySystembility:
             valid = (set(params) == {"service", "name", "purpose"} and known
                      and request.target == service and labels_ok)
         elif request.action_id == "credentials.use":
-            valid = (set(params) == {"service", "consumer"} and known
-                     and request.target == service
-                     and params.get("consumer") in {"provider.request", "gateway", "mcp", "semantic"})
+            if service == "isycode-telegram":
+                key_id = params.get("key_id")
+                valid = (set(params) == {"service", "consumer", "key_id"}
+                         and request.target == service and params.get("consumer") == "telegram"
+                         and isinstance(key_id, str) and re.fullmatch(r"cred_[a-f0-9]{16}", key_id) is not None)
+            else:
+                valid = (set(params) == {"service", "consumer"} and known
+                         and request.target == service
+                         and params.get("consumer") in {"provider.request", "gateway", "mcp", "semantic"})
         else:
             key_id = params.get("key_id")
             valid = (set(params) == {"key_id", "service"} and known
@@ -2056,6 +2064,26 @@ class TailscalePrivateServeSystembility:
                                   "private Serve route must be free or match live and owned identity")
 
 
+class TelegramBoundarySystembility:
+    """Only an exact, locally configured personal peer and material digest."""
+
+    name = "TelegramBoundary"
+
+    def evaluate(self, request, authority):
+        if request.action_id not in {"telegram.connect", "telegram.receive", "telegram.send"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        profile = params.get("profile")
+        bot, user, chat = (params.get(key) for key in ("bot_id", "user_id", "chat_id"))
+        digest = params.get("material_sha256")
+        valid = (set(params) == {"profile", "bot_id", "user_id", "chat_id", "material_sha256"}
+                 and isinstance(profile, str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", profile)
+                 and all(type(n) is int and 0 < n < 2**52 for n in (bot, user, chat))
+                 and user == chat and request.target == f"{profile}:{bot}:{user}"
+                 and isinstance(digest, str) and re.fullmatch(r"[a-f0-9]{64}", digest))
+        return SystembilityResult(self.name, bool(valid), "private Telegram peer and digest must match")
+
+
 class MobileHostSystembility:
     """Keep mobile pairing bound to the loopback host and its one-use PIN."""
 
@@ -2331,7 +2359,7 @@ class ProductActionGate:
             TailscalePackageSystembility(tailscale_facts),
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
-            MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
+            TelegramBoundarySystembility(), MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
             BridgePresenceSystembility(), BridgeCoordinationSystembility(),
             WorkspaceMemorySystembility(), GusL0Systembility(),

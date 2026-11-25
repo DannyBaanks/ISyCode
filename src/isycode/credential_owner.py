@@ -22,14 +22,15 @@ from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 
 GATEWAY_SERVICE = "isyco-gateway"
+TELEGRAM_SERVICE = "isycode-telegram"
 # Who may consume a saved key; recorded in each use decision and receipt.
-KEY_CONSUMERS = frozenset({"provider.request", "gateway", "mcp", "semantic"})
+KEY_CONSUMERS = frozenset({"provider.request", "gateway", "mcp", "semantic", "telegram"})
 KEY_ID = re.compile(r"cred_[a-f0-9]{16}")
 
 
 def credential_services() -> frozenset[str]:
     """Services a key may be saved for: the provider presets plus the ISyCo Gateway."""
-    return frozenset(PRESETS) | {GATEWAY_SERVICE}
+    return frozenset(PRESETS) | {GATEWAY_SERVICE, TELEGRAM_SERVICE}
 
 
 def _label(value: Any) -> bool:
@@ -151,14 +152,15 @@ class CredentialUseOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id="credential_use")
         self.vault = vault if vault is not None else CredentialVault()
 
-    def use_request(self, service: str, consumer: str) -> ActionRequest:
+    def use_request(self, service: str, consumer: str, *, key_id: str | None = None) -> ActionRequest:
         return ActionRequest("credentials.use", self.root, service, {
             "service": service, "consumer": consumer,
+            **({"key_id": key_id} if key_id is not None else {}),
         }, execution_owner="credential_use")
 
-    def secret_for(self, service: str, consumer: str) -> tuple[ActionOutcome, str | None]:
+    def secret_for(self, service: str, consumer: str, *, key_id: str | None = None) -> tuple[ActionOutcome, str | None]:
         try:
-            request = self.use_request(service, consumer)
+            request = self.use_request(service, consumer, key_id=key_id)
             authority, decision = self.gate.authorize(request)
         except Exception:
             return ActionOutcome("Saved key not used.", "DENY", None,
@@ -168,7 +170,14 @@ class CredentialUseOwner:
                 check.reason for check in decision.checks if not check.passed)
             return ActionOutcome("Saved key not used.", "DENY", None, reason[:240]), None
         try:
-            secret = self.vault.latest_secret_for_service(service)
+            if service == TELEGRAM_SERVICE:
+                # Select the exact locally bound credential, never the latest bot.
+                record = next((item for item in self.vault.list_metadata()
+                               if item["id"] == key_id and item["service"] == service
+                               and not item["revoked"]), None)
+                secret = self.vault.get_secret(key_id) if record else None
+            else:
+                secret = self.vault.latest_secret_for_service(service)
         except (CredentialVaultError, OSError, ValueError) as exc:
             return ActionOutcome("Saved key not used.", "ERROR", None,
                                  f"the OS keyring could not be read ({type(exc).__name__})"), None

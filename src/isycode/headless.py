@@ -9,6 +9,8 @@ Edits, commands, commits and anything else stay unavailable.
 """
 from __future__ import annotations
 
+from isycode.agent_runtime import provider_step, tool_message
+
 import asyncio
 import json
 import os
@@ -294,8 +296,8 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                         "temperature_supported": provider.temperature_supported,
                         "tools": tools or None}
             events.emit("provider.request", {"provider": provider.name, "model": provider.model})
-            response, outcome = await owner.execute(
-                provider, material, lambda: send(messages, tools or None, on_chunk))
+            response, outcome = await provider_step(
+                owner, provider, material, lambda: send(messages, tools or None, on_chunk))
             if outcome.decision != "ALLOW" or not isinstance(response, dict):
                 events.emit("agent.end", {"status": "denied"})
                 _terminal(log, f"isycode: provider request {outcome.decision} · {outcome.reason[:240]}")
@@ -318,7 +320,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                 call_id, result = await _dispatch_async(root, authority, call, log, flow=is_flow)
                 tool_calls += 1
                 events.emit("tool.result", {"tool_call_id": call_id})
-                messages.append({"role": "tool", "tool_call_id": call_id, "content": result})
+                messages.append(tool_message(call_id, result))
             if not json_output and streamed:
                 out.write("\n")
     except (ProviderError, StreamError, OSError) as exc:

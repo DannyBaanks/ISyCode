@@ -14,6 +14,7 @@ Usage:
   isycode --mode MODE      Start in classic, flow, or security mode
   isycode --prompt "TEXT"  Start the chat TUI and submit an initial prompt (alias: -i)
   isycode cli              Browse actions by semantic category
+  isycode telegram --help  Configure or run the opt-in personal Telegram frontend
   isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
   isycode sessions ...      List/show/search/rename/delete local conversations; add --json
   isycode models [--json]   Show local provider/model metadata; no network calls
@@ -99,6 +100,10 @@ def main(argv: list[str] | None = None) -> int:
             except (OSError, ValueError):
                 pass  # Embedded/test streams may already have consumed input.
     arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] == "telegram":
+        from isycode.telegram.cli import main as telegram_main
+
+        return telegram_main(arguments[1:])
     if arguments and arguments[0] in {"update", "actualizar"}:
         from isycode.updater import SelfUpdater
 

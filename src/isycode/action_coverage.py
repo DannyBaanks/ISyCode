@@ -37,6 +37,10 @@ NON_AUTHORITY_ACTIONS = frozenset({"role.select"})
 # Their selector implementations are exercised by focused tests; a new dynamic
 # constructor has no contract here and blocks the frontier report.
 DYNAMIC_ACTION_RESOLVERS = {
+    "isycode.telegram.owner.TelegramOwner.request": {
+        "owner": "telegram",
+        "actions": ("telegram.connect", "telegram.receive", "telegram.send"),
+    },
     "isycode.action_runtime.LocalWorkspaceReadOwner._execute": {
         "owner": "workspace_read",
         "actions": ("workspace.files.list", "workspace.files.read",
@@ -288,6 +292,9 @@ KNOWN_EFFECT_CALLSITES = (
     ("workspace.memory.read", "WorkspaceMemoryOwner.execute", "workspace_memory", "COVERED"),
     ("workspace.memory.write", "WorkspaceMemoryOwner.execute", "workspace_memory", "COVERED"),
     ("workspace.memory.forget", "WorkspaceMemoryOwner.execute", "workspace_memory", "COVERED"),
+    ("telegram.connect", "TelegramOwner.authorize", "telegram", "COVERED"),
+    ("telegram.receive", "TelegramOwner.authorize", "telegram", "COVERED"),
+    ("telegram.send", "TelegramOwner.authorize", "telegram", "COVERED"),
     ("mobile.host.start", "MobileHostOwner.authorize_and_launch", "mobile_host", "COVERED"),
     # TUI shutdown is lifecycle cleanup, not a user-authorized stop action.
     # The catalog action remains explicitly denied in Secure.

@@ -4,6 +4,8 @@ Moved verbatim from tui.py. TUIApp inherits this mixin.
 """
 from __future__ import annotations
 
+from isycode.agent_tools import prepare_write, prepare_command
+
 import asyncio
 from typing import TYPE_CHECKING
 
@@ -386,9 +388,7 @@ class WorkspaceMixin:
                                 self._action_approvals)
         try:
             preview = await asyncio.to_thread(
-                owner.prepare, arguments.get("argv"), arguments.get("cwd", "."),
-                arguments.get("timeout_s", 120), scope=arguments.get("scope", "."),
-                max_stage_bytes=arguments.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES))
+                prepare_command, owner, arguments)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
             self._append("  " + tr("Command denied · {reason}", reason=reason), SECURITY)
@@ -670,11 +670,7 @@ class WorkspaceMixin:
         owner = WorkspaceWriteOwner(root, WorkspaceAuthority(root),
                                     self._action_approvals)
         try:
-            if edit:
-                preview = await asyncio.to_thread(owner.preview_edit, path, old_text, new_text,
-                                                  replace_all)
-            else:
-                preview = await asyncio.to_thread(owner.preview, path, content)
+            preview = await asyncio.to_thread(prepare_write, owner, arguments, edit=edit)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
             self._append("  " + tr("Tool denied · workspace.files.write · {reason}", reason=reason), SECURITY)
