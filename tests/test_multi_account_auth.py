@@ -52,7 +52,7 @@ def _fake_exe(tmp_path: Path, name: str) -> Path:
     exe = tmp_path / name
     exe.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     exe.chmod(0o700)
-    return exe
+    return exe.resolve()
 
 
 # ── Antigravity OAuth environment fix ───────────────────────────────────
@@ -257,8 +257,10 @@ def test_provider_auth_owner_and_sentinel_support_isolated_slots(tmp_path, monke
 
 def test_grok_multi_account_isolation_auth_owner_and_token_switch(tmp_path, monkeypatch):
     _isolated_state(tmp_path, monkeypatch)
-    monkeypatch.setenv("HOME", str(tmp_path / "fake_home"))
-    (tmp_path / "fake_home").mkdir()
+    fake_home = tmp_path / "fake_home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("USERPROFILE", str(fake_home))
     root = tmp_path / "workspace"
     root.mkdir()
     exe = _fake_exe(tmp_path, "grok")

@@ -4,6 +4,7 @@ from urllib.parse import urlsplit
 
 from isycode.localization import tr
 from isycode.provider_auth import ANTIGRAVITY_AUTH_HOSTS, AUTH_HOSTS
+from isycode.tui_dialog import Dialog, DialogAction
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -85,44 +86,41 @@ class SubscriptionLoginScreen(ModalScreen[None]):
     def action_cancel(self): self.dismiss(None)
 
 
-class AccountSlotScreen(ModalScreen[str | None]):
+class AccountSlotScreen(Dialog):
     """Prompt for a new isolated subscription slot name (e.g. pro2, work)."""
 
-    CSS = '''
-    AccountSlotScreen { align: center middle; background: #000000 65%; }
-    #account-slot-card { width: 68; max-width: 94%; height: auto; min-height: 10; padding: 1 2; border: solid #718291; background: #000000; }
-    #account-slot-heading { height: 1; color: #edf1f5; text-style: bold; }
-    #account-slot-note { height: auto; color: #9eaab6; margin-bottom: 1; }
-    #account-slot-input { height: 3; margin-bottom: 1; }
-    #account-slot-actions { height: 3; align-horizontal: right; }
-    #account-slot-actions Button { margin-left: 1; }
-    '''
-    BINDINGS = [Binding('escape', 'cancel', 'Cancel')]
+    dialog_width = 'normal'
+    dialog_height = 'fit'
+    dialog_cancel_result = None
+    dialog_default_action = 'account-slot-save'
 
     def __init__(self, provider_label: str, suggested: str = 'pro2') -> None:
         super().__init__()
         self.provider_label = provider_label
         self.suggested = suggested
 
-    def compose(self) -> ComposeResult:
-        with Vertical(id='account-slot-card', classes='isy-dialog'):
-            yield Static(tr('Add account slot · {provider}', provider=self.provider_label),
-                         id='account-slot-heading', classes='isy-dialog-title', markup=False)
-            yield Static(tr('Short label (letters, digits, - or _). Credentials stay isolated in this slot.'),
-                         id='account-slot-note', markup=False)
-            yield Input(value=self.suggested, placeholder='pro2', id='account-slot-input')
-            with Horizontal(id='account-slot-actions', classes='isy-dialog-actions'):
-                yield Button(tr('Cancel'), id='account-slot-cancel')
-                yield Button(tr('Add & sign in'), id='account-slot-save', variant='primary')
+    def dialog_heading(self) -> str:
+        return tr('Add account slot · {provider}', provider=self.provider_label)
+
+    def dialog_note(self) -> str:
+        return tr('Short label (letters, digits, - or _). Credentials stay isolated in this slot.')
+
+    def compose_body(self) -> ComposeResult:
+        yield Input(value=self.suggested, placeholder='pro2', id='account-slot-input')
+
+    def dialog_actions(self) -> tuple[DialogAction, ...]:
+        return (
+            DialogAction('account-slot-cancel', tr('Cancel')),
+            DialogAction('account-slot-save', tr('Add & sign in'), variant='primary', focused=True),
+        )
 
     def on_mount(self) -> None:
         field = self.query_one('#account-slot-input', Input)
         field.focus()
         field.cursor_position = len(field.value)
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        event.stop()
-        if event.button.id == 'account-slot-save':
+    def dismiss_action(self, action_id: str) -> None:
+        if action_id == 'account-slot-save':
             self.dismiss(self.query_one('#account-slot-input', Input).value)
         else:
             self.dismiss(None)
@@ -130,6 +128,3 @@ class AccountSlotScreen(ModalScreen[str | None]):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id == 'account-slot-input':
             self.dismiss(event.value)
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
