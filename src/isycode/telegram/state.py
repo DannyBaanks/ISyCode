@@ -213,7 +213,15 @@ class TelegramStore:
     def recover(self):
         with self.db() as db:
             db.execute("INSERT OR IGNORE INTO paused_sessions SELECT session FROM queue WHERE state='running'")
+            db.execute("INSERT INTO events(turn,kind,payload) SELECT turn,'turn.finish','{\"status\":\"interrupted\"}' FROM queue WHERE state='running'")
             db.execute("UPDATE queue SET state='interrupted' WHERE state='running'")
+
+    def revoke_pending(self):
+        """Cut intake and export and cancel queued work in one local transaction."""
+        with self.db() as db:
+            for key in ('revoked', 'stop_requested'):
+                db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', (key, 'true'))
+            db.execute("UPDATE queue SET state='cancelled' WHERE state='queued'")
 
     def resume_pending(self, session_id):
         """Explicit continuation only; never requeue an interrupted turn."""

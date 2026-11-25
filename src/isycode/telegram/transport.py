@@ -1,6 +1,7 @@
 """Bounded Bot API adapter. Secrets never appear in surfaced exceptions."""
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from dataclasses import dataclass
@@ -66,7 +67,7 @@ class TelegramTransport:
             return body['result']
         except TelegramError:
             raise
-        except (aiohttp.ClientError, TimeoutError, OSError, ValueError, RuntimeError):
+        except (aiohttp.ClientError, asyncio.TimeoutError, TimeoutError, OSError, ValueError, RuntimeError):
             # Neither exception text nor traceback chain may expose the token URL.
             raise TelegramError('transport_failure') from None
 
@@ -95,7 +96,7 @@ class TelegramTransport:
     @staticmethod
     def _receipt(result, chat_id):
         if (not isinstance(result, dict) or not isinstance(result.get('chat'), dict)
-                or result['chat'].get('id') != chat_id or result['chat'].get('type') != 'private'
+                or type(result['chat'].get('id')) is not int or result['chat'].get('id') != chat_id or result['chat'].get('type') != 'private'
                 or type(result.get('message_id')) is not int or result['message_id'] <= 0):
             raise TelegramError('unverified_delivery')
         return SendReceipt(chat_id, result['message_id'])

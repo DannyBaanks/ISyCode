@@ -17,7 +17,7 @@ from isycode.agent_questions import validate_question, ASK_USER_TOOL
 from isycode.approvals import ActionApprovalStore
 from isycode.command_runner import CommandRunOwner, command_tool, COMMAND_DEFAULT_STAGE_BYTES
 from isycode.git_owner import GitOwner, GIT_TOOLS
-from isycode.security import ActionRequest
+from isycode.security import ActionRequest, _plain
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_trust import quiet_request
 from isycode.workspace_write import WorkspaceWriteOwner, write_tools_for_mode
@@ -58,10 +58,11 @@ def prepare_command(owner, arguments: dict):
 
 class LocalAgentTools:
     def __init__(self, root: Path, authority: WorkspaceAuthority,
-                 approvals: ActionApprovalStore, interactions: InteractionPort, *, emit=None):
+                 approvals: ActionApprovalStore, interactions: InteractionPort, *, emit=None, guard=None):
         self.root, self.authority = root.resolve(strict=True), authority
         self.approvals, self.interactions = approvals, interactions
         self.emit = emit or (lambda *args: None)
+        self.guard = guard or (lambda: None)
 
     def schemas(self):
         from isycode.action_runtime import workspace_tools_for_mode
@@ -74,6 +75,7 @@ class LocalAgentTools:
                 if tool['function']['name'] in supported]
 
     async def approval(self, preview, label, text):
+        self.guard()
         request = preview.request
         fingerprint = policy_fingerprint(self.authority)
         if quiet_request(self.authority, request):
@@ -82,7 +84,18 @@ class LocalAgentTools:
             request.digest, text, label, fingerprint))
         if accepted is not True or policy_fingerprint(self.authority) != fingerprint:
             return False, None
+        self.guard()
         return True, self.approvals.issue(request)
+
+    async def _settled_effect(self, fn, *args):
+        self.guard()
+        task = asyncio.create_task(asyncio.to_thread(fn, *args))
+        try:
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            # Do not release the workspace while an owned synchronous effect is running.
+            await asyncio.gather(task, return_exceptions=True)
+            raise
 
     @staticmethod
     def _result(outcome):
@@ -98,8 +111,11 @@ class LocalAgentTools:
     async def dispatch(self, call: dict) -> tuple[str, str]:
         call_id = call.get('id', '') if isinstance(call, dict) else ''
         try:
+            self.guard()
             fn = call['function']
             name = fn['name']
+            if name not in {tool['function']['name'] for tool in self.schemas()}:
+                raise ValueError('tool is unavailable in this frontend')
             raw = fn.get('arguments', '{}')
             if not isinstance(raw, str) or len(raw) > 65536:
                 raise ValueError('tool arguments exceed the protocol limit')
@@ -124,15 +140,19 @@ class LocalAgentTools:
                 owner = GitOwner(self.root, self.authority, self.approvals)
                 preview = await asyncio.to_thread(owner.preview_commit, arguments.get('message'), arguments.get('paths'))
                 accepted, approval = await self.approval(preview, name, preview.diff)
-                result = await asyncio.to_thread(owner.commit, preview, approval) if accepted else None
+                result = await self._settled_effect(owner.commit, preview, approval) if accepted else None
             elif name == 'workspace_run':
                 if arguments.get('background'):
                     raise ValueError('background shell jobs are unavailable; the session itself is asynchronous')
                 owner = CommandRunOwner(self.root, self.authority, self.approvals)
                 preview = await asyncio.to_thread(prepare_command, owner, arguments)
                 accepted, approval = await self.approval(preview, name, json.dumps({
-                    'argv': preview.argv, 'cwd': preview.cwd, 'scope': preview.scope,
-                    'timeout_s': preview.timeout_s, 'host_execution': preview.host_execution}, ensure_ascii=False))
+                    'action': preview.request.action_id, 'target': preview.request.target,
+                    'workspace': str(self.root), 'parameters': _plain(preview.request.parameters),
+                    'scope': preview.scope, 'max_stage_bytes': preview.max_stage_bytes,
+                    'host_execution': preview.host_execution}, ensure_ascii=False, indent=2))
+                if accepted:
+                    self.guard()
                 result = await owner.run(preview, approval, on_output=lambda text: self.emit('command.output', {'text': text})) if accepted else None
             elif name in {'workspace_write', 'workspace_edit', 'workspace_delete', 'workspace_move'}:
                 owner = WorkspaceWriteOwner(self.root, self.authority, self.approvals)
@@ -143,7 +163,7 @@ class LocalAgentTools:
                 else:
                     preview = await asyncio.to_thread(owner.preview_move, arguments.get('path'), arguments.get('to'))
                 accepted, approval = await self.approval(preview, name, preview.diff)
-                result = await asyncio.to_thread(owner.apply, preview, approval) if accepted else None
+                result = await self._settled_effect(owner.apply, preview, approval) if accepted else None
             else:
                 raise ValueError('tool is unavailable in this frontend')
             return call_id, self._result(result) if result else json.dumps({'status': 'rejected_by_user', 'error': 'review rejected or policy changed'})
