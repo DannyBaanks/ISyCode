@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,6 +18,9 @@ ISSUER = "https://auth.x.ai"
 SESSION_BASE = "https://cli-chat-proxy.grok.com/v1"
 SESSION_HOST = "cli-chat-proxy.grok.com"
 SESSION_MODEL = "grok-4.7"
+DEFAULT_CLIENT_VERSION = "1.0.92"
+_VERSION_RE = re.compile(r"\b(\d+\.\d+\.\d+)\b")
+_CLIENT_VERSION_CACHE: dict[str, str] = {}
 
 
 def auth_file() -> Path:
@@ -145,6 +150,46 @@ def access_token(slot: str | None = None) -> str:
     record = _record(slot)
     key = record.get("key") if isinstance(record, dict) else ""
     return key if isinstance(key, str) else ""
+
+
+def client_version() -> str:
+    """Read the installed official grok CLI semver (cached), or fall back safely."""
+    try:
+        executable = grok_executable()
+    except (OSError, ValueError):
+        return DEFAULT_CLIENT_VERSION
+    cached = _CLIENT_VERSION_CACHE.get(executable)
+    if cached:
+        return cached
+    version = DEFAULT_CLIENT_VERSION
+    try:
+        proc = subprocess.run(
+            [executable, "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=2.0,
+            check=False,
+        )
+        match = _VERSION_RE.search(f"{proc.stdout} {proc.stderr}")
+        if match:
+            version = match.group(1)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    _CLIENT_VERSION_CACHE[executable] = version
+    return version
+
+
+def session_headers() -> dict[str, str]:
+    """Headers required by cli-chat-proxy.grok.com (avoids HTTP 426 Upgrade Required)."""
+    version = client_version()
+    return {
+        "User-Agent": f"grok-cli/{version}",
+        "x-grok-client-version": version,
+        "x-grok-client-identifier": "grok-cli",
+        "X-XAI-Token-Auth": "xai-grok-cli",
+    }
 
 
 def session_transport() -> str | None:
