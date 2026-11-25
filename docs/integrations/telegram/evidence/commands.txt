@@ -1,0 +1,8 @@
+Verified at: 2026-11-24T20:50:47-06:00
+Feature HEAD: 6be0b0daa00da2502ad743b5401d822dd69e7c8b
+Python: Python 3.12.3
+Isolation: ISYCODE_STATE_HOME and XDG_STATE_HOME in distinct mktemp directory, PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1
+Regression: python -m pytest tests/test_telegram_service.py tests/test_telegram_cli.py tests/test_telegram_state.py tests/test_telegram_owner.py tests/test_telegram_transport.py tests/test_agent_runtime.py tests/test_agent_tools.py tests/test_headless.py tests/test_workspace_write.py tests/test_workspace_write_tui.py tests/test_git_owner.py tests/test_command_runner.py tests/test_credential_owner.py tests/test_workspace_authority.py tests/test_session_owner.py tests/test_session_continuity_guard.py tests/test_launcher.py -q -p no:cacheprovider
+Progress: python -m pytest tests/test_telegram_service.py tests/test_telegram_state.py tests/test_telegram_transport.py tests/test_telegram_cli.py -q -p no:cacheprovider
+Final focused: python -m pytest tests/test_telegram_service.py tests/test_telegram_cli.py tests/test_telegram_state.py tests/test_telegram_owner.py tests/test_telegram_transport.py tests/test_agent_runtime.py tests/test_agent_tools.py tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners tests/test_action_coverage.py::test_every_declared_owner_boundary_is_installed_in_product_sentinel -q -p no:cacheprovider
+All three exit code 0. No live network pairing or provider.
