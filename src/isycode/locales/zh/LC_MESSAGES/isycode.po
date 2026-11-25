@@ -6752,3 +6752,123 @@ msgstr "账户"
 
 msgid "Credits"
 msgstr "额度"
+
+msgid "+ Add new {provider} account (browser)…"
+msgstr "+ 添加新的 {provider} 账户（浏览器）…"
+
+msgid "+ Add new {provider} account (device code)…"
+msgstr "+ 添加新的 {provider} 账户（设备代码）…"
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated ChatGPT subscriptions."
+msgstr "当前槽位：[{slot}] · {count} 个账户。切换、添加或移除隔离的 ChatGPT 订阅。"
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Google subscriptions."
+msgstr "当前槽位：[{slot}] · {count} 个账户。切换、添加或移除隔离的 Google 订阅。"
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated subscriptions."
+msgstr "当前槽位：[{slot}] · {count} 个账户。切换、添加或移除隔离订阅。"
+
+msgid "Active {provider} account switched to [{slot}]."
+msgstr "已将当前 {provider} 账户切换至 [{slot}]。"
+
+msgid "Add & sign in"
+msgstr "添加并登录"
+
+msgid "Add account slot · {provider}"
+msgstr "添加账户槽位 · {provider}"
+
+msgid "Antigravity sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+msgstr "Antigravity 登录已验证 [{slot}] · 方案 {plan} · 适用 5 小时及每周限额"
+
+msgid "ChatGPT sign-in verified [{slot}] · plan {plan} · subscription limits apply"
+msgstr "ChatGPT 登录已验证 [{slot}] · 方案 {plan} · 适用订阅限额"
+
+msgid "Could not add account slot · {reason}"
+msgstr "无法添加账户槽位 · {reason}"
+
+msgid "Could not switch account · {reason}"
+msgstr "无法切换账户 · {reason}"
+
+msgid "Created isolated {provider} account slot [{slot}]. Starting sign-in…"
+msgstr "已创建隔离的 {provider} 账户槽位 [{slot}]。正在启动登录…"
+
+msgid "Creates a new isolated account slot and starts headless device-code sign-in."
+msgstr "创建新的隔离账户槽位并启动无头设备代码登录。"
+
+msgid "Creates a new isolated account slot and starts official browser sign-in."
+msgstr "创建新的隔离账户槽位并启动官方浏览器登录。"
+
+msgid "Deletes only this slot's isolated local state after confirmation. Primary is untouched."
+msgstr "确认后仅删除此槽位的隔离本地状态。主账户不受影响。"
+
+msgid "Google Antigravity [{slot}] · subscription quota"
+msgstr "Google Antigravity [{slot}] · 订阅配额"
+
+msgid "Low quota ({pct}%) on [{slot}] — switch to [{target}] via /accounts."
+msgstr "[{slot}] 配额较低（{pct}%）— 可通过 /accounts 切换至 [{target}]。"
+
+msgid "Manage ChatGPT accounts [{slot}] ({count})…"
+msgstr "管理 ChatGPT 账户 [{slot}]（{count}）…"
+
+msgid "Manage Google Antigravity accounts [{slot}] ({count})…"
+msgstr "管理 Google Antigravity 账户 [{slot}]（{count}）…"
+
+msgid "Manage Grok accounts [{slot}] ({count})…"
+msgstr "管理 Grok 账户 [{slot}]（{count}）…"
+
+msgid "Quota alert ({level}) on [{slot}]. Switch active Antigravity account immediately."
+msgstr "[{slot}] 配额告警（{level}）。请立即切换当前 Antigravity 账户。"
+
+msgid "Remove account"
+msgstr "移除账户"
+
+msgid "Remove isolated account [{slot}]?"
+msgstr "移除隔离账户 [{slot}]？"
+
+msgid "Remove isolated account [{slot}]…"
+msgstr "移除隔离账户 [{slot}]…"
+
+msgid "Removes local isolated credentials and metadata for {provider} slot [{slot}]. Other accounts and your primary account remain untouched."
+msgstr "移除 {provider} 槽位 [{slot}] 的本地隔离凭据与元数据。其他账户和主账户不受影响。"
+
+msgid "Runs official agy OAuth inside isolated slot [{slot}] (never reads host keyring)."
+msgstr "在隔离槽位 [{slot}] 中运行官方 agy OAuth（绝不读取主机密钥环）。"
+
+msgid "Selects the authenticated slot with the highest remaining quota for the current model."
+msgstr "为当前模型选择剩余配额最高的已登录槽位。"
+
+msgid "Short label (letters, digits, - or _). Credentials stay isolated in this slot."
+msgstr "简短标签（字母、数字、- 或 _）。凭据将隔离保存在此槽位中。"
+
+msgid "Sign in with Google Antigravity [{slot}] · browser OAuth"
+msgstr "使用 Google Antigravity [{slot}] 登录 · 浏览器 OAuth"
+
+msgid "Slot [{slot}] has no live Grok sign-in yet."
+msgstr "槽位 [{slot}] 尚未有有效的 Grok 登录。"
+
+msgid "Slot [{slot}] is not signed in yet. Use /providers or /accounts to sign in."
+msgstr "槽位 [{slot}] 尚未登录。请使用 /providers 或 /accounts 登录。"
+
+msgid "Subscription accounts · choose provider"
+msgstr "订阅账户 · 选择提供商"
+
+msgid "Switch active subscription or add isolated accounts for {provider}."
+msgstr "切换当前订阅或为 {provider} 添加隔离账户。"
+
+msgid "Switch to [{target}] ({tpct}) · [{slot}] low ({pct}%)"
+msgstr "切换至 [{target}]（{tpct}）· [{slot}] 偏低（{pct}%）"
+
+msgid "Switch to best quota account [{target}]"
+msgstr "切换至配额最佳账户 [{target}]"
+
+msgid "Use Grok sign-in [{slot}] · {note}"
+msgstr "使用 Grok 登录 [{slot}] · {note}"
+
+msgid "Uses the grok CLI sign-in in slot [{slot}]. Chat goes to cli-chat-proxy.grok.com."
+msgstr "使用槽位 [{slot}] 中的 grok CLI 登录。聊天将发送至 cli-chat-proxy.grok.com。"
+
+msgid "pending sign-in"
+msgstr "待登录"
+
+msgid "signed in"
+msgstr "已登录"

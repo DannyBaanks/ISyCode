@@ -1574,7 +1574,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         rtk_label = savings_label(self._workspace_root)
         if "~0 tok" not in rtk_label:
             text += " · " + rtk_label
-        if selected_provider_name() == "antigravity" and getattr(self, "_antigravity_quota", None):
+        active_prov = selected_provider_name()
+        if active_prov in {"antigravity", "chatgpt", "xai"}:
+            from isycode.account_slots import PRIMARY_SLOT, active_slot
+            slot_key = "grok" if active_prov == "xai" else active_prov
+            cur_slot = active_slot(slot_key)
+            if cur_slot != PRIMARY_SLOT:
+                text += f" · [{cur_slot}]"
+        if active_prov == "antigravity" and getattr(self, "_antigravity_quota", None):
             from isycode.antigravity_connector import format_quota_line
             qline = format_quota_line(self._antigravity_quota, resolved_chat_model("antigravity"))
             if qline:

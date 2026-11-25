@@ -115,3 +115,65 @@ def test_run_login_launches_only_the_authorized_grok_executable(tmp_path, monkey
         assert "unsupported grok login" in str(exc)
     else:
         raise AssertionError("unknown login method must be refused")
+
+
+def test_grok_session_headers_and_client_version_avoid_http_426(tmp_path, monkeypatch):
+    import asyncio
+    import pytest
+    from isycode import grok_session
+    from isycode.chat_transport import provider_complete
+    from isycode.streaming import StreamError, _validated_extra_headers
+
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.delenv("ISYCODE_BASE_URL", raising=False)
+    monkeypatch.delenv("ISYMOTRON_BASE_URL", raising=False)
+    auth = tmp_path / "auth.json"
+    _auth(auth)
+    monkeypatch.setattr("isycode.grok_session.auth_file", lambda: auth)
+    grok_session._CLIENT_VERSION_CACHE.clear()
+
+    fake_grok = tmp_path / "grok"
+    fake_grok.write_text("#!/bin/sh\necho 'grok 1.2.34 (deadbeef)'\n", encoding="utf-8")
+    fake_grok.chmod(0o700)
+    monkeypatch.setenv("ISYCODE_GROK_EXECUTABLE", str(fake_grok))
+
+    class _Done:
+        stdout = "grok 1.2.34 (deadbeef)\n"
+        stderr = ""
+
+    monkeypatch.setattr("isycode.grok_session.subprocess.run", lambda *a, **kw: _Done())
+
+    assert grok_session.client_version() == "1.2.34"
+    hdrs = grok_session.session_headers()
+    assert hdrs["x-grok-client-version"] == "1.2.34"
+    assert hdrs["User-Agent"] == "grok-cli/1.2.34"
+    assert hdrs["x-grok-client-identifier"] == "grok-cli"
+    assert hdrs["X-XAI-Token-Auth"] == "xai-grok-cli"
+
+    # Session mode attaches Grok CLI headers; API key mode does not.
+    set_xai_auth_mode("session")
+    session_provider = Provider(name="xai", model="grok-4.7")
+    assert session_provider._headers()["x-grok-client-version"] == "1.2.34"
+
+    captured = {}
+
+    async def fake_stream(*args, **kwargs):
+        captured.update(kwargs)
+        return {"text": "ok", "tool_calls": []}
+
+    monkeypatch.setattr("isycode.chat_transport.async_stream_complete", fake_stream)
+    asyncio.run(provider_complete(session_provider, [{"role": "user", "content": "hi"}]))
+    assert captured["extra_headers"]["x-grok-client-version"] == "1.2.34"
+
+    set_xai_auth_mode("api_key")
+    api_provider = Provider(name="xai", model="grok-4", api_key="xai-test-key")
+    assert "x-grok-client-version" not in api_provider._headers()
+    captured.clear()
+    asyncio.run(provider_complete(api_provider, [{"role": "user", "content": "hi"}]))
+    assert "extra_headers" not in captured
+
+    # Extra header validator rejects CRLF injection and reserved headers.
+    with pytest.raises(StreamError):
+        _validated_extra_headers({"X-Test": "ok\r\nEvil: 1"})
+    with pytest.raises(StreamError):
+        _validated_extra_headers({"Authorization": "Bearer evil"})

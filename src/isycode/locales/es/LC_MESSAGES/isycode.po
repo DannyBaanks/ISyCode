@@ -6752,3 +6752,123 @@ msgstr "Cuenta"
 
 msgid "Credits"
 msgstr "Créditos"
+
+msgid "+ Add new {provider} account (browser)…"
+msgstr "+ Agregar nueva cuenta de {provider} (navegador)…"
+
+msgid "+ Add new {provider} account (device code)…"
+msgstr "+ Agregar nueva cuenta de {provider} (código de dispositivo)…"
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated ChatGPT subscriptions."
+msgstr "Perfil activo: [{slot}] · {count} cuenta(s). Cambia, agrega o elimina suscripciones aisladas de ChatGPT."
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Google subscriptions."
+msgstr "Perfil activo: [{slot}] · {count} cuenta(s). Cambia, agrega o elimina suscripciones aisladas de Google."
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated subscriptions."
+msgstr "Perfil activo: [{slot}] · {count} cuenta(s). Cambia, agrega o elimina suscripciones aisladas."
+
+msgid "Active {provider} account switched to [{slot}]."
+msgstr "Cuenta activa de {provider} cambiada a [{slot}]."
+
+msgid "Add & sign in"
+msgstr "Agregar e iniciar sesión"
+
+msgid "Add account slot · {provider}"
+msgstr "Agregar perfil de cuenta · {provider}"
+
+msgid "Antigravity sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+msgstr "Inicio de sesión de Antigravity verificado [{slot}] · plan {plan} · aplican límites 5h y semanales"
+
+msgid "ChatGPT sign-in verified [{slot}] · plan {plan} · subscription limits apply"
+msgstr "Inicio de sesión de ChatGPT verificado [{slot}] · plan {plan} · aplican límites de suscripción"
+
+msgid "Could not add account slot · {reason}"
+msgstr "No se pudo agregar el perfil de cuenta · {reason}"
+
+msgid "Could not switch account · {reason}"
+msgstr "No se pudo cambiar de cuenta · {reason}"
+
+msgid "Created isolated {provider} account slot [{slot}]. Starting sign-in…"
+msgstr "Se creó el perfil aislado [{slot}] para {provider}. Iniciando sesión…"
+
+msgid "Creates a new isolated account slot and starts headless device-code sign-in."
+msgstr "Crea un nuevo perfil de cuenta aislado e inicia sesión con código de dispositivo."
+
+msgid "Creates a new isolated account slot and starts official browser sign-in."
+msgstr "Crea un nuevo perfil de cuenta aislado e inicia sesión oficial en el navegador."
+
+msgid "Deletes only this slot's isolated local state after confirmation. Primary is untouched."
+msgstr "Elimina solo el estado local aislado de este perfil tras confirmar. Primary queda intacto."
+
+msgid "Google Antigravity [{slot}] · subscription quota"
+msgstr "Google Antigravity [{slot}] · cuota de suscripción"
+
+msgid "Low quota ({pct}%) on [{slot}] — switch to [{target}] via /accounts."
+msgstr "Cuota baja ({pct}%) en [{slot}] — cambia a [{target}] con /accounts."
+
+msgid "Manage ChatGPT accounts [{slot}] ({count})…"
+msgstr "Administrar cuentas de ChatGPT [{slot}] ({count})…"
+
+msgid "Manage Google Antigravity accounts [{slot}] ({count})…"
+msgstr "Administrar cuentas de Google Antigravity [{slot}] ({count})…"
+
+msgid "Manage Grok accounts [{slot}] ({count})…"
+msgstr "Administrar cuentas de Grok [{slot}] ({count})…"
+
+msgid "Quota alert ({level}) on [{slot}]. Switch active Antigravity account immediately."
+msgstr "Alerta de cuota ({level}) en [{slot}]. Cambia de cuenta activa de Antigravity de inmediato."
+
+msgid "Remove account"
+msgstr "Eliminar cuenta"
+
+msgid "Remove isolated account [{slot}]?"
+msgstr "¿Eliminar la cuenta aislada [{slot}]?"
+
+msgid "Remove isolated account [{slot}]…"
+msgstr "Eliminar cuenta aislada [{slot}]…"
+
+msgid "Removes local isolated credentials and metadata for {provider} slot [{slot}]. Other accounts and your primary account remain untouched."
+msgstr "Elimina las credenciales locales aisladas y metadatos del perfil [{slot}] de {provider}. Las demás cuentas y primary quedan intactas."
+
+msgid "Runs official agy OAuth inside isolated slot [{slot}] (never reads host keyring)."
+msgstr "Ejecuta el OAuth oficial de agy dentro del perfil aislado [{slot}] (nunca lee el keyring del sistema)."
+
+msgid "Selects the authenticated slot with the highest remaining quota for the current model."
+msgstr "Selecciona el perfil autenticado con mayor cuota restante para el modelo actual."
+
+msgid "Short label (letters, digits, - or _). Credentials stay isolated in this slot."
+msgstr "Etiqueta corta (letras, dígitos, - o _). Las credenciales quedan aisladas en este perfil."
+
+msgid "Sign in with Google Antigravity [{slot}] · browser OAuth"
+msgstr "Iniciar sesión con Google Antigravity [{slot}] · OAuth en navegador"
+
+msgid "Slot [{slot}] has no live Grok sign-in yet."
+msgstr "El perfil [{slot}] aún no tiene sesión activa de Grok."
+
+msgid "Slot [{slot}] is not signed in yet. Use /providers or /accounts to sign in."
+msgstr "El perfil [{slot}] aún no ha iniciado sesión. Usa /providers o /accounts para iniciar sesión."
+
+msgid "Subscription accounts · choose provider"
+msgstr "Cuentas de suscripción · elegir proveedor"
+
+msgid "Switch active subscription or add isolated accounts for {provider}."
+msgstr "Cambia la suscripción activa o agrega cuentas aisladas para {provider}."
+
+msgid "Switch to [{target}] ({tpct}) · [{slot}] low ({pct}%)"
+msgstr "Cambiar a [{target}] ({tpct}) · [{slot}] baja ({pct}%)"
+
+msgid "Switch to best quota account [{target}]"
+msgstr "Cambiar a la cuenta con mejor cuota [{target}]"
+
+msgid "Use Grok sign-in [{slot}] · {note}"
+msgstr "Usar inicio de sesión de Grok [{slot}] · {note}"
+
+msgid "Uses the grok CLI sign-in in slot [{slot}]. Chat goes to cli-chat-proxy.grok.com."
+msgstr "Usa la sesión de grok CLI del perfil [{slot}]. El chat va a cli-chat-proxy.grok.com."
+
+msgid "pending sign-in"
+msgstr "pendiente de sesión"
+
+msgid "signed in"
+msgstr "sesión iniciada"

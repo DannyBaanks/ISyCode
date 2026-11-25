@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,10 +18,29 @@ ISSUER = "https://auth.x.ai"
 SESSION_BASE = "https://cli-chat-proxy.grok.com/v1"
 SESSION_HOST = "cli-chat-proxy.grok.com"
 SESSION_MODEL = "grok-4.7"
+DEFAULT_CLIENT_VERSION = "1.0.92"
+_VERSION_RE = re.compile(r"\b(\d+\.\d+\.\d+)\b")
+_CLIENT_VERSION_CACHE: dict[str, str] = {}
 
 
 def auth_file() -> Path:
-    return Path.home() / ".grok" / "auth.json"
+    from isycode.account_slots import PRIMARY_SLOT, active_slot, slot_home
+    slot = active_slot("grok")
+    if slot == PRIMARY_SLOT:
+        return Path.home() / ".grok" / "auth.json"
+    return slot_home("grok", slot) / ".grok" / "auth.json"
+
+
+def auth_file_for_slot(slot: str | None = None) -> Path:
+    if slot is None:
+        return auth_file()
+    from isycode.account_slots import PRIMARY_SLOT, active_slot, slot_home, validate_slot_name
+    safe = validate_slot_name(slot)
+    if safe == PRIMARY_SLOT:
+        if active_slot("grok") == PRIMARY_SLOT:
+            return auth_file()
+        return Path.home() / ".grok" / "auth.json"
+    return slot_home("grok", safe) / ".grok" / "auth.json"
 
 
 def grok_executable() -> str:
@@ -90,8 +111,8 @@ def _expires(value: object) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def _record() -> dict | None:
-    path = auth_file()
+def _record(slot: str | None = None) -> dict | None:
+    path = auth_file_for_slot(slot)
     try:
         info = path.lstat()
     except OSError:
@@ -110,9 +131,9 @@ def _record() -> dict | None:
     return None
 
 
-def status() -> str:
+def status(slot: str | None = None) -> str:
     """``signed-in``, ``expired``, or ``missing``. Never includes credential text."""
-    record = _record()
+    record = _record(slot)
     if not isinstance(record, dict) or not isinstance(record.get("key"), str) or not record["key"]:
         return "missing"
     expires = _expires(record.get("expires_at"))
@@ -121,13 +142,54 @@ def status() -> str:
     return "signed-in"
 
 
-def access_token() -> str:
+def access_token(slot: str | None = None) -> str:
     """The current access token, or empty. The refresh token is never read out."""
-    if status() != "signed-in":
+    live = status() if slot is None else status(slot)
+    if live != "signed-in":
         return ""
-    record = _record()
+    record = _record(slot)
     key = record.get("key") if isinstance(record, dict) else ""
     return key if isinstance(key, str) else ""
+
+
+def client_version() -> str:
+    """Read the installed official grok CLI semver (cached), or fall back safely."""
+    try:
+        executable = grok_executable()
+    except (OSError, ValueError):
+        return DEFAULT_CLIENT_VERSION
+    cached = _CLIENT_VERSION_CACHE.get(executable)
+    if cached:
+        return cached
+    version = DEFAULT_CLIENT_VERSION
+    try:
+        proc = subprocess.run(
+            [executable, "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=2.0,
+            check=False,
+        )
+        match = _VERSION_RE.search(f"{proc.stdout} {proc.stderr}")
+        if match:
+            version = match.group(1)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    _CLIENT_VERSION_CACHE[executable] = version
+    return version
+
+
+def session_headers() -> dict[str, str]:
+    """Headers required by cli-chat-proxy.grok.com (avoids HTTP 426 Upgrade Required)."""
+    version = client_version()
+    return {
+        "User-Agent": f"grok-cli/{version}",
+        "x-grok-client-version": version,
+        "x-grok-client-identifier": "grok-cli",
+        "X-XAI-Token-Auth": "xai-grok-cli",
+    }
 
 
 def session_transport() -> str | None:
@@ -137,7 +199,8 @@ def session_transport() -> str | None:
     return None
 
 
-async def run_login(method: str, on_line, executable: str | None = None) -> int:
+async def run_login(method: str, on_line, executable: str | None = None, *,
+                    slot: str | None = None) -> int:
     """Run official ``grok login``. ``on_line`` sees status text, never a raw token.
 
     ``executable`` is the exact program the execution owner already bound to
@@ -151,10 +214,26 @@ async def run_login(method: str, on_line, executable: str | None = None) -> int:
     if program != grok_executable():
         raise ValueError("grok executable changed after authorization")
     flag = "--device-auth" if method == "device" else "--oauth"
+    exec_kwargs: dict[str, object] = {
+        "stdout": asyncio.subprocess.DEVNULL,
+        "stderr": asyncio.subprocess.PIPE,
+    }
+    from isycode.account_slots import PRIMARY_SLOT, active_slot, slot_home, validate_slot_name
+    target_slot = validate_slot_name(slot) if slot is not None else active_slot("grok")
+    if target_slot != PRIMARY_SLOT:
+        from isycode.platform_storage import storage
+        isolated_home = slot_home("grok", target_slot)
+        storage.ensure_directory(isolated_home, repair=True)
+        storage.ensure_directory(isolated_home / ".grok", repair=True)
+        storage.ensure_directory(isolated_home / ".config", repair=True)
+        env = dict(os.environ)
+        env["HOME"] = str(isolated_home)
+        env["USERPROFILE"] = str(isolated_home)
+        env["XDG_CONFIG_HOME"] = str(isolated_home / ".config")
+        exec_kwargs["env"] = env
     proc = await asyncio.create_subprocess_exec(
         program, "login", flag,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.PIPE)
+        **exec_kwargs)
 
     async def _show() -> None:
         assert proc.stderr is not None

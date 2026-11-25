@@ -6752,3 +6752,123 @@ msgstr "Account"
 
 msgid "Credits"
 msgstr "Credits"
+
+msgid "+ Add new {provider} account (browser)…"
+msgstr "+ Add new {provider} account (browser)…"
+
+msgid "+ Add new {provider} account (device code)…"
+msgstr "+ Add new {provider} account (device code)…"
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated ChatGPT subscriptions."
+msgstr "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated ChatGPT subscriptions."
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Google subscriptions."
+msgstr "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Google subscriptions."
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated subscriptions."
+msgstr "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated subscriptions."
+
+msgid "Active {provider} account switched to [{slot}]."
+msgstr "Active {provider} account switched to [{slot}]."
+
+msgid "Add & sign in"
+msgstr "Add & sign in"
+
+msgid "Add account slot · {provider}"
+msgstr "Add account slot · {provider}"
+
+msgid "Antigravity sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+msgstr "Antigravity sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+
+msgid "ChatGPT sign-in verified [{slot}] · plan {plan} · subscription limits apply"
+msgstr "ChatGPT sign-in verified [{slot}] · plan {plan} · subscription limits apply"
+
+msgid "Could not add account slot · {reason}"
+msgstr "Could not add account slot · {reason}"
+
+msgid "Could not switch account · {reason}"
+msgstr "Could not switch account · {reason}"
+
+msgid "Created isolated {provider} account slot [{slot}]. Starting sign-in…"
+msgstr "Created isolated {provider} account slot [{slot}]. Starting sign-in…"
+
+msgid "Creates a new isolated account slot and starts headless device-code sign-in."
+msgstr "Creates a new isolated account slot and starts headless device-code sign-in."
+
+msgid "Creates a new isolated account slot and starts official browser sign-in."
+msgstr "Creates a new isolated account slot and starts official browser sign-in."
+
+msgid "Deletes only this slot's isolated local state after confirmation. Primary is untouched."
+msgstr "Deletes only this slot's isolated local state after confirmation. Primary is untouched."
+
+msgid "Google Antigravity [{slot}] · subscription quota"
+msgstr "Google Antigravity [{slot}] · subscription quota"
+
+msgid "Low quota ({pct}%) on [{slot}] — switch to [{target}] via /accounts."
+msgstr "Low quota ({pct}%) on [{slot}] — switch to [{target}] via /accounts."
+
+msgid "Manage ChatGPT accounts [{slot}] ({count})…"
+msgstr "Manage ChatGPT accounts [{slot}] ({count})…"
+
+msgid "Manage Google Antigravity accounts [{slot}] ({count})…"
+msgstr "Manage Google Antigravity accounts [{slot}] ({count})…"
+
+msgid "Manage Grok accounts [{slot}] ({count})…"
+msgstr "Manage Grok accounts [{slot}] ({count})…"
+
+msgid "Quota alert ({level}) on [{slot}]. Switch active Antigravity account immediately."
+msgstr "Quota alert ({level}) on [{slot}]. Switch active Antigravity account immediately."
+
+msgid "Remove account"
+msgstr "Remove account"
+
+msgid "Remove isolated account [{slot}]?"
+msgstr "Remove isolated account [{slot}]?"
+
+msgid "Remove isolated account [{slot}]…"
+msgstr "Remove isolated account [{slot}]…"
+
+msgid "Removes local isolated credentials and metadata for {provider} slot [{slot}]. Other accounts and your primary account remain untouched."
+msgstr "Removes local isolated credentials and metadata for {provider} slot [{slot}]. Other accounts and your primary account remain untouched."
+
+msgid "Runs official agy OAuth inside isolated slot [{slot}] (never reads host keyring)."
+msgstr "Runs official agy OAuth inside isolated slot [{slot}] (never reads host keyring)."
+
+msgid "Selects the authenticated slot with the highest remaining quota for the current model."
+msgstr "Selects the authenticated slot with the highest remaining quota for the current model."
+
+msgid "Short label (letters, digits, - or _). Credentials stay isolated in this slot."
+msgstr "Short label (letters, digits, - or _). Credentials stay isolated in this slot."
+
+msgid "Sign in with Google Antigravity [{slot}] · browser OAuth"
+msgstr "Sign in with Google Antigravity [{slot}] · browser OAuth"
+
+msgid "Slot [{slot}] has no live Grok sign-in yet."
+msgstr "Slot [{slot}] has no live Grok sign-in yet."
+
+msgid "Slot [{slot}] is not signed in yet. Use /providers or /accounts to sign in."
+msgstr "Slot [{slot}] is not signed in yet. Use /providers or /accounts to sign in."
+
+msgid "Subscription accounts · choose provider"
+msgstr "Subscription accounts · choose provider"
+
+msgid "Switch active subscription or add isolated accounts for {provider}."
+msgstr "Switch active subscription or add isolated accounts for {provider}."
+
+msgid "Switch to [{target}] ({tpct}) · [{slot}] low ({pct}%)"
+msgstr "Switch to [{target}] ({tpct}) · [{slot}] low ({pct}%)"
+
+msgid "Switch to best quota account [{target}]"
+msgstr "Switch to best quota account [{target}]"
+
+msgid "Use Grok sign-in [{slot}] · {note}"
+msgstr "Use Grok sign-in [{slot}] · {note}"
+
+msgid "Uses the grok CLI sign-in in slot [{slot}]. Chat goes to cli-chat-proxy.grok.com."
+msgstr "Uses the grok CLI sign-in in slot [{slot}]. Chat goes to cli-chat-proxy.grok.com."
+
+msgid "pending sign-in"
+msgstr "pending sign-in"
+
+msgid "signed in"
+msgstr "signed in"

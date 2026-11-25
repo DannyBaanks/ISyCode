@@ -810,6 +810,10 @@ class Provider:
         headers = {"Accept": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.name == "xai":
+            from isycode.grok_session import SESSION_HOST, session_headers
+            if (urllib.parse.urlsplit(self.base_url).hostname or "").casefold() == SESSION_HOST:
+                headers.update(session_headers())
         return headers
 
 

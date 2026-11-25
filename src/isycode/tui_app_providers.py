@@ -184,18 +184,25 @@ class ProviderMixin:
         self._render_menu("providers", "Select provider", entries)
 
     def _open_xai_auth_methods(self) -> None:
+        from isycode.account_slots import active_slot, list_accounts
         from isycode.grok_session import status
+        cur_slot = active_slot("grok")
+        count = len(list_accounts("grok"))
         note = {"signed-in": "Grok is signed in on this machine",
                 "expired": "Grok sign-in expired",
                 "missing": "No Grok sign-in yet"}.get(status(), "No Grok sign-in yet")
+        slot_detail = tr("Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated subscriptions.",
+                         slot=cur_slot, count=count)
         self._render_menu("xai_auth", "xAI · use Grok in ISyCode", [
             self._entry("API key · console.x.ai", "xai_api_key", "",
                         "Saved in the OS keyring. Chat goes to api.x.ai."),
-            self._entry(tr("Use Grok sign-in · {note}", note=tr(note)), "xai_session", "",
-                        tr("Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."),
+            self._entry(tr("Use Grok sign-in [{slot}] · {note}", slot=cur_slot, note=tr(note)), "xai_session", "",
+                        tr("Uses the grok CLI sign-in in slot [{slot}]. Chat goes to cli-chat-proxy.grok.com.", slot=cur_slot),
                         translate=False),
             self._entry("Sign in with device code", "xai_device"),
             self._entry("Sign in with browser", "xai_browser"),
+            self._entry(tr("Manage Grok accounts [{slot}] ({count})…", slot=cur_slot, count=count),
+                        "account_slots_open", "grok", slot_detail, translate=False),
             self._entry("The sign-in stays in the grok CLI. ISyCode does not copy the token into the project.", "info"),
         ])
 
@@ -227,7 +234,8 @@ class ProviderMixin:
         self._select_provider("xai", SESSION_MODEL)
         self._open_scoped_models("xai")
 
-    async def _connect_xai_login(self, method: str) -> None:
+    async def _connect_xai_login(self, method: str, *, slot: str | None = None) -> None:
+        from isycode.account_slots import PRIMARY_SLOT, active_slot, set_active_slot, validate_slot_name
         from isycode.grok_auth import GrokAuthOwner
         from isycode.grok_session import SESSION_MODEL, grok_executable, set_xai_auth_mode
         try:
@@ -235,12 +243,14 @@ class ProviderMixin:
         except ValueError:
             self._append("  " + tr("Grok CLI not found. Install the official grok CLI first."), YELLOW)
             return
+        target_slot = validate_slot_name(slot) if slot is not None else active_slot("grok")
         try:
             authority = WorkspaceAuthority(self._workspace_root)
-            owner = GrokAuthOwner(self._workspace_root, authority, self._action_approvals)
-            request = owner.request(method)
+            owner = GrokAuthOwner(self._workspace_root, authority, self._action_approvals, slot=target_slot)
+            request = owner.request(method, slot=target_slot)
+            slot_suffix = f" [{target_slot}]" if target_slot != PRIMARY_SLOT else ""
             if not await self._await_screen(ConfirmScreen(
-                    "Sign in to Grok for ISyCode?",
+                    f"Sign in to Grok for ISyCode{slot_suffix}?",
                     "Runs the official grok login. The sign-in stays in the grok CLI. "
                     "After it finishes, ISyCode can send chat with that sign-in. "
                     "The token is not copied into this project or the chat.",
@@ -267,32 +277,43 @@ class ProviderMixin:
         if not await self._allow_grok_session_host():
             self._append("  " + tr("Signed in with grok, but ISyCode was not allowed to use it."), YELLOW)
             return
+        set_active_slot("grok", target_slot)
         set_xai_auth_mode("session")
         self._select_provider("xai", SESSION_MODEL)
         self._open_scoped_models("xai")
 
     def _open_auth_methods(self) -> None:
+        from isycode.account_slots import active_slot, list_accounts
+        cur_slot = active_slot("chatgpt")
+        count = len(list_accounts("chatgpt"))
+        slot_detail = tr("Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated ChatGPT subscriptions.",
+                         slot=cur_slot, count=count)
         self._render_menu('provider_auth_methods', 'OpenAI · choose connection method', [
             self._entry('Manually enter API key · separate API quota', 'auth_api_key'),
             self._entry('ChatGPT Pro/Plus · browser', 'auth_browser'),
             self._entry('ChatGPT Pro/Plus · headless/device code', 'auth_device'),
             self._entry('Use saved ChatGPT sign-in · checked on request', 'auth_saved'),
+            self._entry(tr('Manage ChatGPT accounts [{slot}] ({count})…', slot=cur_slot, count=count),
+                        'account_slots_open', 'chatgpt', slot_detail, translate=False),
             self._entry('Disconnect ChatGPT account…', 'auth_logout'),
             self._entry('Subscription needs official Codex CLI and an unlocked OS keyring. Plan limits apply.', 'info'),
         ])
 
-    async def _connect_chatgpt(self, method: str, *, logout: bool = False) -> None:
+    async def _connect_chatgpt(self, method: str, *, logout: bool = False, slot: str | None = None) -> None:
+        from isycode.account_slots import PRIMARY_SLOT, active_slot, set_active_slot, validate_slot_name
         from isycode.provider_auth import ProviderAuthOwner, AUTH_HOSTS
         from isycode.provider_auth_screens import SubscriptionLoginScreen
         owner = None
         tasks = []
+        target_slot = validate_slot_name(slot) if slot is not None else active_slot('chatgpt')
         try:
             authority = WorkspaceAuthority(self._workspace_root)
-            owner = ProviderAuthOwner(self._workspace_root, authority, self._action_approvals)
-            request = owner.request('logout' if logout else 'login', method)
+            owner = ProviderAuthOwner(self._workspace_root, authority, self._action_approvals, slot=target_slot)
+            request = owner.request('logout' if logout else 'login', method, slot=target_slot)
             identity = request.parameters['connector']
+            slot_suffix = f" [{target_slot}]" if target_slot != PRIMARY_SLOT else ""
             if not await self._await_screen(ConfirmScreen(
-                    'Disconnect ChatGPT?' if logout else 'Connect ChatGPT subscription?',
+                    f'Disconnect ChatGPT{slot_suffix}?' if logout else f'Connect ChatGPT subscription{slot_suffix}?',
                     tr("Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes.", executable=identity['executable'], home=identity['home']),
                     'Disconnect' if logout else 'Connect ChatGPT')):
                 return
@@ -309,7 +330,9 @@ class ProviderMixin:
             if logout:
                 self._append("  " + tr("ChatGPT account disconnected. API keys are unchanged."), GREEN)
                 return
-            screen = SubscriptionLoginScreen(challenge)
+            screen_challenge = dict(challenge or {})
+            screen_challenge.setdefault('slot', target_slot)
+            screen = SubscriptionLoginScreen(screen_challenge)
             visible = asyncio.create_task(self._await_screen(screen)); tasks.append(visible)
             await screen.ready.wait()
             finished = asyncio.create_task(owner.finish()); tasks.append(finished)
@@ -322,7 +345,9 @@ class ProviderMixin:
                 screen.dismiss(None)
             await visible
             if outcome.decision == 'ALLOW' and account:
-                self._append("  " + tr("ChatGPT sign-in verified · plan {plan} · subscription limits apply", plan=account['plan']), GREEN)
+                set_active_slot('chatgpt', target_slot)
+                self._append("  " + tr("ChatGPT sign-in verified [{slot}] · plan {plan} · subscription limits apply",
+                                       slot=target_slot, plan=account['plan']), GREEN)
                 self._select_provider('chatgpt', 'auto')
                 self._open_scoped_models('chatgpt')
             else:
@@ -336,31 +361,60 @@ class ProviderMixin:
             if owner is not None: await owner.cancel()
 
     def _open_antigravity_auth_methods(self) -> None:
+        from isycode.account_slots import active_slot, compute_quota_alert, list_accounts
         from isycode.antigravity_connector import format_quota_line
-        qline = format_quota_line(getattr(self, "_antigravity_quota", None),
-                                  resolved_chat_model("antigravity"))
+        cur_slot = active_slot("antigravity")
+        accounts = list_accounts("antigravity")
+        model_name = resolved_chat_model("antigravity")
+        qline = format_quota_line(getattr(self, "_antigravity_quota", None), model_name)
         quota_detail = qline or tr("Queries official agy /usage inside ISyCode's isolated home (requires host grant).")
-        self._render_menu("antigravity_auth_methods", "Google Antigravity · OAuth subscription", [
-            self._entry("Sign in with Google Antigravity · browser OAuth", "antigravity_auth_browser"),
+        slot_detail = tr("Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Google subscriptions.",
+                         slot=cur_slot, count=len(accounts))
+        entries = [
+            self._entry(tr("Sign in with Google Antigravity [{slot}] · browser OAuth", slot=cur_slot),
+                        "antigravity_auth_browser", "",
+                        tr("Runs official agy OAuth inside isolated slot [{slot}] (never reads host keyring).", slot=cur_slot),
+                        translate=False),
             self._entry("Use saved Antigravity sign-in · checked on request", "antigravity_auth_saved"),
             self._entry("Check 5h & weekly subscription quota", "antigravity_quota", "", quota_detail, translate=False),
+            self._entry(tr("Manage Google Antigravity accounts [{slot}] ({count})…", slot=cur_slot, count=len(accounts)),
+                        "account_slots_open", "antigravity", slot_detail, translate=False),
+        ]
+        alert = compute_quota_alert("antigravity", model_name=model_name)
+        if alert and alert.get("target_slot"):
+            target = alert["target_slot"]
+            pct = round(float(alert["pct"]))
+            tpct = f"{round(float(alert['target_pct']))}%" if alert.get("target_pct") is not None else "available"
+            entries.append(self._entry(
+                tr("Switch to [{target}] ({tpct}) · [{slot}] low ({pct}%)",
+                   target=target, tpct=tpct, slot=cur_slot, pct=pct),
+                "account_slot_switch_best", f"antigravity:{target}",
+                tr("Quota alert ({level}) on [{slot}]. Switch active Antigravity account immediately.",
+                   level=alert["level"], slot=cur_slot),
+                translate=False))
+        entries.extend([
             self._entry("Disconnect Antigravity account…", "antigravity_auth_logout"),
             self._entry("Uses official agy ACP in an isolated home. ISyCode never reads OAuth tokens; tools stay behind IsySentinel.", "info"),
         ])
+        self._render_menu("antigravity_auth_methods", "Google Antigravity · OAuth subscription", entries)
 
-    async def _connect_antigravity(self, *, logout: bool = False) -> None:
+    async def _connect_antigravity(self, *, logout: bool = False, slot: str | None = None) -> None:
+        from isycode.account_slots import PRIMARY_SLOT, active_slot, set_active_slot, validate_slot_name
         from isycode.provider_auth import ANTIGRAVITY_AUTH_HOSTS, ProviderAuthOwner
         from isycode.provider_auth_screens import SubscriptionLoginScreen
         owner = None
         tasks = []
+        target_slot = validate_slot_name(slot) if slot is not None else active_slot("antigravity")
         try:
             authority = WorkspaceAuthority(self._workspace_root)
             owner = ProviderAuthOwner(
-                self._workspace_root, authority, self._action_approvals, provider="antigravity")
-            request = owner.request("logout" if logout else "login", "browser")
+                self._workspace_root, authority, self._action_approvals,
+                provider="antigravity", slot=target_slot)
+            request = owner.request("logout" if logout else "login", "browser", slot=target_slot)
             identity = request.parameters["connector"]
+            slot_suffix = f" [{target_slot}]" if target_slot != PRIMARY_SLOT else ""
             if not await self._await_screen(ConfirmScreen(
-                    "Disconnect Google Antigravity?" if logout else "Connect Google Antigravity subscription?",
+                    f"Disconnect Google Antigravity{slot_suffix}?" if logout else f"Connect Google Antigravity subscription{slot_suffix}?",
                     tr("Runs official agy ACP at {executable}. Private isolated home: {home}. Contacts accounts.google.com and daily-cloudcode-pa.googleapis.com. ISyCode never extracts or copies OAuth tokens, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply.",
                        executable=identity["executable"], home=identity["home"]),
                     "Disconnect" if logout else "Connect Antigravity")):
@@ -383,7 +437,9 @@ class ProviderMixin:
             if challenge and challenge.get("already_authenticated"):
                 outcome, account = await owner.finish()
             else:
-                screen = SubscriptionLoginScreen(challenge)
+                screen_challenge = dict(challenge or {})
+                screen_challenge.setdefault("slot", target_slot)
+                screen = SubscriptionLoginScreen(screen_challenge)
                 visible = asyncio.create_task(self._await_screen(screen)); tasks.append(visible)
                 await screen.ready.wait()
                 finished = asyncio.create_task(owner.finish()); tasks.append(finished)
@@ -396,8 +452,9 @@ class ProviderMixin:
                     screen.dismiss(None)
                 await visible
             if outcome.decision == "ALLOW" and account:
-                self._append("  " + tr("Antigravity sign-in verified · plan {plan} · 5h & weekly limits apply",
-                                       plan=account["plan"]), GREEN)
+                set_active_slot("antigravity", target_slot)
+                self._append("  " + tr("Antigravity sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply",
+                                       slot=target_slot, plan=account["plan"]), GREEN)
                 self._select_provider("antigravity", "auto")
                 self.run_worker(self._refresh_antigravity_quota(report=False),
                                 group="antigravity-quota", exclusive=True)
@@ -418,7 +475,9 @@ class ProviderMixin:
 
     async def _refresh_antigravity_quota(self, *, report: bool = False) -> dict | None:
         """Query 5h and weekly Antigravity subscription quota through ProviderNetworkOwner."""
+        from isycode.account_slots import active_slot, compute_quota_alert, record_account_quota
         from isycode.antigravity_connector import fetch_antigravity_quota, format_reset_countdown
+        cur_slot = active_slot("antigravity")
         try:
             provider = Provider(name="antigravity", model=resolved_chat_model("antigravity"))
             identity = provider.connector_identity
@@ -443,6 +502,7 @@ class ProviderMixin:
             if report:
                 self._append("  " + tr("Antigravity quota could not be read. Verify your Google sign-in first."), YELLOW)
             return None
+        record_account_quota("antigravity", cur_slot, quota)
         self._antigravity_quota = quota
         try:
             from isycode.provider_quotas import record_antigravity_quota
@@ -452,7 +512,7 @@ class ProviderMixin:
         self._refresh_usage()
         self._refresh_open_models_screen_details()
         if report:
-            self._append(tr("Google Antigravity · subscription quota"), CYAN)
+            self._append(tr("Google Antigravity [{slot}] · subscription quota", slot=cur_slot), CYAN)
             groups: dict[str, list[str]] = {}
             for bucket in quota.get("buckets", ()):
                 gname = str(bucket.get("group") or bucket.get("family") or "Models")
@@ -463,6 +523,13 @@ class ProviderMixin:
                 groups.setdefault(gname, []).append(piece)
             for gname, pieces in groups.items():
                 self._append(f"  {gname}: {' · '.join(pieces)}", MUTED)
+            alert = compute_quota_alert("antigravity", model_name=provider.model)
+            if alert and alert.get("target_slot"):
+                self._append(
+                    "  " + tr("Low quota ({pct}%) on [{slot}] — switch to [{target}] via /accounts.",
+                              pct=round(float(alert["pct"])), slot=cur_slot, target=alert["target_slot"]),
+                    YELLOW,
+                )
         return quota
 
     def _refresh_open_models_screen_details(self) -> None:
@@ -573,6 +640,150 @@ class ProviderMixin:
         finally:
             loading.discard(key)
             self._refresh_open_models_screen_details()
+
+    def _open_account_slots_menu(self, provider: str | None = None) -> None:
+        from isycode.account_slots import (
+            PRIMARY_SLOT, active_slot, choose_best_account, list_accounts,
+        )
+        from isycode.antigravity_connector import format_quota_line
+        labels = {
+            "antigravity": "Google Antigravity",
+            "chatgpt": "ChatGPT (Codex)",
+            "grok": "xAI Grok",
+        }
+        if not provider:
+            entries = []
+            for key, title in labels.items():
+                cur = active_slot(key)
+                accts = list_accounts(key)
+                entries.append(self._entry(
+                    f"{title}  ·  [{cur}] ({len(accts)})",
+                    "account_slots_open", key,
+                    tr("Switch active subscription or add isolated accounts for {provider}.", provider=title),
+                    translate=False,
+                ))
+            self._render_menu("account_slots", "Subscription accounts · choose provider", entries)
+            return
+        prov = "grok" if provider == "xai" else provider
+        title = labels.get(prov, prov)
+        accounts = list_accounts(prov)
+        cur = active_slot(prov)
+        model_name = resolved_chat_model("antigravity") if prov == "antigravity" else ""
+        entries = []
+        for acct in accounts:
+            slot = acct["slot"]
+            mark = "*" if acct["active"] else " "
+            state_txt = tr("signed in") if acct.get("authenticated") else tr("pending sign-in")
+            extra_parts = [p for p in (acct.get("plan"), acct.get("email")) if p]
+            if prov == "antigravity" and isinstance(acct.get("quota"), dict) and acct["quota"].get("ok"):
+                qline = format_quota_line(acct["quota"], model_name)
+                if qline:
+                    extra_parts.append(qline)
+            detail = " · ".join([state_txt, *extra_parts])
+            entries.append(self._entry(
+                f"{mark}  [{slot}]  ·  {state_txt}",
+                "account_slot_select", f"{prov}:{slot}",
+                detail,
+                translate=False,
+            ))
+        if prov == "antigravity":
+            best = choose_best_account("antigravity", cur, model_name=model_name)
+            if best:
+                entries.append(self._entry(
+                    tr("Switch to best quota account [{target}]", target=best),
+                    "account_slot_switch_best", f"antigravity:{best}",
+                    tr("Selects the authenticated slot with the highest remaining quota for the current model."),
+                    translate=False,
+                ))
+        entries.append(self._entry(
+            tr("+ Add new {provider} account (browser)…", provider=title),
+            "account_slot_add", prov,
+            tr("Creates a new isolated account slot and starts official browser sign-in."),
+            translate=False,
+        ))
+        if prov in {"chatgpt", "grok"}:
+            entries.append(self._entry(
+                tr("+ Add new {provider} account (device code)…", provider=title),
+                "account_slot_add_device", prov,
+                tr("Creates a new isolated account slot and starts headless device-code sign-in."),
+                translate=False,
+            ))
+        for acct in accounts:
+            slot = acct["slot"]
+            if slot == PRIMARY_SLOT:
+                continue
+            entries.append(self._entry(
+                tr("Remove isolated account [{slot}]…", slot=slot),
+                "account_slot_remove", f"{prov}:{slot}",
+                tr("Deletes only this slot's isolated local state after confirmation. Primary is untouched."),
+                translate=False,
+            ))
+        self._render_menu("account_slots", f"{title} · accounts", entries)
+
+    async def _add_account_slot_flow(self, provider: str, *, method: str = "browser") -> None:
+        from isycode.account_slots import add_account_slot, next_suggested_slot, validate_slot_name
+        from isycode.provider_auth_screens import AccountSlotScreen
+        labels = {"antigravity": "Google Antigravity", "chatgpt": "ChatGPT", "grok": "xAI Grok"}
+        suggested = next_suggested_slot(provider)
+        raw = await self._await_screen(AccountSlotScreen(labels.get(provider, provider), suggested=suggested))
+        if not raw or not raw.strip():
+            return
+        try:
+            slot = validate_slot_name(raw)
+            add_account_slot(provider, slot)
+        except ValueError as exc:
+            self._append("  " + tr("Could not add account slot · {reason}", reason=str(exc)), YELLOW)
+            return
+        self._append("  " + tr("Created isolated {provider} account slot [{slot}]. Starting sign-in…",
+                               provider=labels.get(provider, provider), slot=slot), MUTED)
+        if provider == "antigravity":
+            await self._connect_antigravity(slot=slot)
+        elif provider == "chatgpt":
+            await self._connect_chatgpt(method, slot=slot)
+        elif provider == "grok":
+            await self._connect_xai_login(method, slot=slot)
+
+    async def _select_account_slot(self, provider: str, slot: str) -> None:
+        from isycode.account_slots import list_accounts, set_active_slot
+        try:
+            chosen = set_active_slot(provider, slot)
+        except ValueError as exc:
+            self._append("  " + tr("Could not switch account · {reason}", reason=str(exc)), YELLOW)
+            return
+        acct = next((a for a in list_accounts(provider) if a["slot"] == chosen), None)
+        if provider == "antigravity":
+            saved_q = acct.get("quota") if isinstance(acct, dict) else None
+            self._antigravity_quota = saved_q if isinstance(saved_q, dict) and saved_q.get("ok") else None
+            self._antigravity_quota_at = 0.0
+            self._refresh_usage()
+        self._append("  " + tr("Active {provider} account switched to [{slot}].",
+                               provider=provider, slot=chosen), GREEN)
+        if provider == "antigravity":
+            if acct and acct.get("authenticated"):
+                self.run_worker(self._refresh_antigravity_quota(report=False),
+                                group="antigravity-quota", exclusive=True)
+            else:
+                self._append("  " + tr("Slot [{slot}] is not signed in yet. Use /providers or /accounts to sign in.",
+                                       slot=chosen), MUTED)
+        elif provider == "grok":
+            from isycode.grok_session import status as grok_status
+            if grok_status(chosen) != "signed-in":
+                self._append("  " + tr("Slot [{slot}] has no live Grok sign-in yet.", slot=chosen), MUTED)
+
+    async def _remove_account_slot_flow(self, provider: str, slot: str) -> None:
+        from isycode.account_slots import remove_account_slot
+        if not await self._await_screen(ConfirmScreen(
+                tr("Remove isolated account [{slot}]?", slot=slot),
+                tr("Removes local isolated credentials and metadata for {provider} slot [{slot}]. Other accounts and your primary account remain untouched.",
+                   provider=provider, slot=slot),
+                tr("Remove account"))):
+            return
+        ok, msg = remove_account_slot(provider, slot, confirmed=True)
+        self._append("  " + msg, GREEN if ok else YELLOW)
+        if provider == "antigravity":
+            self._antigravity_quota = None
+            self._antigravity_quota_at = 0.0
+            self._refresh_usage()
 
     def _open_credentials_menu(self) -> None:
         selected = selected_provider_name()
@@ -1299,6 +1510,47 @@ class ProviderMixin:
         self._close_menu()
         self.run_worker(self._refresh_antigravity_quota(report=True),
                         group="antigravity-quota", exclusive=True)
+        return
+
+    def _menu_account_slots_open(self, entry: dict[str, str | bool]) -> None:
+        provider = str(entry.get("value") or "").strip() or None
+        self._open_account_slots_menu(provider)
+        return
+
+    def _menu_account_slot_select(self, entry: dict[str, str | bool]) -> None:
+        raw = str(entry.get("value") or "")
+        provider, _, slot = raw.partition(":")
+        self._close_menu()
+        if provider and slot:
+            self.run_worker(self._select_account_slot(provider, slot),
+                            group="provider-login", exclusive=True)
+        return
+
+    def _menu_account_slot_add(self, entry: dict[str, str | bool]) -> None:
+        provider = str(entry.get("value") or "").strip()
+        method = "device" if entry.get("kind") == "account_slot_add_device" else "browser"
+        self._close_menu()
+        if provider:
+            self.run_worker(self._add_account_slot_flow(provider, method=method),
+                            group="provider-login", exclusive=True)
+        return
+
+    def _menu_account_slot_remove(self, entry: dict[str, str | bool]) -> None:
+        raw = str(entry.get("value") or "")
+        provider, _, slot = raw.partition(":")
+        self._close_menu()
+        if provider and slot:
+            self.run_worker(self._remove_account_slot_flow(provider, slot),
+                            group="provider-login", exclusive=True)
+        return
+
+    def _menu_account_slot_switch_best(self, entry: dict[str, str | bool]) -> None:
+        raw = str(entry.get("value") or "")
+        provider, _, slot = raw.partition(":")
+        self._close_menu()
+        if provider and slot:
+            self.run_worker(self._select_account_slot(provider, slot),
+                            group="provider-login", exclusive=True)
         return
 
     def _menu_providers_open(self, entry: dict[str, str | bool]) -> None:
