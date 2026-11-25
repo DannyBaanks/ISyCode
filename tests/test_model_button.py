@@ -59,6 +59,9 @@ async def test_model_button_opens_chatgpt_account_model_picker(tmp_path, monkeyp
             catalog_calls.append("chatgpt")
             return ["fixture-chat-model"]
 
+        async def rate_limits(self):
+            return None
+
     monkeypatch.setattr("isycode.codex_connector.CodexConnector", AccountConnector)
 
     async def wait_for_picker(app, pilot):

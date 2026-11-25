@@ -363,7 +363,10 @@ def test_tui_accounts_command_and_slot_screen_at_80x24(tmp_path, monkeypatch, ca
             await pilot.pause()
             btn = screen.query_one("#account-slot-save")
             assert btn.region.bottom <= 24
-            await pilot.click("#account-slot-save")
+            # Activate the real button by keyboard; a click during modal layout
+            # can miss its target on the Windows runner.
+            btn.focus()
+            await pilot.press("enter")
             chosen = await asyncio.wait_for(result_task, 5)
             assert chosen == "pro3"
 
