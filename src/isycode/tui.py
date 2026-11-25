@@ -712,6 +712,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             await self._mcp_local.stop_all()
         if self._mobile_host_owner is not None:
             await self._mobile_host_owner.shutdown()
+        self._image_attachments.cleanup()
 
     @property
     def ready(self) -> bool:
