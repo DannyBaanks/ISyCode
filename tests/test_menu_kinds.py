@@ -132,6 +132,11 @@ EXPECTED = {
     "models_open",
     "sidebar_preview_toggle",
     "provider_auth_methods",
+    "antigravity_auth_methods",
+    "antigravity_auth_browser",
+    "antigravity_auth_logout",
+    "antigravity_auth_saved",
+    "antigravity_quota",
     "gus_settings",
 }
 

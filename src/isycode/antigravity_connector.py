@@ -392,7 +392,7 @@ class _MemoryOAuthCapture:
         self.port: int = 0
         self._shim_dir: Path | None = None
 
-    async def start(self) -> tuple[Path, dict[str, str]]:
+    async def start(self, *, base_dir: Path | None = None) -> tuple[Path, dict[str, str]]:
         loop = asyncio.get_running_loop()
         self._future = loop.create_future()
 
@@ -418,7 +418,8 @@ class _MemoryOAuthCapture:
         self._server = await asyncio.start_server(handle, "127.0.0.1", 0)
         self.port = self._server.sockets[0].getsockname()[1]
 
-        shim_dir = Path(tempfile.mkdtemp(prefix="isycode-agy-login-"))
+        mkdtemp_kwargs = {"dir": str(base_dir)} if base_dir is not None else {}
+        shim_dir = Path(tempfile.mkdtemp(prefix=".isycode-agy-login-", **mkdtemp_kwargs)).resolve()
         self._shim_dir = shim_dir
         storage.ensure_directory(shim_dir, repair=True)
         helper = shim_dir / "capture_url.py"
@@ -642,7 +643,7 @@ class AntigravityConnector:
             self._prepare_home()
             if self._allow_browser_capture:
                 self._oauth_capture = _MemoryOAuthCapture()
-                self._extra_path_dir, self._extra_env = await self._oauth_capture.start()
+                self._extra_path_dir, self._extra_env = await self._oauth_capture.start(base_dir=self.home)
             await self._start_child()
             self._reader = asyncio.create_task(self._read_loop())
             self._stderr = asyncio.create_task(self._discard_stderr())
@@ -1026,7 +1027,7 @@ class AntigravityConnector:
         if not mcp_tools:
             return []
         _encode(mcp_tools)
-        temp_dir = Path(tempfile.mkdtemp(prefix="isycode-agy-mcp-"))
+        temp_dir = Path(tempfile.mkdtemp(prefix=".isycode-agy-mcp-", dir=str(self.home))).resolve()
         self._temp_dirs.append(temp_dir)
         storage.ensure_directory(temp_dir, repair=True)
         schema_file = temp_dir / "tools.json"
