@@ -137,6 +137,12 @@ EXPECTED = {
     "antigravity_auth_logout",
     "antigravity_auth_saved",
     "antigravity_quota",
+    "account_slots_open",
+    "account_slot_select",
+    "account_slot_add",
+    "account_slot_add_device",
+    "account_slot_remove",
+    "account_slot_switch_best",
     "gus_settings",
 }
 

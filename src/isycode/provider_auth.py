@@ -33,19 +33,21 @@ def auth_methods(name: str) -> list[dict]:
     return [dict(id='api_key', label='API key', billing='Provider API quota')]
 
 
-def connector_home() -> Path:
-    return (state_root() / 'accounts' / 'chatgpt-codex').absolute()
+def connector_home(slot: str | None = None) -> Path:
+    from isycode.account_slots import slot_home
+    return slot_home('chatgpt', slot)
 
 
-def antigravity_home() -> Path:
-    return (state_root() / 'accounts' / 'antigravity').absolute()
+def antigravity_home(slot: str | None = None) -> Path:
+    from isycode.account_slots import slot_home
+    return slot_home('antigravity', slot)
 
 
-def subscription_home(provider: str) -> Path:
+def subscription_home(provider: str, slot: str | None = None) -> Path:
     if provider == 'chatgpt':
-        return connector_home()
+        return connector_home(slot)
     if provider == 'antigravity':
-        return antigravity_home()
+        return antigravity_home(slot)
     raise ValueError(f'Unsupported subscription provider: {provider}')
 
 
@@ -77,25 +79,36 @@ def antigravity_executable() -> str:
     return str(path)
 
 
-def connector_identity(executable: str | None = None) -> dict:
-    return {'auth_method': 'chatgpt', 'executable': executable or codex_executable(),
-            'home': str(connector_home()), 'credential_store': 'keyring',
-            'environment_access': False, 'protocol': 'codex-app-server-v2',
-            'hosts': list(AUTH_HOSTS)}
+def connector_identity(executable: str | None = None, *, slot: str | None = None) -> dict:
+    from isycode.account_slots import PRIMARY_SLOT, active_slot, validate_slot_name
+    resolved_slot = validate_slot_name(slot) if slot is not None else active_slot('chatgpt')
+    identity = {'auth_method': 'chatgpt', 'executable': executable or codex_executable(),
+                'home': str(connector_home(resolved_slot)), 'credential_store': 'keyring',
+                'environment_access': False, 'protocol': 'codex-app-server-v2',
+                'hosts': list(AUTH_HOSTS)}
+    if resolved_slot != PRIMARY_SLOT:
+        identity['account_slot'] = resolved_slot
+    return identity
 
 
-def antigravity_identity(executable: str | None = None) -> dict:
-    return {'auth_method': 'antigravity', 'executable': executable or antigravity_executable(),
-            'home': str(antigravity_home()), 'credential_store': 'official-cli',
-            'environment_access': False, 'protocol': 'antigravity-acp-v1',
-            'hosts': list(ANTIGRAVITY_AUTH_HOSTS)}
+def antigravity_identity(executable: str | None = None, *, slot: str | None = None) -> dict:
+    from isycode.account_slots import PRIMARY_SLOT, active_slot, validate_slot_name
+    resolved_slot = validate_slot_name(slot) if slot is not None else active_slot('antigravity')
+    identity = {'auth_method': 'antigravity', 'executable': executable or antigravity_executable(),
+                'home': str(antigravity_home(resolved_slot)), 'credential_store': 'official-cli',
+                'environment_access': False, 'protocol': 'antigravity-acp-v1',
+                'hosts': list(ANTIGRAVITY_AUTH_HOSTS)}
+    if resolved_slot != PRIMARY_SLOT:
+        identity['account_slot'] = resolved_slot
+    return identity
 
 
-def subscription_identity(provider: str, executable: str | None = None) -> dict:
+def subscription_identity(provider: str, executable: str | None = None, *,
+                          slot: str | None = None) -> dict:
     if provider == 'chatgpt':
-        return connector_identity(executable)
+        return connector_identity(executable, slot=slot)
     if provider == 'antigravity':
-        return antigravity_identity(executable)
+        return antigravity_identity(executable, slot=slot)
     raise ValueError(f'Unsupported subscription provider: {provider}')
 
 
@@ -110,12 +123,14 @@ def connector_scope_matches(grant: dict, identity: dict, *, target: str | None =
 class ProviderAuthOwner:
     """Manage only an official connector login, with no token reads or API fallback."""
     def __init__(self, root, authority, approvals, *, executable=None, connector_factory=None,
-                 provider: str = 'chatgpt'):
+                 provider: str = 'chatgpt', slot: str | None = None):
         if provider not in SUBSCRIPTION_PROVIDERS:
             raise ValueError('Unsupported subscription provider')
+        from isycode.account_slots import active_slot, validate_slot_name
         self.root = Path(root).resolve(strict=True)
         self.authority, self.approvals = authority, approvals
         self.provider = provider
+        self.slot = validate_slot_name(slot) if slot is not None else active_slot(provider)
         if executable is not None:
             self.executable = executable
         elif provider == 'antigravity':
@@ -126,22 +141,26 @@ class ProviderAuthOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id='provider_auth')
         self.connector = None
         self.active_request = None
+        self.active_slot = self.slot
         self.challenge = None
 
-    def request(self, operation: str, method: str = 'device') -> ActionRequest:
+    def request(self, operation: str, method: str = 'device', *, slot: str | None = None) -> ActionRequest:
         allowed_methods = {'browser'} if self.provider == 'antigravity' else {'browser', 'device'}
         if operation not in {'login', 'logout'} or method not in allowed_methods:
             raise ValueError('Unsupported authentication operation')
+        from isycode.account_slots import validate_slot_name
+        target_slot = validate_slot_name(slot) if slot is not None else self.slot
         return ActionRequest('provider.authenticate', self.root, self.provider,
                              {'operation': operation, 'method': method,
-                              'connector': subscription_identity(self.provider, self.executable)},
+                              'connector': subscription_identity(self.provider, self.executable, slot=target_slot)},
                              execution_owner='provider_auth')
 
     def _scope_valid(self) -> bool:
         try:
             grant = self.authority.effective_policy()['grants'].get('provider.authenticate', {})
             return connector_scope_matches(
-                grant, subscription_identity(self.provider, self.executable), target=self.provider)
+                grant, subscription_identity(self.provider, self.executable, slot=self.active_slot),
+                target=self.provider)
         except (OSError, ValueError):
             return False
 
@@ -173,8 +192,14 @@ class ProviderAuthOwner:
             await asyncio.gather(operation, watcher, return_exceptions=True)
 
     async def begin(self, request, approval):
+        from collections.abc import Mapping
+        from isycode.account_slots import PRIMARY_SLOT, record_account_auth, validate_slot_name
         try:
-            expected = self.request(request.parameters.get('operation'), request.parameters.get('method'))
+            conn_param = request.parameters.get('connector')
+            req_slot = conn_param.get('account_slot', PRIMARY_SLOT) if isinstance(conn_param, Mapping) else PRIMARY_SLOT
+            req_slot = validate_slot_name(req_slot)
+            expected = self.request(request.parameters.get('operation'), request.parameters.get('method'),
+                                    slot=req_slot)
         except (AttributeError, ValueError, OSError):
             return ActionOutcome('Authentication denied.', 'DENY', None, 'invalid login request'), None
         if request != expected:
@@ -184,7 +209,8 @@ class ProviderAuthOwner:
             reason = '; '.join(check.reason for check in decision.checks if not check.passed)
             return ActionOutcome('Authentication denied.', 'DENY', None, reason), None
         await self.cancel()
-        home = subscription_home(self.provider)
+        self.active_slot = req_slot
+        home = subscription_home(self.provider, req_slot)
         if self.connector_factory is None:
             if self.provider == 'antigravity':
                 from isycode.antigravity_connector import AntigravityConnector
@@ -202,6 +228,7 @@ class ProviderAuthOwner:
             if request.parameters['operation'] == 'logout':
                 await self._while_granted(self.connector.logout())
                 await self.cancel()
+                record_account_auth(self.provider, req_slot, authenticated=False)
                 return self._result(request, 'signed-out'), None
             self.challenge = await self._while_granted(self.connector.start_login(request.parameters['method']))
             outcome = self._result(request, 'login-started')
@@ -224,6 +251,7 @@ class ProviderAuthOwner:
         if self.connector is None or self.challenge is None or self.active_request is None:
             return ActionOutcome('No active login.', 'DENY', None, 'login is not active'), None
         request = self.active_request
+        slot = self.active_slot
         if not self._scope_valid():
             await self.cancel()
             return self._result(request, 'connector grant revoked', 'DENY'), None
@@ -244,7 +272,12 @@ class ProviderAuthOwner:
                 return self._result(request, 'connector grant revoked', 'DENY'), None
             if not account.get('authenticated') or account.get('method') != self.provider:
                 return self._result(request, 'subscription login not established', 'ERROR'), None
-            return self._result(request, 'signed-in'), account
+            from isycode.account_slots import record_account_auth
+            record_account_auth(self.provider, slot, authenticated=True,
+                                plan=account.get('plan'), email=account.get('email'))
+            enriched = dict(account)
+            enriched['slot'] = slot
+            return self._result(request, 'signed-in'), enriched
         except asyncio.CancelledError:
             raise
         except Exception as exc:

@@ -1128,6 +1128,7 @@ class ProviderAuthSystembility:
 
     @staticmethod
     def identity_valid(identity, target=None):
+        from isycode.account_slots import PRIMARY_SLOT, validate_slot_name
         from isycode.provider_auth import SUBSCRIPTION_PROVIDERS, subscription_home, subscription_identity
         try:
             provider = target or identity.get("auth_method")
@@ -1137,14 +1138,23 @@ class ProviderAuthSystembility:
             path = Path(executable).resolve(strict=True)
             if str(path) != executable or not path.is_file() or not os.access(path, os.X_OK):
                 return False
-            expected = subscription_identity(provider, executable)
+            if "account_slot" in identity:
+                raw_slot = identity["account_slot"]
+                if not isinstance(raw_slot, str):
+                    return False
+                slot = validate_slot_name(raw_slot)
+                if raw_slot != slot or slot == PRIMARY_SLOT:
+                    return False
+            else:
+                slot = PRIMARY_SLOT
+            expected = subscription_identity(provider, executable, slot=slot)
             if set(identity) != set(expected):
                 return False
             if any(identity[key] != value for key, value in expected.items() if key != "hosts"):
                 return False
             if tuple(identity.get("hosts", ())) != tuple(expected["hosts"]):
                 return False
-            home = subscription_home(provider)
+            home = subscription_home(provider, slot=slot)
             if home.resolve(strict=False) != home:
                 return False
             return not any(p.is_symlink() for p in (home, *home.parents))
@@ -1190,10 +1200,28 @@ class GrokAuthSystembility:
         if request.action_id != "grok.login":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
+        slot_ok = True
+        if "slot" in params:
+            from isycode.account_slots import PRIMARY_SLOT, slot_home, validate_slot_name
+            raw_slot = params.get("slot")
+            try:
+                slot = validate_slot_name(raw_slot) if isinstance(raw_slot, str) else ""
+                home = slot_home("grok", slot) if slot and slot == raw_slot and slot != PRIMARY_SLOT else None
+                slot_ok = bool(
+                    home is not None
+                    and home.resolve(strict=False) == home
+                    and not any(p.is_symlink() for p in (home, *home.parents))
+                )
+            except (OSError, TypeError, ValueError):
+                slot_ok = False
+        allowed_keys = {"executable", "operation", "method"}
+        if "slot" in params:
+            allowed_keys.add("slot")
         valid = (request.target == "grok"
-                 and set(params) == {"executable", "operation", "method"}
+                 and set(params) == allowed_keys
                  and params.get("operation") == "login"
                  and params.get("method") in {"device", "browser"}
+                 and slot_ok
                  and self.executable_valid(params.get("executable")))
         return SystembilityResult(self.name, valid,
                                   "sign-in binds the official grok CLI executable and a fixed login operation")

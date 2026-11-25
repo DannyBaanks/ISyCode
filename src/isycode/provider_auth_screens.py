@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static
+from textual.widgets import Button, Input, Static
 
 
 def _approved_login_url(value: object, *, allowed_hosts: tuple[str, ...] | None = None) -> str | None:
@@ -43,11 +43,13 @@ class SubscriptionLoginScreen(ModalScreen[None]):
         super().__init__()
         self.challenge = challenge
         self.provider = challenge.get('provider', 'chatgpt')
+        self.slot = challenge.get('slot') or 'primary'
         allowed_hosts = (ANTIGRAVITY_AUTH_HOSTS[0],) if self.provider == 'antigravity' else AUTH_HOSTS
         self.login_url = _approved_login_url(challenge.get('url'), allowed_hosts=allowed_hosts)
         self.ready = asyncio.Event()
     def compose(self) -> ComposeResult:
-        title = tr('Sign in with Google Antigravity') if self.provider == 'antigravity' else tr('Sign in with ChatGPT')
+        base_title = tr('Sign in with Google Antigravity') if self.provider == 'antigravity' else tr('Sign in with ChatGPT')
+        title = f'{base_title} [{self.slot}]' if self.slot and self.slot != 'primary' else base_title
         with Vertical(id='subscription-card', classes='isy-dialog'):
             yield Static(title, classes='isy-dialog-title', markup=False)
             with VerticalScroll(id='subscription-copy', classes='isy-dialog-body'):
@@ -81,3 +83,53 @@ class SubscriptionLoginScreen(ModalScreen[None]):
         if event.button.id == 'subscription-cancel':
             self.dismiss(None)
     def action_cancel(self): self.dismiss(None)
+
+
+class AccountSlotScreen(ModalScreen[str | None]):
+    """Prompt for a new isolated subscription slot name (e.g. pro2, work)."""
+
+    CSS = '''
+    AccountSlotScreen { align: center middle; background: #000000 65%; }
+    #account-slot-card { width: 68; max-width: 94%; height: auto; min-height: 10; padding: 1 2; border: solid #718291; background: #000000; }
+    #account-slot-heading { height: 1; color: #edf1f5; text-style: bold; }
+    #account-slot-note { height: auto; color: #9eaab6; margin-bottom: 1; }
+    #account-slot-input { height: 3; margin-bottom: 1; }
+    #account-slot-actions { height: 3; align-horizontal: right; }
+    #account-slot-actions Button { margin-left: 1; }
+    '''
+    BINDINGS = [Binding('escape', 'cancel', 'Cancel')]
+
+    def __init__(self, provider_label: str, suggested: str = 'pro2') -> None:
+        super().__init__()
+        self.provider_label = provider_label
+        self.suggested = suggested
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id='account-slot-card', classes='isy-dialog'):
+            yield Static(tr('Add account slot · {provider}', provider=self.provider_label),
+                         id='account-slot-heading', classes='isy-dialog-title', markup=False)
+            yield Static(tr('Short label (letters, digits, - or _). Credentials stay isolated in this slot.'),
+                         id='account-slot-note', markup=False)
+            yield Input(value=self.suggested, placeholder='pro2', id='account-slot-input')
+            with Horizontal(id='account-slot-actions', classes='isy-dialog-actions'):
+                yield Button(tr('Cancel'), id='account-slot-cancel')
+                yield Button(tr('Add & sign in'), id='account-slot-save', variant='primary')
+
+    def on_mount(self) -> None:
+        field = self.query_one('#account-slot-input', Input)
+        field.focus()
+        field.cursor_position = len(field.value)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        if event.button.id == 'account-slot-save':
+            self.dismiss(self.query_one('#account-slot-input', Input).value)
+        else:
+            self.dismiss(None)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == 'account-slot-input':
+            self.dismiss(event.value)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)

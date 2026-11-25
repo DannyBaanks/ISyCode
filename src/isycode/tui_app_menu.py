@@ -405,6 +405,32 @@ async def _quota_cmd(app: "TUIApp", arg: str) -> None:
     await app._refresh_antigravity_quota(report=True)
 
 
+async def _accounts_cmd(app: "TUIApp", arg: str) -> None:
+    parts = arg.strip().split()
+    active = selected_provider_name()
+    default_provider = (
+        "antigravity" if active == "antigravity"
+        else "chatgpt" if active in {"chatgpt", "openai"}
+        else "grok" if active == "xai"
+        else None
+    )
+    if not parts:
+        app._open_account_slots_menu(default_provider)
+        return
+    head = parts[0].casefold()
+    if head in {"antigravity", "chatgpt", "grok", "xai"}:
+        prov = "grok" if head == "xai" else head
+        if len(parts) >= 2 and parts[1].casefold() in {"use", "switch"} and len(parts) >= 3:
+            await app._select_account_slot(prov, parts[2])
+            return
+        app._open_account_slots_menu(prov)
+        return
+    if head in {"use", "switch"} and len(parts) >= 2 and default_provider:
+        await app._select_account_slot(default_provider, parts[1])
+        return
+    app._open_account_slots_menu(default_provider)
+
+
 async def _isymem_cmd(app: "TUIApp", arg: str) -> None:
     from isycode.isymem_bridge import run_isymem_cli
     rc, output = await asyncio.to_thread(run_isymem_cli, arg, workspace_root=app._workspace_root)
@@ -506,6 +532,12 @@ class MenuAction(str, Enum):
     ANTIGRAVITY_AUTH_LOGOUT = "antigravity_auth_logout"
     ANTIGRAVITY_AUTH_SAVED = "antigravity_auth_saved"
     ANTIGRAVITY_QUOTA = "antigravity_quota"
+    ACCOUNT_SLOTS_OPEN = "account_slots_open"
+    ACCOUNT_SLOT_SELECT = "account_slot_select"
+    ACCOUNT_SLOT_ADD = "account_slot_add"
+    ACCOUNT_SLOT_ADD_DEVICE = "account_slot_add_device"
+    ACCOUNT_SLOT_REMOVE = "account_slot_remove"
+    ACCOUNT_SLOT_SWITCH_BEST = "account_slot_switch_best"
     PROVIDERS_OPEN = "providers_open"
     MODELS_OPEN = "models_open"
     ROLES_OPEN = "roles_open"
@@ -641,6 +673,12 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.ANTIGRAVITY_AUTH_LOGOUT: "_menu_antigravity_auth_browser",
     MenuAction.ANTIGRAVITY_AUTH_SAVED: "_menu_antigravity_auth_saved",
     MenuAction.ANTIGRAVITY_QUOTA: "_menu_antigravity_quota",
+    MenuAction.ACCOUNT_SLOTS_OPEN: "_menu_account_slots_open",
+    MenuAction.ACCOUNT_SLOT_SELECT: "_menu_account_slot_select",
+    MenuAction.ACCOUNT_SLOT_ADD: "_menu_account_slot_add",
+    MenuAction.ACCOUNT_SLOT_ADD_DEVICE: "_menu_account_slot_add",
+    MenuAction.ACCOUNT_SLOT_REMOVE: "_menu_account_slot_remove",
+    MenuAction.ACCOUNT_SLOT_SWITCH_BEST: "_menu_account_slot_switch_best",
     MenuAction.PROVIDERS_OPEN: "_menu_providers_open",
     MenuAction.MODELS_OPEN: "_menu_models_open",
     MenuAction.ROLES_OPEN: "_menu_roles_open",
@@ -808,6 +846,7 @@ class MenuMixin:
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
                 PluginCommand("usage", "show provider-reported chat token usage", _usage_cmd),
                 PluginCommand("quota", "show Antigravity 5h and weekly subscription quota", _quota_cmd),
+                PluginCommand("accounts", "manage multiple subscription accounts (Antigravity, ChatGPT, Grok)", _accounts_cmd),
                 PluginCommand("context", "read workspace AGENTS.md with permission, or clear", _context_cmd),
                 PluginCommand("isymem", "query or update shared multi-harness memory (isymem)", _isymem_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
