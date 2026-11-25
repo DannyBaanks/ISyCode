@@ -178,9 +178,9 @@ class WorkspaceMixin:
         root = self._folder_store().resolve(self._file_browser_alias)
         return LocalWorkspaceReadOwner(root, WorkspaceAuthority(root))
 
-    def _workspace_request(self, action_id: str, path: str, **extra: str) -> ActionRequest:
+    def _workspace_request(self, action_id: str, path: str, *, owner: LocalWorkspaceReadOwner | None = None, **extra: str) -> ActionRequest:
         arguments = {"path": path, **extra}
-        owner = self._workspace_read_owner()
+        owner = owner or self._workspace_read_owner()
         target = owner._lexical_target(path)
         return ActionRequest(action_id, owner.root, str(target), arguments,
                              execution_owner="workspace_read")
@@ -752,6 +752,9 @@ class WorkspaceMixin:
             if not diff_reviewed and not batch_approved:
                 self._show_applied_diff(preview)
             self._append("  " + tr("Tool ALLOW · workspace.files.write · {path} · receipt {receipt_id}", path=preview.path, receipt_id=outcome.receipt.receipt_id), GREEN)
+            record = getattr(self, "_record_conversation_files", None)
+            if callable(record):
+                record(paths=[preview.path])
             if quiet:
                 approval_mode, approved_by_user = "quiet-profile", False
             elif batch_approved:

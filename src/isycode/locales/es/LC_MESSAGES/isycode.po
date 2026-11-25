@@ -6627,6 +6627,30 @@ msgstr "Compartir con el modelo"
 msgid "Trust folder"
 msgstr "Confiar en carpeta"
 
+msgid "+ New side chat"
+msgstr "+ Nuevo chat lateral"
+
+msgid "Expand"
+msgstr "Ampliar"
+
+msgid "Files {count}"
+msgstr "Archivos {count}"
+
+msgid "Open in sidebar"
+msgstr "Abrir en barra lateral"
+
+msgid "Preview unavailable: file is binary or not valid UTF-8."
+msgstr "Vista previa no disponible: el archivo es binario o no es UTF-8 válido."
+
+msgid "Tab"
+msgstr "Pestaña"
+
+msgid "enter open · esc back · ↑/↓ move · ^b hide"
+msgstr "enter abrir · esc volver · ↑/↓ mover · ^b ocultar"
+
+msgid "{relative} · {size} bytes"
+msgstr "{relative} · {size} bytes"
+
 msgid "Antigravity account disconnected. API keys are unchanged."
 msgstr "Cuenta de Antigravity desconectada. Las API keys siguen sin cambios."
 

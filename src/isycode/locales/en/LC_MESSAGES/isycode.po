@@ -6627,6 +6627,30 @@ msgstr "Share with model"
 msgid "Trust folder"
 msgstr "Trust folder"
 
+msgid "+ New side chat"
+msgstr "+ New side chat"
+
+msgid "Expand"
+msgstr "Expand"
+
+msgid "Files {count}"
+msgstr "Files {count}"
+
+msgid "Open in sidebar"
+msgstr "Open in sidebar"
+
+msgid "Preview unavailable: file is binary or not valid UTF-8."
+msgstr "Preview unavailable: file is binary or not valid UTF-8."
+
+msgid "Tab"
+msgstr "Tab"
+
+msgid "enter open · esc back · ↑/↓ move · ^b hide"
+msgstr "enter open · esc back · ↑/↓ move · ^b hide"
+
+msgid "{relative} · {size} bytes"
+msgstr "{relative} · {size} bytes"
+
 msgid "Antigravity account disconnected. API keys are unchanged."
 msgstr "Antigravity account disconnected. API keys are unchanged."
 

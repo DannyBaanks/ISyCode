@@ -600,6 +600,12 @@ class ToolMixin:
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
         # The outcome and its receipt live inside the tool's own card; no
         # separate box per call.
+        if action_id == "workspace.files.read" and isinstance(arguments.get("path"), str):
+            raw_p = arguments["path"]
+            resolved_p = raw_p if Path(raw_p).is_absolute() else str(root / raw_p)
+            record = getattr(self, "_record_conversation_files", None)
+            if callable(record):
+                record(paths=[resolved_p])
         self._append("  " + tr("✓ {alias} · {value} · completed", alias=alias, value=summary[:160]), TEXT)
         self._append(self._receipt_text(result, summary), MUTED)
         return tool_call_id, result.text

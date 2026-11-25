@@ -5,6 +5,7 @@ UI choices still execute through the application's ClipboardOwner path.
 from __future__ import annotations
 
 from rich.cells import cell_len
+from rich.style import Style
 from rich.text import Text
 from rich.syntax import Syntax
 from textual.containers import VerticalScroll
@@ -103,8 +104,21 @@ def selectable_markdown(markdown):
                     if child.type == "code_inline":
                         inline_styles.append(CYAN)
                     if link_href:
-                        inline_styles.append(f"underline link {link_href}")
-                    result.append(child.content, style=" ".join(inline_styles))
+                        real_href = (
+                            "file://" + link_href[10:]
+                            if link_href.lower().startswith("isyfile://")
+                            else link_href
+                        )
+                        base = Style.parse(" ".join(inline_styles)) if inline_styles else Style.null()
+                        link_style = base + Style(
+                            color=CYAN,
+                            underline=True,
+                            link=real_href,
+                            meta={"isy_link": real_href},
+                        )
+                        result.append(child.content, style=link_style)
+                    else:
+                        result.append(child.content, style=" ".join(inline_styles))
         elif kind == "paragraph_close":
             result.append("\n" if list_depth else "\n\n")
         elif kind in {"fence", "code_block"}:

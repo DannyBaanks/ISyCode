@@ -74,6 +74,19 @@ Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-sur
 #key-entry-label { color: $isy-muted; }
 #side-panel Button:focus, #side-panel Button:hover, #side-panel Button.rail-lit { background: $isy-selected-surface; color: $isy-focus; }
 #rail-tabs { border: none !important; border-bottom: solid $isy-separator !important; height: 2; }
+#rail-tab-add { width: 3; min-width: 3; margin-left: 1; padding: 0; }
+#rail-doc-strip { display: none; height: 2; border: none !important; border-bottom: solid $isy-separator !important; align: left middle; }
+#rail-doc-tabs { width: 1fr; height: 1; align: left middle; overflow-x: hidden; }
+#rail-tab-prev, #rail-tab-next { width: 2; min-width: 2; padding: 0; color: $isy-muted; }
+.rail-doc-tab { width: auto; max-width: 20; height: 1; padding: 0 1; text-wrap: nowrap; text-overflow: ellipsis; color: $isy-muted; }
+.rail-doc-tab.rail-lit { background: $isy-selected-surface; color: $isy-focus; }
+.rail-doc-close { width: 2; min-width: 2; height: 1; padding: 0; margin-right: 1; color: $isy-muted; }
+.rail-doc-close:hover, .rail-doc-close:focus { color: $isy-focus; background: $isy-selected-surface; }
+.rail-section-label { height: 1; color: $isy-muted; margin-top: 1; }
+#sidebar-chooser { display: none; height: auto; padding-bottom: 1; border-bottom: solid $isy-separator; }
+#sidebar-chooser-title { margin-top: 0; color: $isy-text; text-style: bold; }
+#sidebar-new-chat { width: 100%; content-align: left middle; padding: 0 1; margin-top: 1; background: $isy-selected-surface; color: $isy-focus; }
+#conversation-files-list { display: none; height: auto; max-height: 10; border: none !important; background: $isy-surface !important; padding: 0; margin-bottom: 1; border-bottom: solid $isy-separator !important; }
 #workspace-tree { border: none !important; background: $isy-surface !important; min-height: 2; height: 1fr; }
 #files-view { height: 1fr; min-height: 12; }
 #file-preview-box { height: 1fr; min-height: 5; }
@@ -81,6 +94,18 @@ Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-sur
 #file-preview { height: auto; }
 #file-preview-meta { height: auto; max-height: 2; color: $isy-muted; }
 #file-actions { height: 1; }
+#file-open-tab { display: none; width: 100%; height: 1; padding: 0; }
+#doc-view { display: none; height: 1fr; min-height: 8; }
+#doc-meta { height: auto; max-height: 2; color: $isy-muted; padding-bottom: 1; }
+#doc-actions { height: 1; margin-bottom: 1; }
+#doc-actions Button { width: 1fr; padding: 0; text-wrap: nowrap; text-overflow: ellipsis; }
+#doc-actions #doc-expand-modal, #doc-actions #doc-close-tab { margin-left: 1; }
+#doc-code { height: 1fr; min-height: 4; background: $isy-surface !important; border: none !important; border-top: solid $isy-separator !important; }
+#doc-code .text-area--gutter { background: $isy-surface; color: $isy-muted; }
+#doc-code .text-area--selection { background: $isy-selected-surface; }
+#doc-markdown-scroll { display: none; height: 1fr; min-height: 4; background: $isy-surface !important; border: none !important; border-top: solid $isy-separator !important; padding: 1 0; }
+#doc-markdown { height: auto; width: 100%; }
+#rail-footer-hint { height: 1; color: $isy-muted; text-wrap: nowrap; text-overflow: ellipsis; margin-top: 1; }
 #command-bar Button { color: $isy-text; background: $isy-surface !important; }
 #command-bar Button:hover, #command-bar Button:focus { background: $isy-selected-surface !important; color: $isy-focus; }
 #settings-button { width: 5; dock: right; }
