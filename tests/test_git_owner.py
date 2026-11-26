@@ -165,7 +165,9 @@ def test_worktree_links_and_missing_repositories_are_refused(tmp_path, monkeypat
     owner = GitOwner(root, authority)
     assert "not a git repository" in owner.status().reason
     (root / ".git").write_text("gitdir: /elsewhere\n")
-    assert "not worktree links" in owner.status().reason
+    outcome = owner.status()
+    assert outcome.decision == "DENY"
+    assert "worktree link" in outcome.reason
 
 
 @pytest.mark.parametrize("paths", [[".env"], ["../x"], ["missing.py"], []])

@@ -113,11 +113,12 @@ class AuthorityMixin:
                     "stay unavailable."),
         "security": ("Everything starts off; you allow each capability in Settings → Authority. "
                      "Permissions you granted explicitly stay as they are."),
-        "flow": ("Flow works freely across your computer: host reads, edits, moves, deletes, "
-                 "shell commands with network, and configured local MCPs run without asking. "
-                 "Workspace turns are recorded for /undo. Commits of human-edited files, push, "
-                 "credentials, and authority changes still ask or stay off. "
-                 "Classic stays workspace-bounded; Security is for explicit per-action grants."),
+        "flow": ("Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, "
+                 "and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, "
+                 "but host shell commands run with your normal user access (not a sandbox). "
+                 "/undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. "
+                 "Commits of human-edited files, push, and authority changes still ask. "
+                 "Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."),
     }
 
     async def _change_workspace_mode(self, mode: str, reopen_menu: bool = True) -> None:

@@ -86,6 +86,7 @@ class TurnJournal:
         self.directory = directory
         self.scope = str(scope or "")
         self.entries: dict[str, dict[str, Any]] = {}
+        self.uncovered: list[dict[str, str]] = []
         self.preimage_bytes = 0
         self.started_at = 0.0
         self.finished = False
@@ -170,6 +171,12 @@ class TurnJournal:
             raise ValueError("turn manifest does not match this workspace")
         journal = cls(root, turn_id, directory)
         journal.entries = data["entries"]
+        raw_uncovered = data.get("uncovered", [])
+        journal.uncovered = [
+            {"path": str(item.get("path", "")), "reason": str(item.get("reason", ""))}
+            for item in raw_uncovered
+            if isinstance(item, dict) and item.get("path")
+        ] if isinstance(raw_uncovered, list) else []
         journal.preimage_bytes = int(data.get("preimage_bytes", 0))
         journal.started_at = float(data.get("started_at", 0.0))
         journal.finished = bool(data.get("finished"))
@@ -246,6 +253,19 @@ class TurnJournal:
                                if after_sha256 is not None else None)
         self._save()
 
+    def note_uncovered(self, relative: str, reason: str) -> None:
+        """Record a path whose preimage could not be verified (excluded from auto-undo)."""
+        if self._undone():
+            return
+        clean_path = str(relative or "").strip()
+        clean_reason = str(reason or "").strip()[:240]
+        if not clean_path:
+            return
+        if not any(item.get("path") == clean_path and item.get("reason") == clean_reason
+                   for item in self.uncovered):
+            self.uncovered.append({"path": clean_path, "reason": clean_reason})
+            self._save()
+
     def _undone(self) -> bool:
         """Undone here or by another instance of this turn (undo loads its own copy)."""
         if not self.undone:
@@ -296,9 +316,13 @@ class TurnJournal:
 
     # -- storage -------------------------------------------------------
     def _save(self) -> None:
-        data = {"turn_id": self.turn_id, "root": _root_key(self.root), "entries": self.entries,
-                "preimage_bytes": self.preimage_bytes, "started_at": self.started_at,
-                "finished": self.finished, "undone": self.undone}
+        data: dict[str, Any] = {
+            "turn_id": self.turn_id, "root": _root_key(self.root), "entries": self.entries,
+            "preimage_bytes": self.preimage_bytes, "started_at": self.started_at,
+            "finished": self.finished, "undone": self.undone,
+        }
+        if self.uncovered:
+            data["uncovered"] = self.uncovered
         _write_private(self.directory / "manifest.json",
                        json.dumps(data, ensure_ascii=False, sort_keys=True).encode("utf-8"))
 

@@ -39,6 +39,39 @@ def tool_message(call_id: str, text: str) -> dict:
     return {'role': 'tool', 'tool_call_id': call_id, 'content': text}
 
 
+class ToolCallLedger:
+    """Shared per-turn tool-call identity and deduplication table across frontends.
+
+    Ensures a repeated tool call with the same ``id``:
+    - reuses the recorded result without repeating side effects when its
+      canonical payload digest matches;
+    - raises ``ValueError`` when the same ``id`` is reused with different
+      arguments or tool name.
+    """
+
+    def __init__(self) -> None:
+        self._executed: dict[str, tuple[str, str]] = {}
+
+    @staticmethod
+    def validate_and_digest(call: object) -> tuple[str, str]:
+        if not isinstance(call, dict) or not isinstance(call.get('id'), str) or not call['id']:
+            raise ValueError('Provider returned a tool call without an identity')
+        call_id = call['id']
+        digest = hashlib.sha256(json.dumps(call, sort_keys=True).encode('utf-8')).hexdigest()
+        return call_id, digest
+
+    def lookup(self, call_id: str, digest: str) -> str | None:
+        if call_id not in self._executed:
+            return None
+        old_digest, result = self._executed[call_id]
+        if old_digest != digest:
+            raise ValueError('Provider reused a tool identity with different arguments')
+        return result
+
+    def record(self, call_id: str, digest: str, result: str) -> None:
+        self._executed[call_id] = (digest, result)
+
+
 class AgentTurn:
     def __init__(self, root: Path, authority: WorkspaceAuthority):
         self.root = root.resolve(strict=True)
@@ -49,7 +82,7 @@ class AgentTurn:
                   ports: TurnPorts, transport=None) -> TurnResult:
         receipts: list[str] = []
         usage: dict = {}
-        executed: dict[str, tuple[str, str]] = {}
+        ledger = ToolCallLedger()
         ports.emit('turn.start', {})
         try:
             while True:
@@ -96,14 +129,10 @@ class AgentTurn:
                     return TurnResult(text, messages, usage, receipts)
                 messages.append(assistant_turn(response))
                 for call in calls:
-                    if not isinstance(call, dict) or not isinstance(call.get('id'), str) or not call['id']:
-                        raise ValueError('Provider returned a tool call without an identity')
-                    call_id = call['id']
-                    digest = hashlib.sha256(json.dumps(call, sort_keys=True).encode()).hexdigest()
-                    if call_id in executed:
-                        old_digest, result = executed[call_id]
-                        if old_digest != digest:
-                            raise ValueError('Provider reused a tool identity with different arguments')
+                    call_id, digest = ledger.validate_and_digest(call)
+                    cached = ledger.lookup(call_id, digest)
+                    if cached is not None:
+                        result = cached
                     else:
                         ports.emit('tool.start', {'call_id': call_id, 'function': call.get('function')})
                         if ports.checkpoint:
@@ -111,7 +140,7 @@ class AgentTurn:
                         returned_id, result = await ports.dispatch(call)
                         if returned_id != call_id or not isinstance(result, str):
                             raise ValueError('Tool returned a mismatched protocol identity')
-                        executed[call_id] = (digest, result)
+                        ledger.record(call_id, digest, result)
                         ports.emit('tool.result', {'call_id': call_id, 'result': result})
                     messages.append(tool_message(call_id, result))
                     if ports.checkpoint:

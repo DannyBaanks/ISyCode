@@ -6872,3 +6872,9 @@ msgstr "待登录"
 
 msgid "signed in"
 msgstr "已登录"
+
+msgid "{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\nFlow: broad host access — reads, edits, host shell commands with network, and local MCPs run without questions. Direct file tools still block sensitive files, but host shell commands run as your user (not a sandbox). /undo restores captured workspace preimages (not arbitrary external or oversized host effects).\nSecurity: everything off until you allow it.\nAll modes keep Sentinel and receipts. Push, non-turn commits, and authority changes still ask."
+msgstr "{root}\nClassic（推荐）：在工作区范围内审查编辑和沙盒命令，或信任此文件夹。\nFlow：广泛的主机访问权限 — 读取、编辑、带网络的主机 Shell 命令和本地 MCP 无需询问即可运行。直接文件工具仍会阻止敏感文件，但主机 Shell 命令以你的用户身份运行（非沙盒）。/undo 仅恢复已捕获的工作区前像（不含任意外部或超限主机副作用）。\nSecurity：所有权限默认关闭，直到你显式允许。\n所有模式均保留 Sentinel 和回执。推送、非本回合提交及权限变更仍会询问。"
+
+msgid "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
+msgstr "Flow 提供广泛的主机访问权限：读取、编辑、移动、删除、带网络的主机 Shell 命令以及已配置的本地 MCP 无需询问即可运行。直接文件工具仍会阻止 .env 等敏感文件，但主机 Shell 命令使用你的普通用户权限运行（并非沙盒）。/undo 仅恢复 ISyCode 捕获并验证的工作区前像，不涵盖任意外部或超限影响。人工编辑文件的提交、推送和权限变更仍会询问。如需工作区沙盒请使用 Classic，如需逐项显式授权请使用 Security。"
