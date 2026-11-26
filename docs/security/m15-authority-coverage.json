@@ -2244,14 +2244,14 @@
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 393,
+      "line": 474,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 356,
+      "line": 437,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
@@ -2279,7 +2279,7 @@
     },
     {
       "file": "isycode/git_owner.py",
-      "line": 340,
+      "line": 427,
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
@@ -2496,7 +2496,7 @@
     },
     {
       "file": "isycode/tui_app_authority.py",
-      "line": 953,
+      "line": 954,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
@@ -2601,7 +2601,7 @@
     },
     {
       "file": "isycode/workspace_write.py",
-      "line": 758,
+      "line": 764,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_turn_undo",
       "action": "workspace.turn.undo",
       "owner": "workspace_write"
@@ -2652,7 +2652,7 @@
     },
     {
       "file": "isycode/git_owner.py",
-      "line": 340,
+      "line": 427,
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
@@ -2687,7 +2687,7 @@
     },
     {
       "file": "isycode/tui_app_authority.py",
-      "line": 953,
+      "line": 954,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"

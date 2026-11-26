@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-ISyCode is version 0.1.0 in active development. A product-oriented README does
+ISyCode is version 1.0.0rc1 in active development. A product-oriented README does
 not change release acceptance, security gates or integration evidence. This
 page keeps those limits visible without making the landing page an audit log.
 

@@ -74,20 +74,22 @@ Se añaden al modelo del roadmap (sección 3):
 
 ## Actualización v2 (uso libre en computadora — 2026-11-17)
 
-Por decisión explícita de Danny, **Flow** evoluciona respecto a v1 para funcionar como agente libre en toda la computadora (análogo a AGY / Codex / Claude Code), mientras **Classic** se mantiene acotado al workspace y **Security** permanece en permisos explícitos:
+Por decisión explícita de Danny, **Flow** evoluciona respecto a v1 para funcionar como agente libre en toda la computadora (análogo a modos de acceso total en Codex / Claude Code), mientras **Classic** se mantiene acotado al workspace con sandbox y **Security** permanece en permisos explícitos:
 
-- **Lectura/escritura/búsqueda:** en Flow aceptan rutas del workspace y rutas del host (`~` o absolutas), respetando los bloqueos de archivos sensibles/credenciales (`.env`, `.ssh`, llaves) y `.isyroot`. Los cambios dentro del workspace siguen registrándose en `TurnJournal` para `/undo`.
-- **Comandos (`workspace_run`):** en Flow se ejecutan directamente en el host (con visibilidad completa del sistema de archivos, `PATH` real, red y cualquier `cwd` válido, y `stdin=/dev/null`). Classic y Security mantienen Bubblewrap sin red ni acceso al host.
+- **Lectura/escritura/búsqueda directa:** en Flow aceptan rutas del workspace y rutas del host (`~` o absolutas). Los owners directos de archivos siguen bloqueando rutas sensibles/credenciales (`.env`, `.ssh`, llaves) y `.isyroot`.
+- **Comandos (`workspace_run`):** en Flow se ejecutan directamente en el host (con visibilidad completa del sistema de archivos, entorno y `PATH` reales del usuario, red y cualquier `cwd` válido, con `stdin=/dev/null`). **No es un sandbox**: un programa ejecutado en la shell de Flow hereda los permisos reales del usuario del sistema operativo (incluyendo archivos legibles por ese usuario). Classic y Security mantienen Bubblewrap sin red ni acceso al host.
+- **Turno recuperable (`/undo`):** los cambios directos del workspace y las modificaciones de comandos host dentro del workspace cuyas preimágenes entren en el presupuesto verificado del `TurnJournal` se registran para `/undo` (también al cancelar un comando host). Toda ruta preexistente no capturada (por ejemplo, archivos mayores de 4 MiB o fuera de la muestra) queda marcada explícitamente como no cubierta y nunca se elimina automáticamente al deshacer. Efectos externos o fuera del workspace no están cubiertos por `/undo`.
 - **MCPs locales configurados (`~/.config/isycode/mcp.json`):** en Flow cuentan con concesión implícita y ejecución silenciosa sin diálogo por llamada (salvo revocación explícita); Classic y Security siguen pidiendo confirmación.
+- **Headless (`isycode --mode flow -p`):** permite ejecución no interactiva en modo Flow usando los mismos owners y deduplicación compartida de herramientas; el modo por defecto sin `--mode flow` sigue siendo solo lectura.
 
 ## Alternativas rechazadas
 
 - **Relajar Classic.** Rompe el contrato de ADR 0005 y la promesa a quien ya lo usa.
-- **Bypass total (sin sandbox o sin Sentinel).** No existe `bypass_all`.
-- **Lista blanca de comandos.** Un test puede ejecutar código arbitrario; la frontera tiene que ser el sistema operativo.
+- **Bypass de Sentinel o recibos.** Incluso en Flow v2, toda llamada sigue pasando por `WorkspaceAuthority`, `IsySentinel`, owners y journal de recibos; no existe `bypass_all`.
+- **Lista blanca de comandos.** Un test puede ejecutar código arbitrario; en Classic/Security el aislamiento sigue estando en el sistema operativo (sandbox).
 - **Commit de todo lo que cambió (`git add .`).** Mezclaría trabajo humano sucio, staged o untracked con el del agente.
 - **Reiniciar el proceso al cambiar de modo.** Pierde estado de la TUI y no aporta aislamiento: Authority relee la política en cada evaluación.
 
-## Qué no hace
+## Qué no hace (contrato vigente v2)
 
-No aprueba GF, M9 ni M10. No abre MCP, credenciales ni push. No cambia headless. No ofrece Flow con comandos donde no hay sandbox verificado.
+No aprueba GF, M9 ni M10. No convierte una shell host de Flow v2 en un sandbox ni impide que un proceso host lea archivos accesibles al usuario. No garantiza deshacer efectos externos, fuera del workspace o sin preimagen verificable. No abre push ni cambios de autoridad sin aprobación explícita. Classic y Security conservan su sandbox y sus aprobaciones sin cambios.

@@ -741,7 +741,13 @@ class WorkspaceWriteOwner:
         for row in reversed(journal.changes()):
             path = row["path"]
             target = self._target(path)
-            current = self._read_back(target)
+            try:
+                current = self._read_back(target)
+            except ValueError:
+                # e.g. a file grew past MAX_WRITE_BYTES after the turn: never crash undo,
+                # surface it as a conflict so other captured files remain restorable.
+                conflicts.append(path)
+                continue
             current_sha = None if current is None else _sha(current)
             current_mode = None if current is None else stat.S_IMODE(target.lstat().st_mode)
             if (current_sha != row["after_sha256"]

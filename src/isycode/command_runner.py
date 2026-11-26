@@ -203,6 +203,20 @@ _HOST_UNDO_IGNORE_DIRS = frozenset({
 _HOST_UNDO_MAX_FILES = 500
 _HOST_UNDO_MAX_FILE_BYTES = 4 * 1024 * 1024
 _HOST_UNDO_MAX_TOTAL_BYTES = 16 * 1024 * 1024
+_HOST_UNDO_MAX_SEEN_PATHS = 50_000
+
+
+@dataclass(frozen=True)
+class _HostSnapshot:
+    """Separates captured preimages from observed existence and scan completeness.
+
+    A path absent from ``captured`` must NEVER be assumed absent before the
+    command unless it is also absent from ``existing`` AND ``truncated`` is False.
+    """
+
+    captured: dict[str, tuple[bytes, int]]
+    existing: frozenset[str]
+    truncated: bool
 
 
 def _host_turn_scan_root(workspace_root: Path, cwd: str) -> Path | None:
@@ -217,50 +231,107 @@ def _host_turn_scan_root(workspace_root: Path, cwd: str) -> Path | None:
     return None
 
 
-def _snapshot_host_files(scan_root: Path, workspace_root: Path) -> dict[str, tuple[bytes, int]]:
-    """Bounded preimage snapshot of regular files under scan_root for Flow host commands."""
-    snapshot: dict[str, tuple[bytes, int]] = {}
+def _snapshot_host_files(scan_root: Path, workspace_root: Path) -> _HostSnapshot:
+    """Bounded preimage snapshot + full existence index under scan_root for Flow host commands."""
+    captured: dict[str, tuple[bytes, int]] = {}
+    existing: set[str] = set()
     total_bytes = 0
-    for cur, dirs, files in os.walk(scan_root, topdown=True, followlinks=False):
+    truncated = False
+
+    def _on_walk_error(_exc: OSError) -> None:
+        nonlocal truncated
+        truncated = True
+
+    for cur, dirs, files in os.walk(scan_root, topdown=True, followlinks=False, onerror=_on_walk_error):
         dirs[:] = [d for d in sorted(dirs) if d not in _HOST_UNDO_IGNORE_DIRS]
         cur_path = Path(cur)
         for name in sorted(files):
-            if len(snapshot) >= _HOST_UNDO_MAX_FILES:
-                return snapshot
             file_path = cur_path / name
+            try:
+                rel = file_path.relative_to(workspace_root).as_posix()
+            except ValueError:
+                continue
+            if len(existing) >= _HOST_UNDO_MAX_SEEN_PATHS:
+                truncated = True
+                return _HostSnapshot(captured, frozenset(existing), truncated)
+            existing.add(rel)
+            if len(captured) >= _HOST_UNDO_MAX_FILES:
+                continue
             try:
                 info = file_path.lstat()
                 if not stat.S_ISREG(info.st_mode) or info.st_size > _HOST_UNDO_MAX_FILE_BYTES:
                     continue
                 if total_bytes + info.st_size > _HOST_UNDO_MAX_TOTAL_BYTES:
                     continue
-                rel = file_path.relative_to(workspace_root).as_posix()
                 data = file_path.read_bytes()
             except (OSError, ValueError):
                 continue
-            snapshot[rel] = (data, stat.S_IMODE(info.st_mode))
+            captured[rel] = (data, stat.S_IMODE(info.st_mode))
             total_bytes += len(data)
-    return snapshot
+    return _HostSnapshot(captured, frozenset(existing), truncated)
 
 
 def _record_host_turn_changes(
     journal,
     workspace_root: Path,
     scan_root: Path,
-    before: dict[str, tuple[bytes, int]],
+    before: _HostSnapshot,
+    *,
+    cancelled: bool = False,
 ) -> None:
-    """Record host-command file additions, edits, and deletions into the active TurnJournal."""
+    """Record verifiable host-command file changes into the active TurnJournal.
+
+    Never infers a creation (``before_sha256 = None``) for a path that already
+    existed before the command (even if skipped for size/budget) or when the
+    pre-snapshot walk was truncated. Such paths are marked uncovered instead of
+    being exposed to destructive deletion on ``/undo``.
+    """
     after = _snapshot_host_files(scan_root, workspace_root)
-    for rel in sorted(set(before) | set(after)):
-        old_entry = before.get(rel)
-        new_entry = after.get(rel)
+    all_paths = sorted(set(before.captured) | set(after.captured) | (after.existing - before.existing))
+    for rel in all_paths:
+        old_entry = before.captured.get(rel)
+        new_entry = after.captured.get(rel)
         try:
             if old_entry is None and new_entry is not None:
+                if rel in before.existing:
+                    # Pre-existing file was not preimaged (e.g. >4 MiB or over sample budget).
+                    # Never record as newly created — undo must NOT delete it!
+                    journal.note_uncovered(
+                        rel,
+                        "pre-existing file exceeded host undo snapshot limit; excluded from automatic undo",
+                    )
+                    continue
+                if before.truncated:
+                    journal.note_uncovered(
+                        rel,
+                        "host pre-snapshot was truncated; pre-command existence unverified",
+                    )
+                    continue
                 new_bytes, _ = new_entry
                 journal.capture(rel, None, None)
                 journal.note_after(rel, hashlib.sha256(new_bytes).hexdigest())
             elif old_entry is not None and new_entry is None:
                 old_bytes, old_mode = old_entry
+                if rel in after.existing:
+                    # Still exists on disk (e.g. grew past the 4 MiB snapshot cap or unreadable).
+                    # Never pretend it was deleted; record current sha if readable or mark uncovered.
+                    journal.note_uncovered(
+                        rel,
+                        "modified file exceeded host undo snapshot limit after command; excluded from automatic undo",
+                    )
+                    continue
+                if after.truncated:
+                    # Verify real deletion on disk before claiming absent.
+                    try:
+                        (workspace_root / rel).lstat()
+                    except FileNotFoundError:
+                        pass
+                    else:
+                        journal.note_uncovered(
+                            rel,
+                            "host post-snapshot was truncated; post-command state unverified",
+                        )
+                        continue
                 journal.capture(rel, old_bytes, old_mode)
                 journal.note_after(rel, None)
             elif old_entry is not None and new_entry is not None:
@@ -269,8 +340,18 @@ def _record_host_turn_changes(
                 if old_bytes != new_bytes or old_mode != new_mode:
                     journal.capture(rel, old_bytes, old_mode)
                     journal.note_after(rel, hashlib.sha256(new_bytes).hexdigest())
+            elif old_entry is None and new_entry is None and rel in after.existing and rel not in before.existing:
+                journal.note_uncovered(
+                    rel,
+                    "created file exceeded host undo snapshot limit; excluded from automatic undo",
+                )
         except Exception:
             continue
+    if cancelled:
+        journal.note_uncovered(
+            ".",
+            "host command was cancelled; captured workspace file changes were reconciled",
+        )
 
 
 def _resolve_host_cwd(root: Path, cwd: object) -> Path:
@@ -548,6 +629,13 @@ class CommandRunOwner:
             except asyncio.CancelledError:
                 self._kill_host(proc)
                 await proc.wait()
+                if journal is not None and scan_root is not None and preimages is not None:
+                    try:
+                        _record_host_turn_changes(
+                            journal, self.root, scan_root, preimages, cancelled=True
+                        )
+                    except Exception:
+                        pass
                 raise
             result: dict = {
                 "argv": list(preview.argv),

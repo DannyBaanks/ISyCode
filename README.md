@@ -91,11 +91,10 @@ Cambia de modo con el chip `◇ Classic` de la barra de abajo:
 | Modo | Para qué |
 | --- | --- |
 | **Classic** | Recomendado. Revisa ediciones y comandos, o confía en la carpeta para trabajar sin preguntas repetidas |
-| **Flow** | Trabaja sin preguntar en lo que se puede deshacer. Cada turno queda registrado y `/undo` lo deshace completo |
+| **Flow** | Acceso amplio en tu equipo sin preguntas (ediciones, comandos en el host con red y MCPs locales). `/undo` restaura los cambios de archivos del workspace con preimagen verificada (no es un sandbox ni deshace efectos externos) |
 | **Security** | Todo apagado hasta que lo permitas, capacidad por capacidad |
 
-En los tres, push, secretos, integraciones y cambios de autoridad siguen
-pidiendo aprobación. [Permisos, aprobaciones e integraciones](docs/reference/authority-and-integrations.md).
+En **Classic** y **Security**, push, secretos, integraciones y cambios de autoridad siguen pidiendo aprobación o bloqueados; en **Flow**, los owners directos bloquean archivos sensibles pero la shell corre con tus permisos reales de usuario, mientras push, commits de archivos ajenos al turno y cambios de autoridad siguen preguntando. [Permisos, aprobaciones e integraciones](docs/reference/authority-and-integrations.md).
 
 ![Selector de modo de ISyCode con Classic, Flow y Security](docs/screenshots/2026-10-24-readme/02-modes.png)
 

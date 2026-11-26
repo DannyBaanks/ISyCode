@@ -216,10 +216,11 @@ class WorkspaceModeScreen(ModalScreen[str]):
     def _mode_copy(self) -> OnboardingCopy:
         return OnboardingCopy(
             tr("{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\n"
-               "Flow: computer-wide reads, edits, host shell commands with network, and configured local MCPs run without questions. "
-               "Each workspace chat turn is recorded; /undo restores its files while keeping later human changes.\n"
+               "Flow: broad host access — reads, edits, host shell commands with network, and local MCPs run without questions. "
+               "Direct file tools still block sensitive files, but host shell commands run as your user (not a sandbox). "
+               "/undo restores captured workspace preimages (not arbitrary external or oversized host effects).\n"
                "Security: everything off until you allow it.\n"
-               "All modes keep Sentinel and receipts. Push, secrets, and authority changes still ask or stay off.",
+               "All modes keep Sentinel and receipts. Push, non-turn commits, and authority changes still ask.",
                root=str(self.root)),
             id="workspace-mode-copy", classes="isy-dialog-body")
 

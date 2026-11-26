@@ -86,13 +86,105 @@ def git_executable() -> str | None:
     return git_platform.discover(COMMAND_SYSTEM_BIN_DIRS)
 
 
+def _resolve_git_dirs(candidate: Path) -> tuple[Path, Path] | str:
+    """Validate ``candidate/.git`` (real directory or linked worktree file).
+
+    Returns ``(git_dir, common_dir)`` on success, or an error string on refusal.
+    For linked worktrees (``.git`` regular file containing ``gitdir: ...``):
+    - rejects symlinks, oversized or malformed files;
+    - requires the target ``gitdir`` to be an existing directory with regular
+      ``HEAD``, ``commondir``, and ``gitdir`` back-pointer files;
+    - verifies the ``gitdir`` back-pointer resolves back to ``candidate/.git``;
+    - verifies ``commondir`` is a real git common directory containing
+      ``HEAD``, ``objects/``, and ``refs/``, and that ``git_dir`` lives under
+      ``common_dir / "worktrees"``.
+    """
+    dot_git = candidate / ".git"
+    try:
+        info = dot_git.lstat()
+    except FileNotFoundError:
+        return "this workspace is not a git repository (no .git folder at its root)"
+    except OSError:
+        return "the repository metadata could not be inspected safely"
+    if stat.S_ISLNK(info.st_mode):
+        return "symlinked .git metadata is not supported"
+    if stat.S_ISDIR(info.st_mode):
+        try:
+            resolved = dot_git.resolve(strict=True)
+        except OSError:
+            return "the repository metadata could not be inspected safely"
+        return resolved, resolved
+    if not stat.S_ISREG(info.st_mode):
+        return "only repositories with a valid .git directory or linked worktree are supported"
+    if info.st_size <= 0 or info.st_size > 4096:
+        return "invalid .git worktree link metadata"
+    try:
+        raw = dot_git.read_bytes()
+    except OSError:
+        return "the .git worktree link could not be read safely"
+    if b"\0" in raw:
+        return "invalid .git worktree link metadata"
+    lines = [line.strip() for line in raw.decode("utf-8", "strict").splitlines() if line.strip()]
+    if len(lines) != 1 or not lines[0].startswith("gitdir:"):
+        return "invalid .git worktree link format"
+    target_text = lines[0].split(":", 1)[1].strip()
+    if not target_text:
+        return "invalid .git worktree link format"
+    raw_target = Path(target_text)
+    git_dir_candidate = raw_target if raw_target.is_absolute() else (candidate / raw_target)
+    try:
+        git_dir_info = git_dir_candidate.lstat()
+        if stat.S_ISLNK(git_dir_info.st_mode) or not stat.S_ISDIR(git_dir_info.st_mode):
+            return "invalid or untrusted .git worktree link target"
+        git_dir = git_dir_candidate.resolve(strict=True)
+    except OSError:
+        return "invalid or untrusted .git worktree link target"
+
+    # Linked worktrees created by Git always carry HEAD, commondir, and a gitdir back-pointer.
+    for req_name in ("HEAD", "commondir", "gitdir"):
+        req_path = git_dir / req_name
+        try:
+            req_info = req_path.lstat()
+        except OSError:
+            return "invalid .git worktree link: missing worktree metadata"
+        if stat.S_ISLNK(req_info.st_mode) or not stat.S_ISREG(req_info.st_mode) or req_info.st_size > 4096:
+            return "invalid .git worktree link: unsafe worktree metadata"
+
+    try:
+        back_raw = (git_dir / "gitdir").read_bytes()
+        common_raw = (git_dir / "commondir").read_bytes()
+        if b"\0" in back_raw or b"\0" in common_raw:
+            return "invalid .git worktree link metadata"
+        back_text = back_raw.decode("utf-8", "strict").strip()
+        common_text = common_raw.decode("utf-8", "strict").strip()
+        back_path = (Path(back_text) if Path(back_text).is_absolute() else (git_dir / back_text)).resolve(strict=True)
+        expected_dot_git = dot_git.resolve(strict=True)
+        if back_path != expected_dot_git:
+            return "invalid .git worktree link: back-pointer does not match this workspace"
+        common_dir = (Path(common_text) if Path(common_text).is_absolute() else (git_dir / common_text)).resolve(strict=True)
+        worktrees_root = (common_dir / "worktrees").resolve(strict=True)
+        if worktrees_root not in git_dir.parents:
+            return "invalid .git worktree link: gitdir is outside repository worktrees directory"
+        if (not (common_dir / "HEAD").is_file()
+                or not (common_dir / "objects").is_dir()
+                or not (common_dir / "refs").is_dir()):
+            return "invalid .git worktree link: commondir is not a valid git repository"
+    except (OSError, UnicodeError, RuntimeError):
+        return "invalid or untrusted .git worktree link"
+    return git_dir, common_dir
+
+
+def _has_valid_git_marker(candidate: Path) -> bool:
+    return isinstance(_resolve_git_dirs(candidate), tuple)
+
+
 def git_repository_available(root: Path) -> bool:
     """Whether Git controls should be offered for a root or a direct child repo."""
     try:
         canonical = root.resolve(strict=True)
         if not canonical.is_dir():
             return False
-        if (canonical / ".git").is_dir():
+        if _has_valid_git_marker(canonical):
             return True
         with os.scandir(canonical) as entries:
             for index, entry in enumerate(entries):
@@ -101,11 +193,8 @@ def git_repository_available(root: Path) -> bool:
                 if (entry.name.startswith(".")
                         or not entry.is_dir(follow_symlinks=False)):
                     continue
-                try:
-                    if stat.S_ISDIR((canonical / entry.name / ".git").lstat().st_mode):
-                        return True
-                except (FileNotFoundError, OSError):
-                    continue
+                if _has_valid_git_marker(canonical / entry.name):
+                    return True
     except (OSError, RuntimeError):
         return False
     return False
@@ -167,6 +256,7 @@ class GitOwner:
             repository = cleaned or "."
         self.repository = repository
         self.repo_root = self._resolve_repository(repository)
+        self._git_dir: Path | None = None
         self.authority = authority
         self.approvals = approvals
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
@@ -207,14 +297,11 @@ class GitOwner:
                             or not entry.is_dir(follow_symlinks=False)):
                         continue
                     child = self.root / entry.name
-                    try:
-                        if stat.S_ISDIR((child / ".git").lstat().st_mode):
-                            if len(child_candidates) >= 512:
-                                return ("too many direct child repositories for automatic discovery; "
-                                        "retry with the repository field set to one folder")
-                            child_candidates.append(child)
-                    except (FileNotFoundError, OSError):
-                        continue
+                    if _has_valid_git_marker(child):
+                        if len(child_candidates) >= 512:
+                            return ("too many direct child repositories for automatic discovery; "
+                                    "retry with the repository field set to one folder")
+                        child_candidates.append(child)
                 child_candidates.sort(key=lambda item: item.name.casefold())
                 if len(child_candidates) > 1:
                     self.repo_root = self.root
@@ -261,34 +348,33 @@ class GitOwner:
     def _check_repository_candidate(self, candidate: Path, git: str) -> str | None:
         """Check inert config keys before asking Git to inspect a repository."""
         self.repo_root = candidate
-        git_dir = candidate / ".git"
-        try:
-            info = git_dir.lstat()
-        except FileNotFoundError:
-            return "this workspace is not a git repository (no .git folder at its root)"
-        except OSError:
-            return "the repository metadata could not be inspected safely"
-        if not stat.S_ISDIR(info.st_mode):
-            return "only repositories with a real .git directory are supported (not worktree links)"
-        for name in ("config", "config.worktree"):
-            config = git_dir / name
-            try:
-                config_info = config.lstat()
-            except FileNotFoundError:
-                continue
-            except OSError:
-                return f".git/{name} could not be inspected safely"
-            if stat.S_ISLNK(config_info.st_mode) or not stat.S_ISREG(config_info.st_mode):
-                return f".git/{name} is not a regular file"
-            result = self._raw([git, "config", "--file", str(config), "--no-includes",
-                                "--list", "--name-only", "-z"])
-            if result is None or result[0] != 0:
-                return f".git/{name} could not be read safely"
-            keys = [key.casefold() for key in result[1].decode("utf-8", "replace").split("\0") if key]
-            flagged = sorted({key for key in keys if _DANGEROUS_KEYS.match(key)})
-            if flagged:
-                return ("the repository config defines programs git would run ("
-                        + ", ".join(flagged[:5]) + "); ISyCode will not run git here")
+        self._git_dir = None
+        resolved = _resolve_git_dirs(candidate)
+        if isinstance(resolved, str):
+            return resolved
+        git_dir, common_dir = resolved
+        self._git_dir = git_dir
+        config_dirs = [common_dir] if common_dir == git_dir else [common_dir, git_dir]
+        for cfg_dir in config_dirs:
+            for name in ("config", "config.worktree"):
+                config = cfg_dir / name
+                try:
+                    config_info = config.lstat()
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    return f".git/{name} could not be inspected safely"
+                if stat.S_ISLNK(config_info.st_mode) or not stat.S_ISREG(config_info.st_mode):
+                    return f".git/{name} is not a regular file"
+                result = self._raw([git, "config", "--file", str(config), "--no-includes",
+                                    "--list", "--name-only", "-z"])
+                if result is None or result[0] != 0:
+                    return f".git/{name} could not be read safely"
+                keys = [key.casefold() for key in result[1].decode("utf-8", "replace").split("\0") if key]
+                flagged = sorted({key for key in keys if _DANGEROUS_KEYS.match(key)})
+                if flagged:
+                    return ("the repository config defines programs git would run ("
+                            + ", ".join(flagged[:5]) + "); ISyCode will not run git here")
         result = self._raw([git, "rev-parse", "--show-toplevel"])
         if result is None or result[0] != 0:
             return "git rejected this repository root"
@@ -303,8 +389,9 @@ class GitOwner:
 
     def _environment(self) -> dict[str, str]:
         repo_root = self.repo_root
+        git_dir = self._git_dir if self._git_dir is not None else (repo_root / ".git")
         env = {**git_platform.environment(COMMAND_SYSTEM_BIN_DIRS), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
-               "GIT_DIR": str(repo_root / ".git"), "GIT_WORK_TREE": str(repo_root),
+               "GIT_DIR": str(git_dir), "GIT_WORK_TREE": str(repo_root),
                "GIT_CEILING_DIRECTORIES": str(repo_root.parent), "GIT_CONFIG_NOSYSTEM": "1",
                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0", "GIT_PAGER": "cat",
                "GIT_EDITOR": "true", "GIT_NO_REPLACE_OBJECTS": "1"}
