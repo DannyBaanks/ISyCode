@@ -16,7 +16,7 @@ from isycode.command_runner import (
     _HostSnapshot,
     _record_host_turn_changes,
 )
-from isycode.git_owner import GitOwner, git_repository_available
+from isycode.git_owner import GitOwner, git_executable, git_repository_available
 from isycode.headless import EXIT_FAILED, EXIT_OK, available_tools, run_headless
 from isycode.terminal_safety import strip_terminal_controls
 from isycode.turn_journal import TurnJournal
@@ -291,6 +291,8 @@ def _git(cwd: Path, *args: str) -> None:
 
 
 def test_a8_linked_git_worktree_supported_and_dangerous_config_still_blocked(tmp_path, monkeypatch):
+    if git_executable() is None:
+        pytest.skip("trusted Git is unavailable; fail-closed tool discovery is tested separately")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("HOME", str(tmp_path))
     (tmp_path / ".gitconfig").write_text("[user]\n\tname = Test\n\temail = test@example.com\n", encoding="utf-8")
