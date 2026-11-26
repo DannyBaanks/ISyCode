@@ -95,9 +95,10 @@ def test_nvidia_accepts_nvidia_api_key_alias_with_nim_precedence(monkeypatch, tm
 
     set_saved_secret_reader(None)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "cfg"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("ISYCODE_PROVIDER", "nvidia")
-    for var in ("NVIDIA_NIM_API_KEY", "NVIDIA_API_KEY", "ISYMOTRON_API_KEY", "ISYMOTRON_API_KEY_FILE"):
+    for var in ("NVIDIA_NIM_API_KEY", "NVIDIA_API_KEY", "ISYMOTRON_API_KEY", "ISYMOTRON_API_KEY_FILE", "ISYMOTRON_KEY_STORE"):
         monkeypatch.delenv(var, raising=False)
 
     assert provider_key_envs("nvidia") == ("NVIDIA_NIM_API_KEY", "NVIDIA_API_KEY")
