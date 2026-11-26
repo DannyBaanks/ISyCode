@@ -48,11 +48,13 @@ def test_native_subscription_login_and_cancel_never_save_challenge(tmp_path,monk
     class Peer:
         def __init__(self,*a,**k): self.closed=False
         async def __aenter__(self): return self
+        async def __aexit__(self,*args): await self.close()
         async def start_login(self,method): return {'method':method,'login_id':'private-id','url':'https://auth.openai.com/device','user_code':'PRIVATE-CODE'}
         async def wait_login(self,login_id):
             if cancel: await asyncio.Event().wait()
             await asyncio.sleep(.05);return True
         async def account(self): return {'authenticated':True,'method':'chatgpt','plan':'plus'}
+        async def rate_limits(self): return None
         async def close(self): self.closed=True
     monkeypatch.setattr('isycode.codex_connector.CodexConnector',Peer)
     async def run():

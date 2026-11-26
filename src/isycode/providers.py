@@ -781,6 +781,13 @@ class Provider:
         try:
             opener = open_reviewed(reviewed, _RejectRedirectHandler())
             with opener.open(request, timeout=self.timeout_s) as response:
+                resp_headers = getattr(response, "headers", None)
+                if resp_headers is not None:
+                    try:
+                        from isycode.provider_quotas import record_http_rate_limits
+                        record_http_rate_limits(self.name, dict(resp_headers.items()))
+                    except Exception:
+                        pass
                 payload = json.loads(response.read(2_000_001))
         except urllib.error.HTTPError as exc:
             raise ProviderError("provider model catalog request failed", exc.code) from exc

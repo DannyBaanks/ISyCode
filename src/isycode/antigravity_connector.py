@@ -48,6 +48,12 @@ MAX_FRAME = 2**63 - 1
 MAX_PENDING_FRAME = 256 * 1024 * 1024
 MAX_ARGUMENTS = 64 * 1024
 MAX_EVENTS = 128
+# agy ACP truncates individual prompt text blocks beyond ~100-128 KB with
+# "<truncated N bytes>", chopping the tail of our JSON transcript and causing
+# infinite re-planning loops. Keep the serialized transcript cleanly below
+# that ceiling by pruning oversized older tool outputs first while always
+# preserving valid JSON and the newest user/tool messages verbatim.
+ACP_PROMPT_BUDGET_BYTES = 96_000
 _SPAWN_TIMEOUT_FLOOR_S = 5.0
 _DATA_IMAGE_RE = re.compile(
     r"^data:(image/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$"
@@ -1060,6 +1066,83 @@ class AntigravityConnector:
             "env": [],
         }]
 
+    @staticmethod
+    def _fit_acp_transcript(
+        messages: list[dict[str, Any]],
+        *,
+        budget_bytes: int = ACP_PROMPT_BUDGET_BYTES,
+    ) -> list[dict[str, Any]]:
+        """Ensure the JSON transcript stays under agy ACP's prompt truncation ceiling.
+
+        When the serialized JSON already fits ``budget_bytes``, returns ``messages``
+        unchanged. Otherwise progressively compacts oversized tool outputs and
+        historical system notes while keeping the latest user prompt and newest
+        tool receipts intact so ACP never slices off the tail of the JSON.
+        """
+        prefix_bytes = len(_GUIDANCE.encode("utf-8")) + 2
+        effective_budget = max(8_192, budget_bytes - prefix_bytes)
+        if len(_encode({"messages": messages})) <= effective_budget:
+            return messages
+
+        fitted = [dict(m) for m in messages]
+
+        def _encoded_len(items: list[dict[str, Any]]) -> int:
+            return len(_encode({"messages": items}))
+
+        # Pass 1: truncate large historical tool notes system messages first.
+        for idx, msg in enumerate(fitted):
+            if _encoded_len(fitted) <= effective_budget:
+                return fitted
+            if msg.get("role") == "system" and isinstance(msg.get("content"), str):
+                content = msg["content"]
+                if content.startswith("Untrusted historical tool results") and len(content) > 4_000:
+                    fitted[idx] = {**msg, "content": content[:4_000] + "\n...[older tool notes truncated for ACP transport]..."}
+
+        # Pass 2: progressively shrink older tool outputs, keeping the newest 2 tool outputs larger.
+        tool_indices = [i for i, m in enumerate(fitted) if m.get("role") == "tool" and isinstance(m.get("content"), str)]
+        for older_limit, recent_limit in ((1_250, 8_000), (400, 3_000), (160, 1_250)):
+            if _encoded_len(fitted) <= effective_budget:
+                return fitted
+            recent_cut = max(0, len(tool_indices) - 2)
+            for pos, idx in enumerate(tool_indices):
+                lim = recent_limit if pos >= recent_cut else older_limit
+                content = fitted[idx]["content"]
+                if len(content) > lim:
+                    fitted[idx] = {
+                        **fitted[idx],
+                        "content": content[:lim] + "\n[truncated to fit ACP prompt limit]",
+                    }
+
+        # Pass 3: if still over budget, drop oldest non-system messages before the latest user turn.
+        if _encoded_len(fitted) > effective_budget:
+            last_user = max((i for i, m in enumerate(fitted) if m.get("role") == "user"), default=len(fitted) - 1)
+            systems = [m for i, m in enumerate(fitted) if i < last_user and m.get("role") == "system"]
+            earlier = [m for i, m in enumerate(fitted) if i < last_user and m.get("role") != "system"]
+            tail = fitted[last_user:]
+            dropped = 0
+            while earlier and _encoded_len([*systems, *earlier, *tail]) > effective_budget:
+                earlier.pop(0)
+                dropped += 1
+            note = (
+                [{"role": "system", "content": f"[{dropped} older messages omitted to fit ACP prompt transport limit]"}]
+                if dropped
+                else []
+            )
+            fitted = [*systems, *note, *earlier, *tail]
+
+        # Pass 4: final safeguard if even a single giant message in the tail exceeds budget.
+        if _encoded_len(fitted) > effective_budget:
+            for idx in range(len(fitted)):
+                if _encoded_len(fitted) <= effective_budget:
+                    break
+                content = fitted[idx].get("content")
+                if isinstance(content, str) and len(content) > 4_000:
+                    fitted[idx] = {
+                        **fitted[idx],
+                        "content": content[:2_000] + "\n...[middle omitted for ACP transport]...\n" + content[-2_000:],
+                    }
+        return fitted
+
     async def complete(self, model: str, messages: list[dict], tools: list[dict] | None = None,
                        on_chunk: Callable[[str, str], None] | None = None, *,
                        effort: str | None = None) -> dict[str, Any]:
@@ -1122,6 +1205,7 @@ class AntigravityConnector:
                 copied["content"] = "\n".join(text_parts)
             transcript_messages.append(copied)
 
+        transcript_messages = self._fit_acp_transcript(transcript_messages)
         payload_text = _GUIDANCE + "\n\n" + _encode({"messages": transcript_messages}).decode("utf-8")
         mcp_servers = self._build_schema_mcp(tools)
 

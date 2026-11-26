@@ -6729,6 +6729,30 @@ msgstr "¿Conectar suscripción de Google Antigravity?"
 msgid "Connect Antigravity"
 msgstr "Conectar Antigravity"
 
+msgid "Quota"
+msgstr "Cuota"
+
+msgid "Checking quota…"
+msgstr "Consultando cuota…"
+
+msgid "Not reported yet"
+msgstr "Sin reporte todavía"
+
+msgid "Shown when this provider exposes quota or rate-limit headers."
+msgstr "Se muestra cuando este proveedor expone cuotas o encabezados de límite."
+
+msgid "Plan"
+msgstr "Plan"
+
+msgid "This model"
+msgstr "Este modelo"
+
+msgid "Account"
+msgstr "Cuenta"
+
+msgid "Credits"
+msgstr "Créditos"
+
 msgid "+ Add new {provider} account (browser)…"
 msgstr "+ Agregar nueva cuenta de {provider} (navegador)…"
 

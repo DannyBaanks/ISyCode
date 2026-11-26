@@ -20,6 +20,7 @@ from isycode.tui_theme import (
     MUTED,
     CYAN,
     GREEN,
+    RED,
     TEXT,
 )
 from isycode.tui_widgets import Collapsible, activate_on_second_click
@@ -201,6 +202,7 @@ class ModelsScreen(ModalScreen):
         # Widget IDs change when a live catalog is recomposed. Retain the
         # provider/model payload, never a positional row ID, as the preview.
         self.selected_model_value: str | None = None
+        self._detail_target: tuple[str, str] | None = None
         # Textual chooses initial focus before refresh callbacks run. The
         # current row assigns its concrete selector while compose builds it.
         self.AUTO_FOCUS = "#models-search"
@@ -402,8 +404,15 @@ class ModelsScreen(ModalScreen):
             return entry
         return {**entry, "reasoning": self.effort_drafts.get(entry["value"], "default")}
 
+    def refresh_details(self) -> None:
+        """Re-render the highlighted model card (e.g. once live quota arrives)."""
+        if self._detail_target is not None and self.is_mounted:
+            self.show_details(*self._detail_target)
+
     def show_details(self, provider: str, model: str) -> None:
         from isycode.model_card import model_facts
+        from isycode.provider_quotas import quota_panel_lines
+        self._detail_target = (provider, model)
         card = Text()
         facts = model_facts(provider, model)
         for fact in facts:
@@ -415,7 +424,31 @@ class ModelsScreen(ModalScreen):
             card.append(tr("GUS") + ": ", style=MUTED)
             card.append((tr("Ready") if check.allowed else tr(check.reason)) + "\n",
                         style=GREEN if check.allowed else YELLOW)
-        self.query_one("#model-detail", Static).update(card)
+        loading = provider in getattr(self.app, "_provider_quota_loading", set())
+        tone_styles = {
+            "rule": MUTED,
+            "header": f"bold {CYAN}",
+            "section": CYAN,
+            "ok": GREEN,
+            "warn": YELLOW,
+            "low": RED,
+            "value": TEXT,
+            "muted": MUTED,
+        }
+        quota_lines = quota_panel_lines(
+            provider,
+            model,
+            antigravity_quota=getattr(self.app, "_antigravity_quota", None),
+            loading=loading,
+        )
+        if quota_lines:
+            card.append("\n")
+            for line_text, tone in quota_lines:
+                card.append(line_text + "\n", style=tone_styles.get(tone, TEXT))
+        try:
+            self.query_one("#model-detail", Static).update(card)
+        except NoMatches:
+            pass
 
     def _haystack(self, provider: str, model: str) -> str:
         from isycode.model_card import catalog_entry
@@ -434,6 +467,9 @@ class ModelsScreen(ModalScreen):
                 self.app._account_models_attempted = attempted | {name}
                 self.app._account_models_loading = True
                 self.app.run_worker(self.app._load_account_models(name), group="provider-models")
+            trigger_quota = getattr(self.app, "_maybe_refresh_provider_quota", None)
+            if callable(trigger_quota):
+                trigger_quota(name)
 
     def on_collapsible_collapsed(self, event: Collapsible.Collapsed) -> None:
         self.expanded_providers.discard((event.collapsible.id or "").removeprefix("model-provider-"))

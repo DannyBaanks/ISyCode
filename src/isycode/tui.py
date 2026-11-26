@@ -336,6 +336,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._model_line_style = MUTED
         # Model-written notes replacing history that no longer fits the budget.
         self._conversation_summary = ""
+        self._conversation_recent_context = ""
         self._chat_turn_task: asyncio.Task | None = None
         self._pending_steering: list[str] = []
         self._queued_messages: list[str] = []
@@ -1753,6 +1754,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 self._account_models_attempted = attempted | {name}
                 self._account_models_loading = True
                 self.run_worker(self._load_account_models(name), exclusive=True, group="provider-models")
+            trigger_quota = getattr(self, "_maybe_refresh_provider_quota", None)
+            if callable(trigger_quota):
+                trigger_quota(name)
         self._menu_mode = mode
         self._menu_title = display_title
         self._menu_entries = entries

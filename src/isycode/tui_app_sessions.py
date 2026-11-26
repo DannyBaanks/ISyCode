@@ -910,6 +910,7 @@ class SessionMixin:
         self._throughput = ThroughputMeter()
         self._refresh_usage()
         self._conversation_summary = ""
+        self._conversation_recent_context = ""
         self._show_agent_tasks([])
         self._active_chat_session_id = None
         self._session_save_warned = False
@@ -1029,6 +1030,7 @@ class SessionMixin:
         state = session.state if isinstance(session.state, dict) else {}
         lane.tool_history = list(state.get("tool_history", []))
         lane.conversation_summary = state.get("conversation_summary", "")
+        lane.conversation_recent_context = ""
         lane.idea_box = state.get("idea_box", "")
         lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
         try:
@@ -1671,6 +1673,7 @@ class SessionMixin:
         state = session.state if isinstance(session.state, dict) else {}
         lane.tool_history = list(state.get("tool_history", []))
         lane.conversation_summary = state.get("conversation_summary", "") or ""
+        lane.conversation_recent_context = ""
         lane.idea_box = state.get("idea_box", "") or ""
         lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
         # Silent adoption: this lane answers in the background; /msg must not move the screen.

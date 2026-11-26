@@ -504,7 +504,13 @@ class ProviderMixin:
             return None
         record_account_quota("antigravity", cur_slot, quota)
         self._antigravity_quota = quota
+        try:
+            from isycode.provider_quotas import record_antigravity_quota
+            record_antigravity_quota(quota)
+        except Exception:
+            pass
         self._refresh_usage()
+        self._refresh_open_models_screen_details()
         if report:
             self._append(tr("Google Antigravity [{slot}] · subscription quota", slot=cur_slot), CYAN)
             groups: dict[str, list[str]] = {}
@@ -525,6 +531,115 @@ class ProviderMixin:
                     YELLOW,
                 )
         return quota
+
+    def _refresh_open_models_screen_details(self) -> None:
+        """Update the detail/quota panel on any currently open ModelsScreen."""
+        from isycode.tui_screens_harness import ModelsScreen
+        for screen in list(getattr(self, "screen_stack", ())):
+            if isinstance(screen, ModelsScreen):
+                try:
+                    screen.refresh_details()
+                except Exception:
+                    pass
+
+    def _maybe_refresh_provider_quota(self, name: str, *, force: bool = False) -> None:
+        """Trigger a bounded background quota check for providers exposing live quota."""
+        from isycode.provider_quotas import LIVE_QUOTA_PROVIDERS
+        key = (name or "").strip().lower()
+        if key not in LIVE_QUOTA_PROVIDERS:
+            return
+        if not force:
+            seen_at = getattr(self, "_provider_quota_at", {}).get(key, 0.0)
+            if (_time.monotonic() - seen_at) < 60.0:
+                return
+        loading = getattr(self, "_provider_quota_loading", None)
+        if isinstance(loading, set) and key in loading:
+            return
+        self.run_worker(
+            self._refresh_provider_quota(key, force=force),
+            group=f"provider-quota-{key}",
+            exclusive=True,
+        )
+
+    async def _refresh_provider_quota(self, name: str, *, force: bool = False) -> dict | None:
+        """Query read-only provider quota through ProviderNetworkOwner and refresh ModelsScreen."""
+        key = (name or "").strip().lower()
+        if key == "antigravity":
+            loading = getattr(self, "_provider_quota_loading", None)
+            if not isinstance(loading, set):
+                loading = set()
+                self._provider_quota_loading = loading
+            loading.add(key)
+            self._refresh_open_models_screen_details()
+            try:
+                quota = await self._refresh_antigravity_quota(report=False)
+                at_map = getattr(self, "_provider_quota_at", None)
+                if not isinstance(at_map, dict):
+                    at_map = {}
+                    self._provider_quota_at = at_map
+                at_map[key] = _time.monotonic()
+                return quota
+            finally:
+                loading.discard(key)
+                self._refresh_open_models_screen_details()
+
+        from isycode.provider_quotas import fetch_deepseek_quota, fetch_openrouter_quota
+        loading = getattr(self, "_provider_quota_loading", None)
+        if not isinstance(loading, set):
+            loading = set()
+            self._provider_quota_loading = loading
+        loading.add(key)
+        self._refresh_open_models_screen_details()
+        try:
+            provider = Provider(
+                name=key,
+                model=resolved_chat_model(key),
+                api_key=load_provider_key(key) or None,
+            )
+            if not provider.configured():
+                return None
+            owner = ProviderNetworkOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            if key == "chatgpt":
+                from isycode.codex_connector import CodexConnector
+                identity = provider.connector_identity
+
+                async def _read_codex_limits():
+                    async with CodexConnector(identity["executable"], Path(identity["home"])) as conn:
+                        return await conn.rate_limits()
+
+                snapshot, outcome = await owner.execute(
+                    provider,
+                    {"operation": "quota.read", "provider": "chatgpt", "model": provider.model},
+                    _read_codex_limits,
+                )
+            elif key == "openrouter":
+                snapshot, outcome = await owner.execute(
+                    provider,
+                    {"operation": "quota.read", "provider": "openrouter", "model": provider.model},
+                    lambda: asyncio.to_thread(fetch_openrouter_quota, provider.api_key or "", provider.base_url),
+                )
+            elif key == "deepseek":
+                snapshot, outcome = await owner.execute(
+                    provider,
+                    {"operation": "quota.read", "provider": "deepseek", "model": provider.model},
+                    lambda: asyncio.to_thread(fetch_deepseek_quota, provider.api_key or "", provider.base_url),
+                )
+            else:
+                return None
+            at_map = getattr(self, "_provider_quota_at", None)
+            if not isinstance(at_map, dict):
+                at_map = {}
+                self._provider_quota_at = at_map
+            at_map[key] = _time.monotonic()
+            if outcome.decision != "ALLOW":
+                return None
+            return snapshot if isinstance(snapshot, dict) else None
+        except (OSError, ValueError, ProviderError, WorkspaceAuthorityError):
+            return None
+        finally:
+            loading.discard(key)
+            self._refresh_open_models_screen_details()
 
     def _open_account_slots_menu(self, provider: str | None = None) -> None:
         from isycode.account_slots import (
@@ -734,6 +849,7 @@ class ProviderMixin:
         """Step two of provider → model → reasoning. Nothing is applied yet."""
         self._models_scope = name
         self._render_menu("branch", "Models", self._branch_entries("models"))
+        self._maybe_refresh_provider_quota(name)
 
     def _step_reasoning(self, direction: int) -> None:
         from isycode.reasoning_options import reasoning_levels, effective_reasoning, select_reasoning

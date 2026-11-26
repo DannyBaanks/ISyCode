@@ -67,8 +67,8 @@ _PLANS = frozenset(("free", "go", "plus", "pro", "prolite", "promax", "team",
     "self_serve_business_prolite", "self_serve_business_usage_based", "business",
     "ent26", "enterprise_cbp_automation", "enterprise_cbp_usage_based",
     "enterprise", "edu", "edu_plus", "edu_pro", "unknown"))
-_REQUESTS = frozenset(("initialize", "account/read", "model/list",
-    "account/login/start", "account/login/cancel", "account/logout",
+_REQUESTS = frozenset(("initialize", "account/read", "account/rateLimits/read",
+    "model/list", "account/login/start", "account/login/cancel", "account/logout",
     "thread/start", "turn/start"))
 
 
@@ -377,6 +377,12 @@ class CodexConnector:
                             if len(self._early_logins) >= 4:
                                 raise CodexConnectorError("Codex sent too many login notifications")
                             self._early_logins[login_id] = success and not params.get("error")
+                    elif msg["method"] == "account/rateLimits/updated":
+                        try:
+                            from isycode.provider_quotas import record_codex_rate_limits
+                            record_codex_rate_limits(params)
+                        except Exception:
+                            pass
                     elif msg["method"] in ("item/agentMessage/delta", "item/reasoning/summaryTextDelta",
                                                 "thread/tokenUsage/updated", "turn/completed", "error"):
                         self._queue(msg)
@@ -460,6 +466,12 @@ class CodexConnector:
             raise CodexConnectorError("Codex account plan is unsupported")
         return {"authenticated": method == "chatgpt", "method": method,
                 "plan": plan if method == "chatgpt" else None}
+
+    async def rate_limits(self) -> dict | None:
+        """Read ChatGPT subscription rate limits via official Codex ``account/rateLimits/read``."""
+        response = await self.request("account/rateLimits/read", {})
+        from isycode.provider_quotas import record_codex_rate_limits
+        return record_codex_rate_limits(response)
 
     async def models(self) -> list[str]:
         models: list[str] = []
