@@ -222,3 +222,30 @@ def test_headless_main_parses_flow_mode_and_provider_model(monkeypatch):
     assert captured[1][0] == "readonly"
     assert captured[1][1]["mode"] is None
     assert captured[1][1]["tool_profile"] == "read-only"
+
+
+def test_headless_fails_fast_when_required_api_key_is_missing(workspace, monkeypatch):
+    from isycode.credentials import set_saved_secret_reader
+    from isycode.headless import EXIT_FAILED
+
+    monkeypatch.setattr(
+        "isycode.headless._register_saved_key_reader",
+        lambda root: set_saved_secret_reader(None),
+    )
+    for var in ("NVIDIA_NIM_API_KEY", "NVIDIA_API_KEY", "ISYMOTRON_API_KEY", "ISYMOTRON_API_KEY_FILE"):
+        monkeypatch.delenv(var, raising=False)
+
+    out, log = io.StringIO(), io.StringIO()
+    code = asyncio.run(run_headless(
+        "hi",
+        root=workspace,
+        out=out,
+        log=log,
+        provider_name="nvidia",
+        model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
+        mode="flow",
+        tool_profile="flow",
+    ))
+    assert code == EXIT_FAILED
+    assert "no API key configured for nvidia" in log.getvalue()
+    assert "NVIDIA_NIM_API_KEY or NVIDIA_API_KEY" in log.getvalue()

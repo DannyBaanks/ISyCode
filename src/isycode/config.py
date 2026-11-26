@@ -132,13 +132,14 @@ def load_api_key(provider_name: str | None = None) -> str:
         key_file = Path(configured_file).expanduser()
     else:
         provider = selected_provider
-        from isycode.providers import PRESETS
-        key_env = str(PRESETS.get(provider, {}).get("key_env") or "")
-        if not key_env:
+        from isycode.providers import provider_key_envs
+        key_envs = provider_key_envs(provider)
+        if not key_envs:
             return ""
-        provider_value = os.environ.get(key_env, "").strip()
-        if provider_value:
-            return provider_value
+        for env_name in key_envs:
+            provider_value = os.environ.get(env_name, "").strip()
+            if provider_value:
+                return provider_value
 
         if os.name == "nt":
             config_home = Path(
@@ -154,10 +155,15 @@ def load_api_key(provider_name: str | None = None) -> str:
         else:
             store_path = config_home / "keys.env"
         try:
+            stored_values: dict[str, str] = {}
             for line in store_path.read_text(encoding="utf-8").splitlines():
                 name, separator, stored = line.partition("=")
-                if separator and name.strip() == key_env:
-                    return stored.strip()
+                key_name = name.strip()
+                if separator and key_name in key_envs and stored.strip():
+                    stored_values.setdefault(key_name, stored.strip())
+            for env_name in key_envs:
+                if env_name in stored_values:
+                    return stored_values[env_name]
         except FileNotFoundError:
             pass
         except OSError as exc:
@@ -208,12 +214,13 @@ def credential_state(provider_name: str) -> str:
     preset = _provider_preset(provider_name)
     if not preset.get("key_required", True):
         return "optional"
-    key_env = preset["key_env"]
+    from isycode.providers import provider_key_envs
+    key_envs = provider_key_envs(provider_name)
     generic_override_applies = (
         provider_name.casefold() == os.environ.get(
             "ISYMOTRON_PROVIDER", "nebius").casefold()
         and bool(os.environ.get("ISYMOTRON_API_KEY")))
-    if os.environ.get(key_env) or generic_override_applies:
+    if any(os.environ.get(env_name, "").strip() for env_name in key_envs) or generic_override_applies:
         return "environment"
     if (provider_name.casefold() == os.environ.get(
             "ISYMOTRON_PROVIDER", "nebius").casefold()
@@ -229,7 +236,7 @@ def credential_state(provider_name: str) -> str:
     try:
         for line in key_store_path().read_text(encoding="utf-8").splitlines():
             name, separator, value = line.partition("=")
-            if separator and name.strip() == key_env and value.strip():
+            if separator and name.strip() in key_envs and value.strip():
                 return "stored"
     except FileNotFoundError:
         pass

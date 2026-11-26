@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 from isycode.command_runner import sandbox_executable
 from isycode.platform_sandbox import sandbox_backend
-from isycode.providers import PRESETS, selected_model_name, selected_provider_name
+from isycode.providers import PRESETS, provider_key_envs, selected_model_name, selected_provider_name
 from isycode.user_defaults import UserDefaultsStore
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
@@ -33,7 +33,7 @@ def collect_diagnostics(root: Path) -> dict:
                     else parsed.hostname or 'not-configured')
     except ValueError:
         endpoint = 'invalid-url'
-    credential = ('environment-present' if os.environ.get(preset.get('key_env', ''))
+    credential = ('environment-present' if any(os.environ.get(env_name, '').strip() for env_name in provider_key_envs(name))
                   else 'not-required' if preset.get('key_required') is False
                   else 'environment-absent; saved keys require an authorized lookup')
     if name == 'chatgpt':

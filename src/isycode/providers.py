@@ -38,7 +38,9 @@ PRESETS: dict[str, dict[str, Any]] = {
                     "key_required": False, "supports_tools": True, "api": "antigravity",
                     "auth_hosts": ["accounts.google.com", "daily-cloudcode-pa.googleapis.com"]},
     "nvidia": {"base_url": "https://integrate.api.nvidia.com/v1",
-               "key_env": "NVIDIA_NIM_API_KEY", "label": "NVIDIA NIM",
+               "key_env": "NVIDIA_NIM_API_KEY",
+               "key_env_aliases": ("NVIDIA_API_KEY",),
+               "label": "NVIDIA NIM",
                "supports_tools": True},
     "nebius": {"base_url": "https://api.tokenfactory.us-central1.nebius.com/v1",
                "key_env": "NEBIUS_API_KEY", "label": "Nebius Token Factory",
@@ -106,6 +108,9 @@ PRESETS: dict[str, dict[str, Any]] = {
     "deepinfra": {"base_url": "https://api.deepinfra.com/v1/openai",
                   "key_env": "DEEPINFRA_API_KEY", "label": "DeepInfra",
                   "default_model": "meta-llama/Meta-Llama-3.1-8B-Instruct"},
+    "spur": {"base_url": "https://ai.spuric.com/v1", "key_env": "SPUR_API_KEY",
+             "label": "SPUR Compute", "default_model": "spur-glm-5-3",
+             "supports_tools": True},
 }
 
 
@@ -135,6 +140,7 @@ KEY_PAGES: dict[str, str] = {
     "venice": "https://venice.ai/settings/api",
     "scaleway": "https://console.scaleway.com/iam/api-keys",
     "deepinfra": "https://deepinfra.com/dash/api_keys",
+    "spur": "https://ai.spuric.com/account#api",
 }
 
 # One extra line for providers whose key page or key type needs a word.
@@ -148,6 +154,7 @@ KEY_NOTES: dict[str, str] = {
     "opencode-go": "OpenCode Go needs an active Go subscription on the same account.",
     "vercel": "Create the key under AI Gateway → API Keys in your Vercel dashboard.",
     "alibaba": "Open API-KEY management in Model Studio and create a pay-as-you-go key.",
+    "spur": "Create an API key under API & Usage in SPUR Compute Console. Keys start with sk-spur-.",
 }
 
 
@@ -179,6 +186,7 @@ PROVIDER_SCREEN: tuple[tuple[str, str, str, str], ...] = (
     ("providers", "venice", "Venice", "OpenAI-compatible API"),
     ("providers", "scaleway", "Scaleway", "Scaleway Generative APIs"),
     ("providers", "nebius", "Nebius Token Factory", "Token Factory, OpenAI-compatible"),
+    ("providers", "spur", "SPUR Compute", "GLM-5.3 & open models, OpenAI-compatible"),
     ("providers", "ollama", "Ollama", "Local server"),
     ("providers", "lmstudio", "LM Studio", "Local server on 127.0.0.1:1234"),
     ("providers", "llamacpp", "llama.cpp", "Local server on 127.0.0.1:8080"),
@@ -649,6 +657,18 @@ def load_provider_key(name: str) -> str:
     return value or load_api_key(name)
 
 
+def provider_key_envs(name: str) -> tuple[str, ...]:
+    """Return the primary env var and any accepted aliases for a provider."""
+    preset = PRESETS.get(name.casefold(), {})
+    primary = str(preset.get("key_env") or "").strip()
+    aliases = tuple(
+        str(alias).strip()
+        for alias in preset.get("key_env_aliases", ())
+        if str(alias).strip() and str(alias).strip() != primary
+    )
+    return (primary, *aliases) if primary else aliases
+
+
 def provider_credential_state(name: str) -> str:
     """Return key presence for the selector without exposing the key value."""
     provider = name.casefold()
@@ -663,9 +683,8 @@ def provider_credential_state(name: str) -> str:
             return "signed-in"
     if not preset.get("key_required", True):
         return "optional"
-    key_env = preset["key_env"]
     active = selected_provider_name()
-    if os.environ.get(key_env, "").strip():
+    if any(os.environ.get(env_name, "").strip() for env_name in provider_key_envs(provider)):
         return "environment"
     if provider == active and os.environ.get("ISYMOTRON_API_KEY", "").strip():
         return "environment"
