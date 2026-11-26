@@ -85,3 +85,43 @@ def test_live_model_context_window_survives_model_selection_without_accepting_ba
     assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")
     record_model_metadata("openai", "gpt-example", {"context_length": True})
     assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")
+
+
+def test_nvidia_accepts_nvidia_api_key_alias_with_nim_precedence(monkeypatch, tmp_path):
+    from isycode.config import credential_state
+    from isycode.credentials import set_saved_secret_reader
+    from isycode.diagnostics import collect_diagnostics
+    from isycode.providers import load_provider_key, provider_credential_state, provider_key_envs
+
+    set_saved_secret_reader(None)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "cfg"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("ISYCODE_PROVIDER", "nvidia")
+    for var in ("NVIDIA_NIM_API_KEY", "NVIDIA_API_KEY", "ISYMOTRON_API_KEY", "ISYMOTRON_API_KEY_FILE", "ISYMOTRON_KEY_STORE"):
+        monkeypatch.delenv(var, raising=False)
+
+    assert provider_key_envs("nvidia") == ("NVIDIA_NIM_API_KEY", "NVIDIA_API_KEY")
+    assert load_api_key("nvidia") == ""
+    assert credential_state("nvidia") == "missing"
+
+    monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-alias-key")
+    assert load_api_key("nvidia") == "nvapi-alias-key"
+    assert load_provider_key("nvidia") == "nvapi-alias-key"
+    assert credential_state("nvidia") == "environment"
+    assert provider_credential_state("nvidia") == "environment"
+    assert Provider(name="nvidia").configured() is True
+    assert collect_diagnostics(tmp_path)["provider"]["credential"] == "environment-present"
+
+    monkeypatch.setenv("NVIDIA_NIM_API_KEY", "nvapi-primary-key")
+    assert load_api_key("nvidia") == "nvapi-primary-key"
+    assert load_provider_key("nvidia") == "nvapi-primary-key"
+
+    # Also accepted in keys.env when env vars are unset.
+    monkeypatch.delenv("NVIDIA_NIM_API_KEY", raising=False)
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    store = tmp_path / "cfg" / "isymotron" / "keys.env"
+    store.parent.mkdir(parents=True)
+    store.write_text("NVIDIA_API_KEY=nvapi-stored-alias\n", encoding="utf-8")
+    assert load_api_key("nvidia") == "nvapi-stored-alias"
+    assert credential_state("nvidia") == "stored"

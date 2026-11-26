@@ -27,7 +27,8 @@ from isycode.authority_view import displayed_on
 from isycode.config import discover_workspace_identity
 from isycode.git_owner import GIT_TOOLS, GitOwner, git_executable, git_repository_available
 from isycode.providers import (
-    Provider, ProviderError, load_provider_key, resolved_chat_model, selected_provider_name,
+    Provider, ProviderError, load_provider_key, provider_key_envs,
+    resolved_chat_model, selected_provider_name,
 )
 from isycode.chat_transport import assistant_turn, provider_complete
 from isycode.streaming import StreamError
@@ -271,6 +272,11 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                             api_key=load_provider_key(name) or None)
     except ProviderError as exc:
         _terminal(log, f"isycode: provider unavailable · {exc}")
+        return EXIT_FAILED
+    if transport is None and not provider.configured():
+        envs = " or ".join(provider_key_envs(name))
+        hint = f" (set {envs})" if envs else ""
+        _terminal(log, f"isycode: provider unavailable · no API key configured for {name}{hint}")
         return EXIT_FAILED
     tools = (available_tools(root, authority, flow=is_flow)
              if provider.supports_tools and tool_profile != "none" else [])
