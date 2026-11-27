@@ -3459,6 +3459,9 @@ msgstr "Sigo trabajando. Tu mensaje sigue en el compositor; envíalo de nuevo cu
 msgid "Context loaded · {relative_path} · owned read; no permissions changed."
 msgstr "Contexto cargado · {relative_path} · lectura propia; no cambió ningún permiso."
 
+msgid "Context updated · {relative_path} changed; this turn uses the new text."
+msgstr "Contexto actualizado · {relative_path} cambió; este turno usa el texto nuevo."
+
 msgid "Context not loaded · {value}"
 msgstr "Contexto no cargado · {value}"
 
@@ -6890,6 +6893,12 @@ msgstr "Menú cerrado · de vuelta al compositor · nada cambió"
 
 msgid "Back to providers · {provider} not selected · model unchanged"
 msgstr "De vuelta a proveedores · {provider} no seleccionado · modelo sin cambios"
+
+msgid "Switch account · {provider} [{slot}] ({count})…"
+msgstr "Cambiar cuenta · {provider} [{slot}] ({count})…"
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
+msgstr "Cuentas de suscripción · Antigravity / ChatGPT / Grok…"
 
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "Ejecutando /{name} mientras el turno actual sigue en segundo plano."

@@ -667,7 +667,7 @@ class ChatMixin:
             nonlocal chat_tools, command_active, context_plan, messages, notes, provider_supports_tools, session_excerpt, text, tools_active
             if resume is None:
                 if self._agent_context and self._agent_context.get("path") == "AGENTS.md":
-                    await self._load_project_context()
+                    await self._load_project_context(refresh=True)
                 text = await self._expand_mentions(text)
                 self._history.append({"role": "user", "content": text})
                 if not ctx_file.has_entries() and len(self._history) > 1:

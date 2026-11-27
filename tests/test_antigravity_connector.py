@@ -61,6 +61,22 @@ _FAKE_ACP_COMMON = """
 import json, os, sys
 mode = MODE
 if len(sys.argv) >= 3 and sys.argv[1] == "-p" and sys.argv[2] == "/usage":
+    slash_disabled = "--disable-slash-commands" in sys.argv
+    if not slash_disabled:
+        settings_path = os.path.join(os.environ.get("HOME", ""), ".gemini", "antigravity-cli", "settings.json")
+        if os.path.isfile(settings_path):
+            with open(settings_path, encoding="utf-8") as fh:
+                slash_disabled = bool(json.load(fh).get("disableSlashCommands", False))
+        if "--settings" in sys.argv:
+            idx = sys.argv.index("--settings")
+            if idx + 1 < len(sys.argv):
+                override = json.loads(sys.argv[idx + 1])
+                if "disableSlashCommands" in override:
+                    slash_disabled = bool(override["disableSlashCommands"])
+    if slash_disabled:
+        sys.stdout.write(json.dumps({"status": "SUCCESS", "response": "/usage was passed through as a regular prompt"}) + "\\n")
+        sys.stdout.flush()
+        sys.exit(0)
     payload = {
         "status": "SUCCESS",
         "command": {
@@ -164,6 +180,10 @@ for raw in sys.stdin:
             }})
             continue
         if mode == "isycode_tool":
+            send({"jsonrpc": "2.0", "method": "session/update", "params": {
+                "sessionId": "sess-1",
+                "update": {"sessionUpdate": "usage_update", "used": 4321, "size": 1048576},
+            }})
             send({"jsonrpc": "2.0", "method": "session/update", "params": {
                 "sessionId": "sess-1",
                 "update": {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "Checking file."}},
@@ -366,6 +386,7 @@ def test_declared_isycode_tool_is_captured_and_returned_to_sentinel(tmp_path):
                 on_chunk=lambda kind, text: chunks.append((kind, text)),
             )
             assert result["text"] == "Checking file."
+            assert result["usage"] == {"input_tokens": 4321}
             assert len(result["tool_calls"]) == 1
             call = result["tool_calls"][0]
             assert call["id"] == "call_123"

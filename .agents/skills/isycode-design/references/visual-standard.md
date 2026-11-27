@@ -36,6 +36,10 @@ The activity cat keeps its outline Braille drawing. While a turn runs it paces i
 
 Added 2026-11-27 at Danny's request (agy-dash/claude-dash style). The Sessions board groups conversations by state: `● Working` (the turn on screen), `◐ Background` (a turn running in a lane that is not on screen), `◆ Needs input` and `○ Idle`; ASCII mode uses `*`, `~`, `?`, `-`. The section titles and the detail panel name the state, so it reads without color. Each row shows model, title, an estimated context badge (`~34%` of the model window when the window is known, `~12k` tokens otherwise; green under 60 %, yellow under 85 %, red above) and age; a muted `you:`/`ai:` last-message line appears only when the list has at least 8 rows, so 80×24 keeps one line per conversation. The context badge is a local ~4 chars/token estimate of the saved transcript, never a provider measurement.
 
+## Agent Markdown tables and drawn boxes
+
+Added 2026-11-27 at Danny's request. Markdown tables in agent replies render as box-drawing grids (`┌─┬─┐`, ASCII `+-|` in ASCII mode) with muted borders, a bold header row and the column alignment from the delimiter row. Column widths are measured in terminal cells (CJK and emoji count 2) and fit the chat content width: narrow columns keep their width, wide ones share the rest and wrap on words inside the column, never through a border. Below about six cells per column the table becomes `header: value` records. `---` rules span the content width. Boxes the model draws in prose (box-drawing runs or `+---+`) are shown verbatim as text blocks; pipe tables stay tables. Whole-box copy still returns the original Markdown. Verified at 80×24 and 120×40 with Textual screenshots, including a resize; not yet checked in a real terminal font.
+
 ## Typography and compatibility
 
 The accepted comparator profile is **Ubuntu Sans Mono / Unicode / 14 CSS px / 1.3 line-height**. Textual does not set a terminal's font family or point size. Preserve the user's terminal settings unless their request specifically changes them. Calibrate terminal cell metrics separately; 14 CSS px is not a tested GNOME Terminal point size.

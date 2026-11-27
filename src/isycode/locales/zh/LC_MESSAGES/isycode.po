@@ -3459,6 +3459,9 @@ msgstr "仍在处理中。你的消息仍在输入框中；准备好后再发送
 msgid "Context loaded · {relative_path} · owned read; no permissions changed."
 msgstr "已加载上下文 · {relative_path} · 由所属模块读取；未更改任何权限。"
 
+msgid "Context updated · {relative_path} changed; this turn uses the new text."
+msgstr "上下文已更新 · {relative_path} 已更改；本轮使用新文本。"
+
 msgid "Context not loaded · {value}"
 msgstr "未加载上下文 · {value}"
 
@@ -6890,6 +6893,12 @@ msgstr "菜单已关闭 · 回到输入框 · 未做任何更改"
 
 msgid "Back to providers · {provider} not selected · model unchanged"
 msgstr "返回提供商列表 · 未选择 {provider} · 模型未更改"
+
+msgid "Switch account · {provider} [{slot}] ({count})…"
+msgstr "切换账号 · {provider} [{slot}]（{count}）…"
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
+msgstr "订阅账号 · Antigravity / ChatGPT / Grok…"
 
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "当前回合继续在后台运行，同时执行 /{name}。"

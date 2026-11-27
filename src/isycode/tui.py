@@ -1626,12 +1626,28 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             return False
         return super()._request_is_quiet(request)
 
+    def _context_meter_messages(self) -> list[dict]:
+        """The messages of the request in flight while a turn runs, else the history.
+
+        A turn with tools sends several requests (prompt, calls, results) before
+        it appends to _history; the meter follows the last one sent. Nothing
+        sets a `_generating` flag, so the running loop task is the signal.
+        """
+        task = getattr(self, "_loop_task", None)
+        if task is not None and not task.done():
+            active = getattr(self, "_active_context_messages", None)
+            if active:
+                return active
+        else:
+            self._active_context_messages = None  # never show a finished turn's request
+        return self._history
+
     def _usage_status_text(self) -> str:
         from isycode.context_meter import compact_context_label
         limit, _source = self._context_window()
         reported = getattr(self, "_last_context_input_tokens", None)
         total = self._usage.input_tokens + self._usage.output_tokens
-        context = compact_context_label(self._history, provider_limit_tokens=limit,
+        context = compact_context_label(self._context_meter_messages(), provider_limit_tokens=limit,
                                         reported_tokens=reported)
         # #usage-status is 20% of the composer row and three cells tall: one row
         # for the rate, one for the tokens, one for the context window. Flattening
@@ -1684,7 +1700,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             # One-row status (small terminal): three rows would overflow the composer line.
             from isycode.context_meter import usage_row as usage_panel
         widget.update(usage_panel(
-            self._history, widget.content_size.width or 18,
+            self._context_meter_messages(), widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
             provider_limit_tokens=limit, limit_source=source,
             reported_tokens=getattr(self, "_last_context_input_tokens", None),
@@ -1733,9 +1749,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         from isycode.continuity_capsule import request_chars, update_tokens_per_char
         from isycode.providers import heal_observed_context_limit
 
+        sent_chars = request_chars(messages, tools)
+        self._active_context_messages = list(messages)
+        if getattr(self, "_last_request_chars", None) != sent_chars:
+            self._last_context_input_tokens = None
         self._throughput.measuring = True
         self._refresh_usage()
-        sent_chars = request_chars(messages, tools)
         started = _time.monotonic()
         try:
             response = await provider_complete(provider, messages, max_tokens=max_tokens,
@@ -2927,9 +2946,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self._paint_workspace_chrome()
 
-    async def _load_project_context(self) -> bool:
-        """Explicitly read root AGENTS.md; the file never supplies grants or tools."""
-        return await self._load_context_file("AGENTS.md")
+    async def _load_project_context(self, *, refresh: bool = False) -> bool:
+        """Explicitly read root AGENTS.md; the file never supplies grants or tools.
+
+        ``refresh`` is the per-turn re-read: it still goes through the read
+        owner (so a revoked grant drops the context), but stays quiet unless
+        the text changed since the copy already in use.
+        """
+        return await self._load_context_file("AGENTS.md", refresh=refresh)
 
     def copy_to_clipboard(self, text: str) -> None:
         """Every copy Textual makes (selection, Ctrl+C, text fields) goes through the owner."""
@@ -3273,8 +3297,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         mode = {"classic": "Classic", "flow": "Flow"}.get(self._workspace_mode(), "Security")
         return f"Root Source · {source}{broad} · {mode} Mode"
 
-    async def _load_context_file(self, relative_path: str) -> bool:
+    async def _load_context_file(self, relative_path: str, *, refresh: bool = False) -> bool:
         """Load one selected workspace document through the read owner and receipt."""
+        previous = self._agent_context if (self._agent_context or {}).get("path") == relative_path else None
         self._agent_context = None
         owner = LocalWorkspaceReadOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
         outcome = await asyncio.to_thread(owner.execute, "workspace.context.inject", {"path": relative_path})
@@ -3282,7 +3307,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if text and outcome.receipt is not None:
             self._agent_context = {"path": relative_path, "text": text,
                                    "receipt_id": outcome.receipt.receipt_id, "verification": "PASS"}
-            self._append("  " + tr("Context loaded · {relative_path} · owned read; no permissions changed.", relative_path=relative_path), MUTED)
+            if not refresh or previous is None:
+                self._append("  " + tr("Context loaded · {relative_path} · owned read; no permissions changed.", relative_path=relative_path), MUTED)
+            elif previous.get("text") != text:
+                self._append("  " + tr("Context updated · {relative_path} changed; this turn uses the new text.", relative_path=relative_path), MUTED)
         else:
             self._append("  " + tr("Context not loaded · {value}", value=outcome.reason[:160]), YELLOW)
         if self._lane_on_screen():

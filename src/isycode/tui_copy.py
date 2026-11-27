@@ -50,18 +50,187 @@ def exact_selected_text(screen):
     return "\n".join(parts)
 
 
-def selectable_markdown(markdown):
+_BOX_UNICODE = {"h": "─", "v": "│", "tl": "┌", "tm": "┬", "tr": "┐",
+                "ml": "├", "mm": "┼", "mr": "┤", "bl": "└", "bm": "┴", "br": "┘"}
+_BOX_ASCII = {"h": "-", "v": "|", "tl": "+", "tm": "+", "tr": "+",
+              "ml": "+", "mm": "+", "mr": "+", "bl": "+", "bm": "+", "br": "+"}
+_WRAP_CONSOLE = None
+_MIN_CELL = 6
+
+
+def _wrap_console():
+    global _WRAP_CONSOLE
+    if _WRAP_CONSOLE is None:
+        from rich.console import Console
+        _WRAP_CONSOLE = Console(width=10_000, color_system=None, legacy_windows=False,
+                                force_terminal=False, no_color=True)
+    return _WRAP_CONSOLE
+
+
+def _append_inline(target: Text, token, heading: bool) -> None:
+    styles = [f"bold {CYAN}" if heading else ""]
+    link_href = None
+    for child in token.children or []:
+        if child.type in {"strong_open", "em_open", "s_open"}:
+            styles.append({"strong_open": "bold", "em_open": "italic", "s_open": "strike"}[child.type])
+        elif child.type in {"strong_close", "em_close", "s_close"}:
+            if len(styles) > 1:
+                styles.pop()
+        elif child.type == "link_open":
+            link_href = child.attrGet("href")
+        elif child.type == "link_close":
+            link_href = None
+        elif child.type in {"softbreak", "hardbreak"}:
+            target.append("\n")
+        elif child.type == "image":
+            target.append(child.content)
+        elif child.type in {"text", "code_inline"}:
+            inline_styles = [style for style in styles if style]
+            if child.type == "code_inline":
+                inline_styles.append(CYAN)
+            if link_href:
+                real_href = (
+                    "file://" + link_href[10:]
+                    if link_href.lower().startswith("isyfile://")
+                    else link_href
+                )
+                base = Style.parse(" ".join(inline_styles)) if inline_styles else Style.null()
+                link_style = base + Style(
+                    color=CYAN,
+                    underline=True,
+                    link=real_href,
+                    meta={"isy_link": real_href},
+                )
+                target.append(child.content, style=link_style)
+            else:
+                target.append(child.content, style=" ".join(inline_styles))
+
+
+def _column_widths(natural: list[int], room: int) -> list[int]:
+    """Fit columns into ``room`` cells: narrow columns keep their width, wide ones share the rest."""
+    if sum(natural) <= room:
+        return list(natural)
+    widths = [0] * len(natural)
+    pending = sorted(range(len(natural)), key=lambda index: natural[index])
+    left = room
+    while pending:
+        share = left // len(pending)
+        index = pending[0]
+        if natural[index] <= share:
+            widths[index] = natural[index]
+            left -= natural[index]
+            pending.pop(0)
+            continue
+        for position, index in enumerate(pending):
+            widths[index] = share + (1 if position < left - share * len(pending) else 0)
+        break
+    return widths
+
+
+def _table_as_records(rows, header) -> Text:
+    """Too narrow for a box: one ``header: value`` line per cell, rows split by a blank line."""
+    result = Text()
+    names = header or []
+    for row_index, (is_header, cells, _aligns) in enumerate(rows):
+        if is_header:
+            continue
+        for index, cell in enumerate(cells):
+            if index < len(names) and names[index].plain.strip():
+                name = names[index].copy()
+                name.stylize("bold")
+                result.append_text(name)
+                result.append(": ")
+            result.append_text(cell)
+            result.append("\n")
+        if row_index < len(rows) - 1:
+            result.append("\n")
+    return result
+
+
+def render_table_box(rows, width: int | None = None, *, ascii: bool = False) -> Text:
+    """Draw parsed Markdown table rows as an aligned box no wider than ``width`` cells.
+
+    ``rows`` holds ``(is_header, [Text], [align])``. Widths come from terminal
+    cells (CJK and emoji count as 2); a cell too long for its column wraps on
+    words inside the column rather than breaking the border.
+    """
+    rows = [row for row in rows if row[1]]
+    if not rows:
+        return Text()
+    columns = max(len(cells) for _header, cells, _aligns in rows)
+    rows = [(is_header, cells + [Text()] * (columns - len(cells)), aligns + [None] * (columns - len(aligns)))
+            for is_header, cells, aligns in rows]
+    header = next((cells for is_header, cells, _aligns in rows if is_header), None)
+    natural = [max(1, *(cell.cell_len for _h, cells, _a in rows for cell in [cells[index]]))
+               for index in range(columns)]
+    overhead = 3 * columns + 1
+    room = None if not width else width - overhead
+    if room is not None and room < min(sum(natural), _MIN_CELL * columns):
+        return _table_as_records(rows, header)
+    widths = natural if room is None else _column_widths(natural, room)
+    box = _BOX_ASCII if ascii else _BOX_UNICODE
+    border = MUTED
+
+    def rule(left, middle, right):
+        line = Text(left + middle.join(box["h"] * (size + 2) for size in widths) + right, style=border)
+        line.append("\n")
+        return line
+
+    console = _wrap_console()
+    result = Text()
+    result.append_text(rule(box["tl"], box["tm"], box["tr"]))
+    for row_index, (is_header, cells, aligns) in enumerate(rows):
+        wrapped = []
+        for index, cell in enumerate(cells):
+            text = cell.copy()
+            if is_header:
+                text.stylize("bold")
+            lines = text.wrap(console, widths[index], overflow="fold", no_wrap=False) if text.plain else [Text()]
+            lines = [line for line in lines if line.plain.strip()]
+            wrapped.append(lines or [Text()])
+        for line_index in range(max(len(lines) for lines in wrapped)):
+            result.append(box["v"], style=border)
+            for index, lines in enumerate(wrapped):
+                piece = lines[line_index].copy() if line_index < len(lines) else Text()
+                piece.rstrip()
+                piece.align(aligns[index] or "left", widths[index])
+                result.append(" ")
+                result.append_text(piece)
+                result.append(" ")
+                result.append(box["v"], style=border)
+            result.append("\n")
+        if is_header and row_index < len(rows) - 1:
+            result.append_text(rule(box["ml"], box["mm"], box["mr"]))
+    result.append_text(rule(box["bl"], box["bm"], box["br"]))
+    return result
+
+
+def _cell_align(token) -> str | None:
+    style = token.attrGet("style") or ""
+    for align in ("left", "center", "right"):
+        if f"text-align:{align}" in style.replace(" ", ""):
+            return align
+    return None
+
+
+def selectable_markdown(markdown, width: int | None = None):
     """Render logical styled lines, allowing native selection before soft wrapping.
 
     Rich's pre-wrapped Markdown segments have no Textual source offsets. Keep
     formatting as Text, code whitespace intact, and let Textual wrap it once.
+    Tables and rules are the exception: they need the content ``width`` to be
+    drawn as aligned boxes that never soft-wrap through their borders.
     """
+    from isycode.tui_theme import ascii_only
+
+    ascii = ascii_only()
     result = Text()
     list_depth = 0
     ordered = []
     heading = False
-    in_table = False
-    link_href = None
+    table_rows = None
+    row = None
+    cell = None
     for token in markdown.parsed:
         kind = token.type
         if kind in {"bullet_list_open", "ordered_list_open"}:
@@ -84,41 +253,7 @@ def selectable_markdown(markdown):
             heading = False
             result.append("\n\n")
         elif kind == "inline":
-            styles = [f"bold {CYAN}" if heading else ""]
-            for child in token.children or []:
-                if child.type in {"strong_open", "em_open", "s_open"}:
-                    styles.append({"strong_open": "bold", "em_open": "italic", "s_open": "strike"}[child.type])
-                elif child.type in {"strong_close", "em_close", "s_close"}:
-                    if len(styles) > 1:
-                        styles.pop()
-                elif child.type == "link_open":
-                    link_href = child.attrGet("href")
-                elif child.type == "link_close":
-                    link_href = None
-                elif child.type in {"softbreak", "hardbreak"}:
-                    result.append("\n")
-                elif child.type == "image":
-                    result.append(child.content)
-                elif child.type in {"text", "code_inline"}:
-                    inline_styles = [style for style in styles if style]
-                    if child.type == "code_inline":
-                        inline_styles.append(CYAN)
-                    if link_href:
-                        real_href = (
-                            "file://" + link_href[10:]
-                            if link_href.lower().startswith("isyfile://")
-                            else link_href
-                        )
-                        base = Style.parse(" ".join(inline_styles)) if inline_styles else Style.null()
-                        link_style = base + Style(
-                            color=CYAN,
-                            underline=True,
-                            link=real_href,
-                            meta={"isy_link": real_href},
-                        )
-                        result.append(child.content, style=link_style)
-                    else:
-                        result.append(child.content, style=" ".join(inline_styles))
+            _append_inline(cell if cell is not None else result, token, heading)
         elif kind == "paragraph_close":
             result.append("\n" if list_depth else "\n\n")
         elif kind in {"fence", "code_block"}:
@@ -130,16 +265,27 @@ def selectable_markdown(markdown):
         elif kind == "blockquote_open":
             result.append("› ", style=MUTED)
         elif kind == "hr":
-            result.append("────────\n")
+            size = max(8, (width or 0) - 1) if width else 8
+            result.append(("-" if ascii else "─") * size + "\n", style=MUTED)
         elif kind == "table_open":
-            in_table = True
-        elif kind in {"td_close", "th_close"} and in_table:
-            result.append("  |  ")
-        elif kind == "tr_close":
+            table_rows = []
+        elif kind == "tr_open" and table_rows is not None:
+            row = (False, [], [])
+        elif kind in {"th_open", "td_open"} and row is not None:
+            if kind == "th_open":
+                row = (True, row[1], row[2])
+            cell = Text()
+            row[2].append(_cell_align(token))
+        elif kind in {"th_close", "td_close"} and row is not None:
+            row[1].append(cell if cell is not None else Text())
+            cell = None
+        elif kind == "tr_close" and row is not None:
+            table_rows.append(row)
+            row = None
+        elif kind == "table_close" and table_rows is not None:
+            result.append_text(render_table_box(table_rows, width, ascii=ascii))
             result.append("\n")
-        elif kind == "table_close":
-            in_table = False
-            result.append("\n")
+            table_rows = None
     return result
 
 

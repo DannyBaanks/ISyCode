@@ -282,6 +282,10 @@ class ModelsScreen(ModalScreen):
                                 id="models-add-input")
                     yield Button(tr("+ Add"), id="models-add-button")
             with Horizontal(id="models-actions", classes="isy-dialog-actions"):
+                if scope in {"antigravity", "chatgpt", "xai"}:
+                    from isycode.account_slots import active_slot
+                    skey = "grok" if scope == "xai" else scope
+                    yield Button(Text(f"{tr('Accounts')} [{active_slot(skey)}]"), id="models-accounts")
                 yield Button(tr("Back") if scope else tr("Close"), id="models-close")
                 yield Button(tr("Choose model"), id="models-use", variant="primary", disabled=True)
             yield Static(tr("↑↓ move · ←→ effort · Enter choose · Esc back · Tab search"), id="models-hint", classes="isy-dialog-hint")
@@ -565,6 +569,11 @@ class ModelsScreen(ModalScreen):
         event.stop()
         if event.button.id == "models-add-button":
             self._add_custom_model()
+        elif event.button.id == "models-accounts":
+            scope = self.provider_scope
+            if scope in {"antigravity", "chatgpt", "xai"}:
+                self.dismiss({"kind": "account_slots_open",
+                              "value": "grok" if scope == "xai" else scope})
         elif event.button.id == "models-close":
             self.dismiss(None)
         elif event.button.id == "models-use":

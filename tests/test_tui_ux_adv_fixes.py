@@ -450,7 +450,9 @@ def test_providers_enter_opens_the_highlighted_provider_models(tmp_path, monkeyp
             options = app.query_one("#action-list", OptionList)
             assert app.focused is options
             # The first highlight is a real choice, never a section heading.
-            assert app._menu_filtered[options.highlighted].get("kind") == "provider", app._menu_filtered[options.highlighted]
+            # (#131 puts the account switcher first: an action, still not a heading.)
+            first = app._menu_filtered[options.highlighted]
+            assert first.get("kind") != "section" and not first.get("disabled"), first
             await _walk_to(pilot, options, app, "lmstudio")
             assert options.highlighted is not None
             await pilot.press("enter")

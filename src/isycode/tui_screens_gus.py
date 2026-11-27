@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable
 
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import VerticalScroll
 from textual.widgets import Input, OptionList, Static
 
 from isycode.catalog import role_color
@@ -105,6 +105,15 @@ class GusScreen(Dialog):
     # Textual focuses this when the screen activates; without it, a focus asked
     # for during mount can lose to the first focusable widget (the body scroll).
     AUTO_FOCUS = "#gus-input"
+    DEFAULT_CSS = """
+    GusScreen .isy-dialog-body { overflow-y: hidden; }
+    GusScreen #gus-transcript { height: 1fr; min-height: 3; overflow-y: auto; scrollbar-gutter: stable; }
+    GusScreen #gus-status { height: auto; }
+    """
+    BINDINGS = [
+        ("pageup", "scroll_transcript_up", ""),
+        ("pagedown", "scroll_transcript_down", ""),
+    ]
 
     def __init__(self, roots, model_label: str,
                  *, initial: str = "", complete=None, work=None, remember=None,
@@ -149,7 +158,7 @@ class GusScreen(Dialog):
         return tr("Enter send · Esc close · on a gus/* branch GUS edits its target; elsewhere it reads and answers")
 
     def compose_body(self) -> ComposeResult:
-        with Vertical(id="gus-transcript"):
+        with VerticalScroll(id="gus-transcript"):
             for entry in self.state.transcript():
                 yield self._line(entry["role"], entry["text"], entry.get("workspace", ""))
         yield Static("", id="gus-status", markup=False)
@@ -191,8 +200,19 @@ class GusScreen(Dialog):
         return Static(line, classes="gus-line")
 
     def _scroll_end(self) -> None:
-        for body in self.query(".isy-dialog-body"):
-            body.scroll_end(animate=False)
+        def _jump() -> None:
+            for transcript in self.query("#gus-transcript"):
+                transcript.scroll_end(animate=False)
+        _jump()
+        self.call_after_refresh(_jump)
+
+    def action_scroll_transcript_up(self) -> None:
+        for transcript in self.query("#gus-transcript"):
+            transcript.scroll_page_up(animate=False)
+
+    def action_scroll_transcript_down(self) -> None:
+        for transcript in self.query("#gus-transcript"):
+            transcript.scroll_page_down(animate=False)
 
     def _status(self, text: str, color: str = MUTED) -> None:
         status = self.query_one("#gus-status", Static)

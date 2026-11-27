@@ -3459,6 +3459,9 @@ msgstr "Still working. Your message remains in the composer; send it again when 
 msgid "Context loaded · {relative_path} · owned read; no permissions changed."
 msgstr "Context loaded · {relative_path} · owned read; no permissions changed."
 
+msgid "Context updated · {relative_path} changed; this turn uses the new text."
+msgstr "Context updated · {relative_path} changed; this turn uses the new text."
+
 msgid "Context not loaded · {value}"
 msgstr "Context not loaded · {value}"
 
@@ -6890,6 +6893,12 @@ msgstr "Menu closed · back to the composer · nothing changed"
 
 msgid "Back to providers · {provider} not selected · model unchanged"
 msgstr "Back to providers · {provider} not selected · model unchanged"
+
+msgid "Switch account · {provider} [{slot}] ({count})…"
+msgstr "Switch account · {provider} [{slot}] ({count})…"
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
+msgstr "Subscription accounts · Antigravity / ChatGPT / Grok…"
 
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "Running /{name} while the current turn keeps going in the background."
