@@ -227,6 +227,7 @@ class ApprovalCard(QFrame):
         title.setObjectName("approvalTitle")
         title.setTextFormat(Qt.TextFormat.PlainText)
         title.setWordWrap(True)
+        self._title_label = title
         header.addWidget(title, 3)
         header.addStretch(1)
         self.status_badge = QLabel("ESPERANDO · tu aprobación")
@@ -241,6 +242,7 @@ class ApprovalCard(QFrame):
                             str(self.arguments.get("path") or "\n".join(paths)))
         path_label.setTextFormat(Qt.TextFormat.PlainText)
         path_label.setWordWrap(True)
+        self._path_label = path_label
         layout.addWidget(path_label)
         base = self.arguments.get("executable_sha256") if command else self.arguments.get("before_sha256")
         base_label = QLineEdit(f"SHA-256 {'ejecutable' if command else 'base'}: {base or ('varias bases en el diff' if paths else 'archivo nuevo')}")
@@ -354,14 +356,14 @@ class ApprovalCard(QFrame):
             self.always_button.setEnabled(False)
         self.status_badge.setText("AUTORIZADO · comando exacto" if approved == "always" else "APROBADO ✓" if approved else "RECHAZADO ✗")
         self.setProperty("decision", "approved" if approved else "rejected")
-        self._collapse_decided()
+        self._collapse_decided(approved=bool(approved))
         theme.repolish(self)
         for child in self.findChildren(QLabel):
             theme.repolish(child)
         self.decision_made.emit(approved)
 
-    def _collapse_decided(self) -> None:
-        """Minimize decided approval cards to a compact 1-line bar with an expandable details toggle."""
+    def _collapse_decided(self, *, approved: bool = False) -> None:
+        """Hide approved cards (the ToolCard already records execution) and compact rejected/expired ones."""
         self._decided_expanded = False
         self.detail_view.hide()
         self.approve_button.hide()
@@ -370,6 +372,14 @@ class ApprovalCard(QFrame):
             self.always_button.hide()
         if self.review_button is not None:
             self.review_button.hide()
+        if hasattr(self, "_path_label"):
+            self._path_label.hide()
+        self._base_details.hide()
+        if approved:
+            self.hide()
+            return
+        if hasattr(self, "_title_label"):
+            self._title_label.setText("Propuesta rechazada")
         if not hasattr(self, "_toggle_details_btn"):
             btn = QPushButton("detalles ▸", self)
             btn.setProperty("variant", "ghost")
@@ -570,10 +580,48 @@ class StreamingAssistantBubble(QFrame):
         inner.addWidget(self.content_browser)
         self.main_layout.addWidget(bubble)
 
-        self.tools_container = QVBoxLayout()
+        self.tools_toggle = QPushButton("▾ Herramientas")
+        self.tools_toggle.setCheckable(True)
+        self.tools_toggle.setChecked(True)
+        self.tools_toggle.setProperty("variant", "ghost")
+        self.tools_toggle.setStyleSheet("text-align: left; padding: 3px 8px; color: #94a3b8; font-size: 11px;")
+        self.tools_toggle.setVisible(False)
+        self.main_layout.addWidget(self.tools_toggle)
+
+        self.tools_box = QWidget(self)
+        self.tools_container = QVBoxLayout(self.tools_box)
         self.tools_container.setContentsMargins(12, 0, 0, 0)
         self.tools_container.setSpacing(4)
-        self.main_layout.addLayout(self.tools_container)
+        self.tools_toggle.toggled.connect(self._on_tools_toggled)
+        self.main_layout.addWidget(self.tools_box)
+
+    def _on_tools_toggled(self, expanded: bool) -> None:
+        self.tools_box.setVisible(expanded)
+        self._refresh_tools_toggle_label()
+
+    def _refresh_tools_toggle_label(self) -> None:
+        n = len(self._tool_cards)
+        if n == 0:
+            self.tools_toggle.setVisible(False)
+            return
+        ok = sum(1 for c in self._tool_cards if c._success and c._result is not None)
+        fail = sum(1 for c in self._tool_cards if not c._success and c._result is not None)
+        arrow = "▾" if self.tools_toggle.isChecked() else "▸"
+        summary = f"{arrow} {n} paso{'s' if n != 1 else ''} de herramientas"
+        if ok or fail:
+            parts = []
+            if ok:
+                parts.append(f"{ok} ok")
+            if fail:
+                parts.append(f"{fail} falló" if fail == 1 else f"{fail} fallaron")
+            summary += " (" + " · ".join(parts) + ")"
+        self.tools_toggle.setText(summary)
+        self.tools_toggle.setVisible(n >= 2)
+
+    def collapse_tools(self) -> None:
+        if len(self._tool_cards) >= 2:
+            self.tools_toggle.setChecked(False)
+            self._refresh_tools_toggle_label()
 
     def append_chunk(self, chunk: str) -> None:
         first = not self._buffer
@@ -608,6 +656,7 @@ class StreamingAssistantBubble(QFrame):
         card = ToolCard(tool_name, arguments, self)
         self.tools_container.addWidget(card)
         self._tool_cards.append(card)
+        self._refresh_tools_toggle_label()
         return card
 
     def get_last_tool_card(self) -> ToolCard | None:
@@ -942,6 +991,7 @@ class ChatPanel(QWidget):
             if self._streaming_bubble is not None:
                 self._streaming_bubble.flush_text()
                 self._streaming_bubble.finish_reasoning("paso previo")
+                self._streaming_bubble.collapse_tools()
             self.start_assistant_stream()
         self._streaming_bubble.append_chunk(chunk)
         self._scroll_to_bottom()
@@ -963,6 +1013,7 @@ class ChatPanel(QWidget):
         if self._streaming_bubble is not None:
             self._streaming_bubble.flush_text()
             self._streaming_bubble.finish_reasoning(reasoning_status)
+            self._streaming_bubble.collapse_tools()
         self._streaming_bubble = None
         self.set_status_ready()
         self._scroll_to_bottom()

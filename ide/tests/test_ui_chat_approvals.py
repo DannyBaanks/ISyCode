@@ -124,3 +124,47 @@ def test_workspace_git_and_context_meter(qapp):
         win.workspace.refresh_git_status()
         assert win.workspace.git_label is not None
         win.close()
+
+
+def test_approval_card_auto_hides_on_approve_and_compacts_on_reject(qapp):
+    chat = ChatPanel()
+    approved_card = chat.add_approval_card("appr-hide", "run_command", {"command": "echo hi"}, "argv: ['echo', 'hi']")
+    assert approved_card.isHidden() is False
+    approved_card.approve_button.click()
+    assert approved_card._decided is True
+    assert approved_card.isHidden() is True
+
+    rejected_card = chat.add_approval_card("appr-rej", "run_command", {"command": "rm -rf /"}, "argv: ['rm', '-rf', '/']")
+    rejected_card.reject_button.click()
+    assert rejected_card._decided is True
+    assert rejected_card.isHidden() is False
+    assert rejected_card._title_label.text() == "Propuesta rechazada"
+    assert hasattr(rejected_card, "_toggle_details_btn")
+    assert rejected_card.detail_view.isHidden() is True
+
+
+def test_multi_tool_steps_auto_collapse_on_reply_and_toggle(qapp):
+    chat = ChatPanel()
+    chat.start_assistant_stream()
+    tool_bubble = chat._streaming_bubble
+    c1 = chat.add_tool_call("read", {"path": "a.py"})
+    c1.set_result(True, stdout="ok")
+    c2 = chat.add_tool_call("run_command", {"command": "pytest"})
+    c2.set_result(False, stderr="failed", returncode=1)
+
+    # Before final text arrives, tools are expanded
+    assert tool_bubble.tools_box.isHidden() is False
+
+    # Streaming final text spawns a new bubble below and collapses the previous tool stack
+    chat.append_chunk("Resumen final tras revisar los archivos.")
+    assert chat._streaming_bubble is not tool_bubble
+    assert tool_bubble.tools_box.isHidden() is True
+    assert tool_bubble.tools_toggle.isHidden() is False
+    assert "2 pasos de herramientas" in tool_bubble.tools_toggle.text()
+    assert "1 ok" in tool_bubble.tools_toggle.text()
+    assert "1 falló" in tool_bubble.tools_toggle.text()
+
+    # Clicking the toggle expands the tool cards again
+    tool_bubble.tools_toggle.click()
+    assert tool_bubble.tools_box.isHidden() is False
+    chat.end_assistant_stream()
