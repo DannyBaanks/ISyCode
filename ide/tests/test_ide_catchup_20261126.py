@@ -89,3 +89,43 @@ def test_all_technical_pages_are_visible_not_hidden(qtbot, tmp_path, monkeypatch
     if win.terminal_panel._process is not None:
         win.terminal_panel._process.kill()
         win.terminal_panel._process.waitForFinished(1000)
+
+
+def test_isymcp_hub_replaces_cambios_and_obsidian_isymem_graph_loads(qtbot, tmp_path, monkeypatch):
+    state_dir = tmp_path / "state"
+    monkeypatch.setattr("core.ide_state.state_home", lambda: state_dir)
+    monkeypatch.setattr("core.ui_preferences.state_home", lambda: state_dir)
+
+    # Create a tiny fixture isymem bank inside tmp_path
+    mem = tmp_path / "docs" / "agent" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "hub-demo.md").write_text("---\nname: Demo Hub\ntype: project\nproject: demo\n---\nLinks [[note-a]]\n", encoding="utf-8")
+    (mem / "note-a.md").write_text("---\nname: Note A\ntype: feedback\nproject: demo\n---\nBack to [[hub-demo]]\n", encoding="utf-8")
+
+    win = MainWindow(controller=AppController(tmp_path))
+    qtbot.addWidget(win)
+    win.show()
+
+    # Left nav has ISyMCP Hub instead of redundant Cambios
+    assert "ISyMCP" in win.panel_bar.nav_buttons
+    assert "Cambios" not in win.panel_bar.nav_buttons
+    assert win.isymcp_panel.tabs.count() == 3
+    assert win.isymcp_panel.conn_table.rowCount() >= 6
+
+    # Obsidian isymem graph loaded nodes & edges
+    assert len(win.resident_panel._isymem_graph["nodes"]) == 2
+    assert len(win.resident_panel._isymem_graph["edges"]) == 1
+
+    # Error recovery card exposes inline model switcher
+    win._last_prompt = "hola"
+    win._discovered_models["nvidia"] = ["model-a", "model-b"]
+    win._on_agent_error("PROVIDER_HTTP_429 · rate limited")
+    assert win.config_panel.health_pill is not None
+    assert win.config_panel.model_browser is not None
+
+    # UiPreferences persists github_auto_verify
+    from core.ui_preferences import UiPreferences
+    saved = UiPreferences().save(github_auto_verify=True)
+    assert saved["github_auto_verify"] is True
+    assert UiPreferences().load()["github_auto_verify"] is True
+

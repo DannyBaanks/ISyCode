@@ -831,13 +831,20 @@ class ChatPanel(QWidget):
         self._insert(label)
         self._scroll_to_bottom()
 
-    def add_recovery_card(self, title: str, detail: str, actions: list[tuple[str, callable]] | None = None) -> QFrame:
+    def add_recovery_card(
+        self,
+        title: str,
+        detail: str,
+        actions: list[tuple[str, callable]] | None = None,
+        model_switcher: tuple[list[str], str, callable] | None = None,
+    ) -> QFrame:
         """Actionable recovery card when a turn fails, cancels, or hits a workspace guard."""
+        from PySide6.QtWidgets import QComboBox
         card = QFrame(self)
         card.setObjectName("approvalCard")
         box = QVBoxLayout(card)
         box.setContentsMargins(14, 10, 14, 10)
-        box.setSpacing(6)
+        box.setSpacing(8)
         hdr = QLabel(title)
         hdr.setObjectName("approvalTitle")
         hdr.setTextFormat(Qt.TextFormat.PlainText)
@@ -848,12 +855,38 @@ class ChatPanel(QWidget):
         body.setWordWrap(True)
         body.setStyleSheet(f"color: {theme.TEXT_DIM}; font-size: 12px;")
         box.addWidget(body)
+        if model_switcher is not None:
+            models, current_model, on_retry_model = model_switcher
+            sw_lbl = QLabel("Cambiar modelo del mismo provider y reintentar:")
+            sw_lbl.setStyleSheet(f"color: {theme.TEXT_DIM}; font-size: 11px;")
+            sw_lbl.setWordWrap(True)
+            box.addWidget(sw_lbl)
+            combo = QComboBox(card)
+            combo.setEditable(True)
+            combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+            combo.setMinimumWidth(140)
+            ordered = [m for m in models if m != current_model]
+            if current_model and current_model not in ordered:
+                ordered.append(current_model)
+            for m in ordered:
+                combo.addItem(m)
+            if ordered:
+                combo.setCurrentIndex(0)
+            elif current_model:
+                combo.setCurrentText(current_model)
+            card.model_combo = combo
+            box.addWidget(combo)
+            sw_btn = QPushButton("Cambiar modelo y reintentar")
+            sw_btn.setProperty("variant", "primary")
+            sw_btn.clicked.connect(lambda _=False, c=combo, cb=on_retry_model: cb(c.currentText().strip()))
+            card.switch_retry_button = sw_btn
+            box.addWidget(sw_btn)
         if actions:
             row = QHBoxLayout()
             row.setSpacing(8)
             for idx, (label, callback) in enumerate(actions):
                 btn = QPushButton(label)
-                if idx == 0:
+                if idx == 0 and model_switcher is None:
                     btn.setProperty("variant", "primary")
                 btn.clicked.connect(callback)
                 row.addWidget(btn)

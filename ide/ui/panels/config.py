@@ -61,6 +61,7 @@ _INSPECTIONS = set()
 
 class ConfigPanel(QWidget):
     providers_changed = Signal()
+    models_discovered = Signal(str, list)
 
     def __init__(self, controller, parent=None):
         super().__init__(parent)
@@ -71,6 +72,7 @@ class ConfigPanel(QWidget):
         self._draft_revision = 0
         self._probe_revision = 0
         self._last_checks: dict[str, str] = {}
+        self._discovered_cache: dict[str, list[str]] = {}
         self.setObjectName("providerWorkspace")
 
         root_layout = QVBoxLayout(self)
@@ -137,6 +139,9 @@ class ConfigPanel(QWidget):
         self.profile_logo.setFixedSize(30, 30)
         heading.addWidget(self.profile_logo)
         heading.addWidget(self.profile_title, 1)
+        self.health_pill = QLabel("○ Sin comprobar")
+        self.health_pill.setStyleSheet("padding: 4px 10px; border-radius: 10px; background: #162133; color: #94a3b8; font-size: 11px; font-weight: 600;")
+        heading.addWidget(self.health_pill)
         form_box.addLayout(heading)
         self.profile_hint = QLabel("Elige un provider del catálogo o edita una conexión guardada.")
         self.profile_hint.setWordWrap(True)
@@ -171,7 +176,7 @@ class ConfigPanel(QWidget):
         form_box.addLayout(form)
 
         query_row = QHBoxLayout()
-        self.inspect_button = QPushButton("Consultar modelos")
+        self.inspect_button = QPushButton("Descubrir modelos")
         self.inspect_button.clicked.connect(self.inspect_models)
         self.cancel_button = QPushButton("Cancelar consulta")
         self.cancel_button.clicked.connect(self._cancel_inspection)
@@ -180,6 +185,28 @@ class ConfigPanel(QWidget):
         query_row.addWidget(self.cancel_button)
         query_row.addStretch()
         form_box.addLayout(query_row)
+
+        # Searchable model picker card
+        picker_frame = QFrame()
+        picker_frame.setObjectName("statusCard")
+        picker_box = QVBoxLayout(picker_frame)
+        picker_box.setContentsMargins(12, 10, 12, 10)
+        picker_box.setSpacing(6)
+        picker_hdr = QHBoxLayout()
+        self.picker_title = QLabel("Modelos disponibles (clic para elegir)")
+        self.picker_title.setStyleSheet("font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px;")
+        picker_hdr.addWidget(self.picker_title, 1)
+        self.model_filter = QLineEdit()
+        self.model_filter.setPlaceholderText("Filtrar modelos (ej. llama, qwen, claude)…")
+        self.model_filter.setMaximumWidth(260)
+        self.model_filter.textChanged.connect(self._filter_model_browser)
+        picker_hdr.addWidget(self.model_filter)
+        picker_box.addLayout(picker_hdr)
+        self.model_browser = QListWidget()
+        self.model_browser.setMaximumHeight(140)
+        self.model_browser.itemClicked.connect(lambda it: self.model_input.setCurrentText(it.text()))
+        picker_box.addWidget(self.model_browser)
+        form_box.addWidget(picker_frame)
         self.connection_status = QLabel("Sin comprobar. Guardar una conexión no verifica su funcionamiento.")
         self.connection_status.setWordWrap(True)
         self.connection_status.setTextFormat(Qt.TextFormat.PlainText)
@@ -287,6 +314,16 @@ class ConfigPanel(QWidget):
         self._draft_changed()
         if name in self._last_checks:
             self.connection_status.setText(self._last_checks[name])
+        if name in self._discovered_cache:
+            self._populate_model_browser(self._discovered_cache[name])
+            self._set_health_pill("ok", f"● {len(self._discovered_cache[name])} modelos")
+        else:
+            self._populate_model_browser([config.get("model", "")] if config.get("model") else [])
+            # Auto-discover models in background when credentials exist or auth is none
+            has_auth = config.get("auth") == "none" or self.controller.secret_broker.has_key(name)
+            if has_auth and self._worker is None:
+                from PySide6.QtCore import QTimer
+                QTimer.singleShot(50, self.inspect_models)
 
     def _on_provider_type_changed(self, kind):
         if hasattr(self, "auth_combo"):
@@ -360,6 +397,56 @@ class ConfigPanel(QWidget):
         }[storage]
         self.storage_label.setText(f"{detail}  ·  {kr_badge}")
 
+    def _set_health_pill(self, state: str, text: str) -> None:
+        if not hasattr(self, "health_pill"):
+            return
+        styles = {
+            "ok": "padding: 4px 10px; border-radius: 10px; background: #0d3326; color: #34d399; font-size: 11px; font-weight: 700;",
+            "loading": "padding: 4px 10px; border-radius: 10px; background: #0d2a3d; color: #38bdf8; font-size: 11px; font-weight: 700;",
+            "error": "padding: 4px 10px; border-radius: 10px; background: #3b141a; color: #fb7185; font-size: 11px; font-weight: 700;",
+            "idle": "padding: 4px 10px; border-radius: 10px; background: #162133; color: #94a3b8; font-size: 11px; font-weight: 600;",
+        }
+        self.health_pill.setText(text)
+        self.health_pill.setStyleSheet(styles.get(state, styles["idle"]))
+
+    def _populate_model_browser(self, models: list[str]) -> None:
+        if not hasattr(self, "model_browser"):
+            return
+        self._current_browser_models = list(models)
+        self._filter_model_browser(self.model_filter.text() if hasattr(self, "model_filter") else "")
+
+    def _filter_model_browser(self, text: str) -> None:
+        if not hasattr(self, "model_browser"):
+            return
+        q = text.strip().casefold()
+        all_models = getattr(self, "_current_browser_models", [])
+        filtered = [m for m in all_models if not q or q in m.casefold()]
+        self.model_browser.clear()
+        for m in filtered[:250]:
+            self.model_browser.addItem(m)
+        if hasattr(self, "picker_title"):
+            self.picker_title.setText(f"Modelos disponibles ({len(filtered)}/{len(all_models)}) · clic para elegir")
+
+    def discover_models_silent(self, provider_name: str, callback=None) -> None:
+        """Background model discovery for error-recovery switcher without changing form selection."""
+        try:
+            config = self.controller.provider_registry.get_config(provider_name)
+        except ValueError:
+            return
+        worker = _InspectWorker(self.service, config, None)
+        _INSPECTIONS.add(worker)
+        def _done(report):
+            if report.models:
+                models_list = list(report.models)
+                self._discovered_cache[provider_name] = models_list
+                self.models_discovered.emit(provider_name, models_list)
+                if callback:
+                    callback(models_list)
+        worker.report_ready.connect(_done)
+        worker.finished.connect(lambda w=worker: _INSPECTIONS.discard(w))
+        worker.finished.connect(worker.deleteLater)
+        worker.start()
+
     def inspect_models(self):
         if self._worker is not None:
             return
@@ -371,7 +458,8 @@ class ConfigPanel(QWidget):
         protocol = values.pop("provider")
         config = ProviderConfig(name=self.name_input.text().strip(), provider_type=protocol, **values)
         self._probe_revision = self._draft_revision
-        self.connection_status.setText("Consultando catálogo…")
+        self.connection_status.setText("Descubriendo modelos…")
+        self._set_health_pill("loading", "◌ Descubriendo…")
         self.inspect_button.setEnabled(False)
         self.cancel_button.setVisible(True)
         worker = _InspectWorker(self.service, config, self.key_input.text().strip() or None)
@@ -397,11 +485,18 @@ class ConfigPanel(QWidget):
         self._last_checks[report.provider] = status_text
         self.connection_status.setText(status_text)
         if report.models:
+            models_list = list(report.models)
+            self._discovered_cache[report.provider] = models_list
+            self._set_health_pill("ok", f"● {len(models_list)} modelos")
             previous = self.model_input.currentText()
             self.model_input.clear()
-            self.model_input.addItems(report.models)
+            self.model_input.addItems(models_list)
             if previous:
                 self.model_input.setCurrentText(previous)
+            self._populate_model_browser(models_list)
+            self.models_discovered.emit(report.provider, models_list)
+        else:
+            self._set_health_pill("error" if report.state not in {"catalog_available", "unsupported_listing"} else "idle", f"● {report.state}")
         self.refresh()
 
     def _inspection_stopped(self):

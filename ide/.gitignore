@@ -1,36 +1,12 @@
-# Python / packaging
-__pycache__/
-*.py[cod]
-*.egg-info/
 .venv/
-venv/
-dist/
+__pycache__/
+*.pyc
 build/
+dist/
 .pytest_cache/
-.ruff_cache/
-.mypy_cache/
-
-# Local runtime state & caches
-.isyvm/
+*.egg-info/
+.worktrees/
+api.txt
+.venv_linux/
 .isycode-ide/
 .superpowers/
-ui_verify_out/
-
-# Secrets & credentials (NEVER commit)
-auth.json
-*auth.json*
-.env
-.env.*
-*.key
-*.pem
-*.p12
-*.pfx
-*.keystore
-credentials.json
-secrets.json
-secrets.yaml
-secrets.yml
-token.json
-tokens.json
-hosts.yml
-*keyring*

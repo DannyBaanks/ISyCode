@@ -27,6 +27,7 @@ from .panels.terminal import TerminalPanel
 from .panels.tests import TestsPanel
 from .panels.tools import ToolsPanel
 from .panels.changes import ChangesPanel
+from .panels.isymcp import ISyMCPControlPanel
 from .panels.workspace import WorkspacePanel
 from .shell import DesktopShell
 from .icons import icon, provider_icon
@@ -123,6 +124,7 @@ class MainWindow(QMainWindow):
         self.panel_windows: dict[str, QDialog] = {}
         self._total_tokens_estimated: int = 0
         self._last_prompt: str = ""
+        self._discovered_models: dict[str, list[str]] = {}
         self._session_id: str | None = None
         self._provider_replacement_required = False
         self._pending_new_session = False
@@ -377,6 +379,9 @@ class MainWindow(QMainWindow):
         self.changes_panel = ChangesPanel(self.controller)
         self.changes_collapsible = self.panel_bar.add_panel("Cambios", self.changes_panel, status="")
 
+        self.isymcp_panel = ISyMCPControlPanel(self.controller)
+        self.isymcp_collapsible = self.panel_bar.add_panel("ISyMCP", self.isymcp_panel, status="")
+
         # Diff panel
         self.diff_view = QWidget()
         self.diff_browser = self._build_diff_browser()
@@ -410,6 +415,8 @@ class MainWindow(QMainWindow):
         self.config_panel = ConfigPanel(self.controller)
         self.config_panel.subscriptions.busy_guard = self._agent_busy
         self.config_panel.providers_changed.connect(self._refresh_provider_models)
+        if hasattr(self.config_panel, "models_discovered"):
+            self.config_panel.models_discovered.connect(self._on_models_discovered)
         self.config_collapsible = self.panel_bar.add_panel(
             "Config", self.config_panel, status="")
 
@@ -637,8 +644,24 @@ class MainWindow(QMainWindow):
         default = models.get(provider)
         if default and default not in candidates:
             candidates.append(default)
+        for m in self._discovered_models.get(provider, []):
+            if m not in candidates:
+                candidates.append(m)
         self.model_combo.clear()
         self.model_combo.addItems(candidates)
+
+    def _on_models_discovered(self, provider: str, models: list) -> None:
+        if not provider or not models:
+            return
+        self._discovered_models[provider] = list(models)
+        if self.provider_combo.currentData() == provider:
+            current = self.model_combo.currentText()
+            existing = {self.model_combo.itemText(i) for i in range(self.model_combo.count())}
+            for m in models:
+                if m not in existing:
+                    self.model_combo.addItem(m)
+            if current:
+                self.model_combo.setCurrentText(current)
 
     def _set_mode(self, mode) -> None:
         if self._agent_busy():
@@ -733,6 +756,14 @@ class MainWindow(QMainWindow):
     def _retry_last_prompt(self, prompt: str) -> None:
         if prompt:
             self._start_agent(prompt)
+
+    def _retry_with_model(self, new_model: str) -> None:
+        if new_model:
+            if self.model_combo.findText(new_model) < 0:
+                self.model_combo.addItem(new_model)
+            self.model_combo.setCurrentText(new_model)
+        if self._last_prompt:
+            self._start_agent(self._last_prompt)
 
     def _open_workspace(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
@@ -1027,9 +1058,54 @@ class MainWindow(QMainWindow):
         self.chat.set_status_error(message)
         actions = []
         if self._last_prompt:
-            actions.append(("Reintentar turno", lambda p=self._last_prompt: self._retry_last_prompt(p)))
+            actions.append(("Reintentar mismo modelo", lambda p=self._last_prompt: self._retry_last_prompt(p)))
         actions.append(("Revisar Providers", self.open_providers))
-        self.chat.add_recovery_card("Error en el turno del agente", message, actions)
+
+        provider = self.provider_combo.currentData() or ""
+        current_model = self.model_combo.currentText().strip()
+        candidates: list[str] = []
+        for m in self._discovered_models.get(provider, []):
+            if m not in candidates:
+                candidates.append(m)
+        for i in range(self.model_combo.count()):
+            m = self.model_combo.itemText(i).strip()
+            if m and m not in candidates:
+                candidates.append(m)
+        # Fallback sensible alternatives for common providers when catalog hasn't been fetched yet
+        if len(candidates) <= 1 and provider:
+            pconf = self.controller.providers().get(provider, {})
+            ptype = pconf.get("provider", provider)
+            fallbacks = {
+                "nvidia": [
+                    "meta/llama-3.3-70b-instruct",
+                    "qwen/qwen2.5-coder-32b-instruct",
+                    "deepseek-ai/deepseek-r1",
+                    "nvidia/llama-3.1-nemotron-70b-instruct",
+                ],
+                "openai": ["gpt-4.1", "gpt-4.1-mini", "o4-mini"],
+                "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-haiku-latest"],
+                "google": ["gemini-2.5-pro", "gemini-2.5-flash"],
+            }.get(ptype, [])
+            for m in fallbacks:
+                if m not in candidates:
+                    candidates.append(m)
+
+        switcher = (candidates, current_model, self._retry_with_model) if self._last_prompt else None
+        card = self.chat.add_recovery_card("Error en el turno del agente", message, actions, model_switcher=switcher)
+        # Trigger background model discovery for this provider if we don't have its live catalog yet
+        if provider and provider not in self._discovered_models and hasattr(self.config_panel, "discover_models_silent"):
+            def _fill_card(models_list, c=card, cur=current_model):
+                combo = getattr(c, "model_combo", None)
+                if combo is None:
+                    return
+                try:
+                    existing = {combo.itemText(i) for i in range(combo.count())}
+                    for m in models_list:
+                        if m != cur and m not in existing:
+                            combo.addItem(m)
+                except RuntimeError:
+                    pass
+            self.config_panel.discover_models_silent(provider, _fill_card)
 
     def _stop_agent(self) -> None:
         if self._worker is not None and self._worker.isRunning():

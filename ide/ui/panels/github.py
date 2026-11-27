@@ -107,6 +107,27 @@ class GitHubPanel(QWidget):
         self.notice.setWordWrap(True)
         self.notice.setObjectName("pageSubtitle")
         layout.addWidget(self.notice)
+        # Non-blocking opt-in banner for automatic gh verification
+        from PySide6.QtWidgets import QCheckBox
+        self.auto_verify_banner = QFrame()
+        self.auto_verify_banner.setObjectName("statusCard")
+        av_lay = QHBoxLayout(self.auto_verify_banner)
+        av_lay.setContentsMargins(12, 8, 12, 8)
+        av_lay.setSpacing(10)
+        av_lbl = QLabel("¿Verificar gh y cargar tus repositorios automáticamente al abrir GitHub?")
+        av_lbl.setWordWrap(True)
+        av_lay.addWidget(av_lbl, 1)
+        self.auto_verify_remember = QCheckBox("No volver a mostrar")
+        av_lay.addWidget(self.auto_verify_remember)
+        av_yes = QPushButton("Sí, verificar ahora")
+        av_yes.setProperty("variant", "primary")
+        av_yes.clicked.connect(lambda: self._answer_auto_verify(True))
+        av_lay.addWidget(av_yes)
+        av_no = QPushButton("Ahora no")
+        av_no.clicked.connect(lambda: self._answer_auto_verify(False))
+        av_lay.addWidget(av_no)
+        self.auto_verify_banner.hide()
+        layout.addWidget(self.auto_verify_banner)
         split = QSplitter(Qt.Orientation.Horizontal)
         split.setChildrenCollapsible(False)
         layout.addWidget(split, 1)
@@ -138,6 +159,10 @@ class GitHubPanel(QWidget):
         self.link_button.setIcon(icon("folder"))
         self.link_button.clicked.connect(self.link_folder)
         left_box.addWidget(self.link_button)
+        self.auto_link_button = QPushButton("Autodetectar carpetas locales")
+        self.auto_link_button.setToolTip("Escanea ~/Development y vincula automáticamente cada carpeta con su repositorio remoto de GitHub")
+        self.auto_link_button.clicked.connect(self.auto_discover_folders)
+        left_box.addWidget(self.auto_link_button)
         self.check_all_button = QPushButton("Comprobar carpetas vinculadas")
         self.check_all_button.clicked.connect(self.refresh_all)
         left_box.addWidget(self.check_all_button)
@@ -276,6 +301,8 @@ class GitHubPanel(QWidget):
         self.catalog_button.setEnabled(not running)
         self.tree.setEnabled(not running)
         self.link_button.setEnabled(not running and bool(self._selected_repo) and self._account_verified)
+        if hasattr(self, "auto_link_button"):
+            self.auto_link_button.setEnabled(not running and self._account_verified)
         self.check_all_button.setEnabled(not running and self._account_verified)
         self.refresh_button.setEnabled(not running and bool(self._selected_folder) and self._account_verified)
         self.pull_button.setEnabled(not running and self._account_verified and self._status is not None and self._status.can_update)
@@ -681,6 +708,109 @@ class GitHubPanel(QWidget):
             self._job(lambda: sync.apply_pull(preview.id, operator_approved=True),
                       lambda result: self._show_status(result[0]), mutating=True)
         QTimer.singleShot(0, review)
+
+    def maybe_auto_verify(self):
+        """Non-blocking opt-in automatic gh verification with 'No volver a mostrar' persistence."""
+        if self._account_verified or self._catalog_loading or (self._worker is not None and self._worker.isRunning()):
+            return
+        if getattr(self, "_auto_verify_prompted", False):
+            return
+        from core.ui_preferences import UiPreferences
+        try:
+            pref = UiPreferences().load().get("github_auto_verify")
+        except (OSError, ValueError):
+            pref = None
+        if pref is True:
+            self._auto_verify_prompted = True
+            self.auto_verify_banner.hide()
+            self.load_catalog()
+            return
+        if pref is False:
+            self._auto_verify_prompted = True
+            self.auto_verify_banner.hide()
+            return
+        self._auto_verify_prompted = True
+        self.auto_verify_banner.show()
+
+    def _answer_auto_verify(self, accepted: bool) -> None:
+        self.auto_verify_banner.hide()
+        if self.auto_verify_remember.isChecked():
+            from core.ui_preferences import UiPreferences
+            try:
+                UiPreferences().save(github_auto_verify=accepted)
+            except (OSError, ValueError):
+                pass
+        if accepted:
+            self.load_catalog()
+
+    def auto_discover_folders(self):
+        """Scan local Development folders and auto-link every git checkout matching a catalog repo."""
+        import re
+        import subprocess
+        if not self._account_verified or not self._repos:
+            self.notice.setText("Primero carga el catálogo de repositorios para autodetectar carpetas.")
+            return
+        owned_map = {repo["name"].casefold(): repo["name"] for repo in self._repos}
+
+        def _parse_remote(url: str) -> str:
+            m = re.search(r"github\.com[:/]([^/\s]+/[^/\s]+?)(?:\.git)?$", url.strip(), re.IGNORECASE)
+            return m.group(1) if m else ""
+
+        async def scan():
+            roots = []
+            for base in (Path.home() / "Development", Path("/home/danny/Development")):
+                if base.is_dir() and str(base.resolve()) not in {str(r) for r in roots}:
+                    roots.append(base.resolve())
+            candidates: list[Path] = []
+            for base in roots:
+                for sub in sorted(base.iterdir()):
+                    if not sub.is_dir() or sub.name.startswith("."):
+                        continue
+                    if (sub / ".git").exists():
+                        candidates.append(sub)
+                    else:
+                        try:
+                            for nested in sorted(sub.iterdir()):
+                                if nested.is_dir() and not nested.name.startswith(".") and (nested / ".git").exists():
+                                    candidates.append(nested)
+                        except OSError:
+                            continue
+            linked = []
+            existing = {(l.get("repo", "").casefold(), str(Path(l.get("folder", "")).resolve()))
+                        for l in self.service.links.list() if l.get("folder")}
+            for folder in candidates:
+                try:
+                    proc = subprocess.run(
+                        ["git", "-C", str(folder), "remote", "get-url", "origin"],
+                        capture_output=True, text=True, timeout=2,
+                    )
+                    if proc.returncode != 0:
+                        continue
+                    remote_repo = _parse_remote(proc.stdout)
+                    if not remote_repo:
+                        continue
+                    canonical = owned_map.get(remote_repo.casefold())
+                    if not canonical:
+                        continue
+                    resolved = str(folder.resolve())
+                    if (canonical.casefold(), resolved) in existing:
+                        continue
+                    await self._sync(resolved).link(canonical)
+                    existing.add((canonical.casefold(), resolved))
+                    linked.append((canonical, resolved))
+                except Exception:
+                    continue
+            return linked
+
+        def ready(linked):
+            if linked:
+                self.notice.setText(f"Autodetección completada: {len(linked)} carpeta(s) nueva(s) vinculada(s) automáticamente.")
+                # Refresh tree with newly linked folders
+                self._catalog_ready({"verified": True, "login": self.account.text().split(" · ")[0], "repositories": self._repos, "may_have_more": False})
+            else:
+                self.notice.setText("Autodetección completada: no se encontraron carpetas locales nuevas sin vincular en ~/Development.")
+
+        self._job(scan, ready)
 
     def open_folder(self):
         if self._selected_folder and not self.busy_guard():

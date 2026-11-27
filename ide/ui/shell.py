@@ -13,7 +13,8 @@ from .panels.collapsible import CollapsiblePanel
 
 NAVIGATION = [
     ("Conversaciones", "Conversación", "chat"), ("Editor", "Archivos", "code"),
-    ("Cambios", "Cambios", "changes"), ("Tool calls", "Herramientas", "tools"),
+    ("ISyMCP", "ISyMCP Hub", "tools"),
+    ("Tool calls", "Herramientas", "tools"),
     ("Tests", "Pruebas", "tests"), ("Evidence", "Evidencia", "evidence"),
     ("Status", "Sistema", "system"), ("GitHub", "GitHub", "github"),
     ("Config", "Providers", "provider"), ("Ajustes", "Ajustes", "settings"),
@@ -200,6 +201,8 @@ class DesktopShell(QWidget):
                 panel.content().refresh_receipts()
             elif title == "Tests" and hasattr(panel.content(), "refresh_discovery"):
                 panel.content().refresh_discovery()
+            elif title == "GitHub" and hasattr(panel.content(), "maybe_auto_verify"):
+                panel.content().maybe_auto_verify()
         if title in self.nav_buttons:
             self.nav_buttons[title].setChecked(True)
         elif location == "group":
