@@ -834,6 +834,16 @@ class SessionMixin:
         return "generating" if self._loop_task and not self._loop_task.done() else "idle"
 
     def _paint_work_status(self) -> None:
+        # The list describes the screen, so it reads the lane on screen. A refresh
+        # worker started inside a background turn inherits that turn's pinned lane;
+        # read through it, the hidden conversation looked current and "generating".
+        token = conversation_lane_context.set(None)
+        try:
+            self._paint_work_status_on_screen()
+        finally:
+            conversation_lane_context.reset(token)
+
+    def _paint_work_status_on_screen(self) -> None:
         if not self.screen_stack:
             return  # the 1 s timer can still tick while the app shuts down
         self._sync_terminal_title()

@@ -58,6 +58,16 @@ def test_switching_leaves_the_other_conversation_running(tmp_path, monkeypatch):
             await pilot.pause()
             row = next(item for item in app._work_rows if item["id"] == first.session_id)
             assert row["status"] == "background"  # its lane is not on screen
+            # A refresh started inside that turn inherits its pinned lane; the list
+            # must still describe the screen (Windows CI hit this as a race).
+            from isycode.conversation_lane import conversation_lane_context
+            token = conversation_lane_context.set(first)
+            try:
+                app._paint_work_status()
+            finally:
+                conversation_lane_context.reset(token)
+            row = next(item for item in app._work_rows if item["id"] == first.session_id)
+            assert row["status"] == "background" and not row["current"]
             gate.set()
             for _ in range(50):
                 await pilot.pause(0.01)
