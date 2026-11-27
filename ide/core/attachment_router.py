@@ -314,7 +314,8 @@ def build_hidden_attachment_prompt(attachments: list[str | Path], workspace: Pat
                     f"Imagen adjunta '{r.name}' ({r.ext}) · token='{tok}' · path='{r.path}'. "
                     "REGLA DE VISIÓN: Si tu modelo tiene visión nativa y ya ve la imagen, IGNORA isycode_see_image y responde directo. "
                     f"Si NO tienes visión nativa, llama EN UN SOLO PASO: isycode_see_image(token='{tok}') — "
-                    "esto ejecuta FlowSight completo (map + bloques + stitch) automáticamente en 1 sola llamada, SIN discover ni describe."
+                    "devuelve el texto OCR real, paneles, botones y un boceto de la imagen en 1 sola llamada. "
+                    "Con ese resultado responde directamente; NO uses isycode_mcp_discover/describe/execute ni isycode_motor para la imagen."
                 )
             except OSError:
                 extra_guide = r.instruction
@@ -329,14 +330,34 @@ def build_hidden_attachment_prompt(attachments: list[str | Path], workspace: Pat
     return "\n".join(lines)
 
 
+SCREEN_VF = "theme,layout,controls,text_bands,ocr,ui_map=64:24"
+FLOWSIGHT_TIMEOUT_S = 150.0
+_CROP_RE = re.compile(r"^\d{1,5}:\d{1,5}:\d{1,5}:\d{1,5}$")
+_SESSION_RE = re.compile(r'session(?:_id)?"?\s*[:=]\s*"?([A-Za-z0-9_-]{6,64})')
+
+
+def _flowsight_cache_path(root: Path, image: Path, key: str) -> Path:
+    digest = hashlib.sha256(image.read_bytes()).hexdigest()[:20]
+    k = hashlib.sha256(key.encode("utf-8")).hexdigest()[:10]
+    return project_state(root) / "attachments" / "flowsight_cache" / f"{digest}_{k}.txt"
+
+
 async def see_image_with_flowsight(
     workspace: Path,
     *,
     token: str = "",
     path: str = "",
     split: str = "quarters",
+    crop: str = "",
+    detail: str = "screen",
 ) -> ExecutionResult:
-    """One-shot compacted FlowSight pipeline (map_blocks -> get_block x N -> stitch_blocks) in 1 tool call."""
+    """One-call FlowSight vision for non-vision models.
+
+    detail="screen" (default): flowsight_screen_run = OCR text + panels + controls + wireframe.
+    detail="full": also map_blocks -> get_block x N -> stitch_blocks (structural color/edge maps).
+    crop="x:y:w:h": zoom into a region with exact global coordinates.
+    Results are cached per (image sha, options), so repeated calls are instant.
+    """
     root = Path(workspace).resolve()
     resolved: Path | None = None
     if token.strip():
@@ -364,6 +385,20 @@ async def see_image_with_flowsight(
     if not resolved.is_file():
         return ExecutionResult(False, stderr=f"FILE_NOT_FOUND: {resolved}", returncode=1, error_code="FILE_NOT_FOUND")
 
+    crop = crop.strip()
+    if crop and not _CROP_RE.match(crop):
+        return ExecutionResult(False, stderr="INVALID_CROP: usa crop='x:y:w:h' en píxeles (ej. '400:120:800:300').", returncode=1, error_code="INVALID_CROP")
+    detail = detail if detail in {"screen", "full"} else "screen"
+    valid_split = split if split in {"quarters", "halves_h", "halves_v"} else "quarters"
+    vf = (f"crop={crop}," if crop else "") + SCREEN_VF
+    tok = token.strip() or issue_attachment_token(root, resolved)
+
+    cache_path = _flowsight_cache_path(root, resolved, f"{vf}|{detail}|{valid_split}")
+    if cache_path.is_file():
+        cached = cache_path.read_text(encoding="utf-8")
+        return ExecutionResult(True, stdout="[FlowSight: resultado en caché, misma imagen y opciones]\n" + cached,
+                               evidence={"flowsight": {"image": str(resolved), "cached": True}})
+
     from core.isymcp_hub_client import load_local_mcp_servers, _extract_mcp_text
     local_mcps = load_local_mcp_servers()
     fs_spec = local_mcps.get("flowsight")
@@ -380,8 +415,9 @@ async def see_image_with_flowsight(
         *fs_spec["command"],
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
         env=env,
+        limit=8 * 1024 * 1024,
     )
     assert proc.stdin is not None and proc.stdout is not None
 
@@ -407,71 +443,48 @@ async def see_image_with_flowsight(
             if isinstance(msg, dict) and msg.get("id") == req_id:
                 return msg
 
-    async def _run_pipeline() -> dict[str, Any]:
+    async def _call(tool: str, arguments: dict[str, Any]) -> str:
+        resp = await _rpc("tools/call", {"name": tool, "arguments": arguments})
+        if "error" in resp:
+            raise RuntimeError(f"{tool} error: {resp['error']}")
+        return _extract_mcp_text(resp.get("result") or {})
+
+    async def _run_pipeline() -> str:
         init = await _rpc("initialize", {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
-            "clientInfo": {"name": "isycode-ide-flowsight", "version": "0.4.0"},
+            "clientInfo": {"name": "isycode-ide-flowsight", "version": "0.5.0"},
         })
         if "error" in init:
             raise RuntimeError(f"FlowSight init error: {init['error']}")
         proc.stdin.write((json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}) + "\n").encode("utf-8"))
         await proc.stdin.drain()
 
-        valid_split = split if split in {"quarters", "halves_h", "halves_v"} else "quarters"
-        mapped_resp = await _rpc("tools/call", {
-            "name": "flowsight_map_blocks",
-            "arguments": {"image_path": str(resolved), "split": valid_split, "palette_k": 12, "grid_w": 24, "grid_h": 14},
-        })
-        if "error" in mapped_resp:
-            raise RuntimeError(f"flowsight_map_blocks error: {mapped_resp['error']}")
-        mapped_text = _extract_mcp_text(mapped_resp.get("result") or {})
+        screen = await _call("flowsight_screen_run", {"image_path": str(resolved), "vf": vf, "max_chars": 16000})
 
-        # Extract session_id from mapped_text (JSON or text line)
-        session_id = ""
-        m = re.search(r'"?session_id"?\s*[:=]\s*"?([A-Za-z0-9_-]{6,64})"?', mapped_text)
-        if m:
-            session_id = m.group(1)
-
-        blocks_out: dict[str, str] = {}
-        stitched_text = ""
-        if session_id:
-            block_ids = ["TL", "TR", "BL", "BR"] if valid_split == "quarters" else (["L", "R"] if valid_split == "halves_h" else ["T", "B"])
-            for bid in block_ids:
-                b_resp = await _rpc("tools/call", {
-                    "name": "flowsight_get_block",
-                    "arguments": {"session_id": session_id, "block_id": bid, "include_edge_map": True},
-                })
-                if "result" in b_resp:
-                    blocks_out[bid] = _extract_mcp_text(b_resp["result"])[:2500]
-            s_resp = await _rpc("tools/call", {
-                "name": "flowsight_stitch_blocks",
-                "arguments": {"session_id": session_id},
+        sections = [screen.strip()]
+        if detail == "full":
+            mapped = await _call("flowsight_map_blocks", {
+                "image_path": str(resolved), "split": valid_split, "palette_k": 12, "grid_w": 24, "grid_h": 14,
             })
-            if "result" in s_resp:
-                stitched_text = _extract_mcp_text(s_resp["result"])[:4500]
-
-        dims = _image_dimensions(resolved)
-        return {
-            "engine": "FlowSight (1-step compacted pipeline)",
-            "image": str(resolved),
-            "token": token or issue_attachment_token(root, resolved),
-            "dimensions": {"width": dims[0], "height": dims[1]} if dims else None,
-            "session_id": session_id,
-            "map_overview": mapped_text[:3500],
-            "stitched_scene": stitched_text,
-            "blocks": blocks_out,
-        }
+            m = _SESSION_RE.search(mapped)
+            session_id = m.group(1) if m else ""
+            sections.append("=== BLOCKS MAP ===\n" + mapped.strip()[:3500])
+            if session_id:
+                block_ids = ["TL", "TR", "BL", "BR"] if valid_split == "quarters" else (["L", "R"] if valid_split == "halves_h" else ["T", "B"])
+                for bid in block_ids:
+                    sections.append(f"=== BLOCK {bid} ===\n" + (await _call("flowsight_get_block", {
+                        "session_id": session_id, "block_id": bid, "include_edge_map": True,
+                    })).strip()[:2500])
+                sections.append("=== STITCH ===\n" + (await _call("flowsight_stitch_blocks", {"session_id": session_id})).strip()[:4500])
+            else:
+                sections.append("[BLOCKS: FlowSight no devolvió session_id; se omiten bloques]")
+        return "\n\n".join(sections)
 
     try:
-        report = await asyncio.wait_for(_run_pipeline(), timeout=45.0)
-        return ExecutionResult(
-            True,
-            stdout=json.dumps(report, indent=2, ensure_ascii=False),
-            evidence={"flowsight": {"image": str(resolved), "session_id": report.get("session_id", "")}},
-        )
+        body = await asyncio.wait_for(_run_pipeline(), timeout=FLOWSIGHT_TIMEOUT_S)
     except asyncio.TimeoutError:
-        return ExecutionResult(False, stderr="FLOWSIGHT_TIMEOUT: el análisis FlowSight excedió 45s.", returncode=1, error_code="FLOWSIGHT_TIMEOUT")
+        return ExecutionResult(False, stderr=f"FLOWSIGHT_TIMEOUT: el análisis excedió {int(FLOWSIGHT_TIMEOUT_S)}s. Reintenta con crop='x:y:w:h' sobre la zona de interés.", returncode=1, error_code="FLOWSIGHT_TIMEOUT")
     except Exception as exc:
         return ExecutionResult(False, stderr=f"FLOWSIGHT_ERROR: {type(exc).__name__}: {exc}", returncode=1, error_code="FLOWSIGHT_ERROR")
     finally:
@@ -483,6 +496,28 @@ async def see_image_with_flowsight(
                 proc.kill()
             except Exception:
                 pass
+
+    if body.lstrip().startswith("DENY"):
+        return ExecutionResult(False, stderr=f"FLOWSIGHT_DENY: {body.strip()[:500]}", returncode=1, error_code="FLOWSIGHT_DENY")
+
+    dims = _image_dimensions(resolved)
+    dims_s = f"{dims[0]}x{dims[1]}" if dims else "?"
+    report = (
+        f"ISYCODE VISION (FlowSight, 1 llamada) · token={tok} · imagen={resolved.name} ({dims_s})"
+        f"{' · crop=' + crop if crop else ''} · detail={detail}\n"
+        "Lee así: OCR = texto real visible en la imagen; CONTROLS = botones/campos con su texto y centro click=(x,y); "
+        "LAYOUT = paneles; UI WIREFRAME MAP = boceto ASCII de la distribución.\n\n"
+        f"{body}\n\n"
+        "[FIN DE LA VISIÓN] Esta es la percepción completa de la imagen. Responde al usuario YA con lo que ves "
+        "(describe la interfaz/escena y el texto relevante en lenguaje natural). NO llames isycode_mcp_* ni otras tools "
+        "de FlowSight para esta imagen. Solo si el usuario pide un detalle concreto, vuelve a llamar "
+        f"isycode_see_image(token='{tok}', crop='x:y:w:h') sobre esa zona."
+    )
+    try:
+        atomic_write(cache_path, report)
+    except OSError:
+        pass
+    return ExecutionResult(True, stdout=report, evidence={"flowsight": {"image": str(resolved), "vf": vf, "detail": detail}})
 
 
 def _image_dimensions(path: Path) -> tuple[int, int] | None:

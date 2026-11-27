@@ -132,7 +132,25 @@ def test_attachment_token_and_one_step_flowsight(tmp_path, monkeypatch):
     if Path("/home/danny/Development/ISyCo Git/FlowSight/flowsight_mcp.py").is_file():
         res = asyncio.run(see_image_with_flowsight(ws, token=tok))
         assert res.success, res.stderr
-        data = json.loads(res.stdout)
-        assert data["engine"].startswith("FlowSight")
-        assert data["token"] == tok
-        assert data["map_overview"]
+        assert res.stdout.startswith("ISYCODE VISION (FlowSight, 1 llamada)")
+        assert f"token={tok}" in res.stdout
+        assert "FLOWSIGHT SCREEN" in res.stdout
+        assert "[FIN DE LA VISIÓN]" in res.stdout
+        again = asyncio.run(see_image_with_flowsight(ws, token=tok))
+        assert again.success and "caché" in again.stdout
+
+
+def test_flowsight_session_regex_and_crop_validation(tmp_path, monkeypatch):
+    import asyncio
+    from core.attachment_router import _SESSION_RE, see_image_with_flowsight
+
+    line = "FLOWSIGHT BLOCKS v1 | session=0123456789abcdef | image=x.png (1920x1080)"
+    assert _SESSION_RE.search(line).group(1) == "0123456789abcdef"
+    assert _SESSION_RE.search('{"session_id": "abcdef123456"}').group(1) == "abcdef123456"
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    ws = tmp_path / "repo"
+    ws.mkdir()
+    (ws / "a.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 32)
+    res = asyncio.run(see_image_with_flowsight(ws, path="a.png", crop="10;10"))
+    assert not res.success and res.error_code == "INVALID_CROP"

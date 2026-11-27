@@ -246,6 +246,8 @@ async def execute_isycode_readonly_tool(workspace: Path, name: str, arguments: d
                 token=str(arguments.get("token", "")),
                 path=str(arguments.get("path", "")),
                 split=str(arguments.get("split", "quarters")),
+                crop=str(arguments.get("crop", "")),
+                detail=str(arguments.get("detail", "screen")),
             )
             if res.stdout:
                 res.stdout = _bounded(res.stdout)

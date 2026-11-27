@@ -18,6 +18,9 @@ from ..resident import ResidentReader
 from ..tool_execution import ToolExecutionService
 
 
+VISION_FOLLOWUP_TOOLS = {"isycode_mcp_discover", "isycode_mcp_describe", "isycode_mcp_execute", "isycode_motor"}
+
+
 @dataclass
 class AgentContext:
     provider_name: str
@@ -338,13 +341,15 @@ AVAILABLE_TOOLS = [
         "type": "function",
         "function": {
             "name": "isycode_see_image",
-            "description": "ONE-STEP image vision via FlowSight for non-vision models: runs map_blocks + get_block (TL/TR/BL/BR) + stitch_blocks automatically in a single call using the attachment token (e.g. token='att_...') or image path. No discover or describe needed.",
+            "description": "ONE-CALL image vision for non-vision models (FlowSight). Returns the real OCR text of the image, panels, buttons/fields with their text and click centers, and an ASCII wireframe. Call it ONCE with the attachment token, then answer the user directly from its output. Do NOT use isycode_mcp_* / discover / describe for images. Follow-up zoom: same tool with crop='x:y:w:h'. Takes ~30-60s the first time; repeated calls are cached.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "token": {"type": "string", "description": "Attachment token provided in the hidden attachment prompt (e.g. att_...)"},
+                    "token": {"type": "string", "description": "Attachment token from the hidden attachment prompt (e.g. att_...)"},
                     "path": {"type": "string", "description": "Optional image path if no token was provided"},
-                    "split": {"type": "string", "enum": ["quarters", "halves_h", "halves_v"], "default": "quarters"}
+                    "crop": {"type": "string", "description": "Optional zoom region 'x:y:w:h' in pixels (global coords from a previous call)"},
+                    "detail": {"type": "string", "enum": ["screen", "full"], "default": "screen", "description": "screen = OCR+layout+controls (default). full = also structural color/edge blocks (rarely needed)."},
+                    "split": {"type": "string", "enum": ["quarters", "halves_h", "halves_v"], "default": "quarters", "description": "Only used with detail='full'"}
                 },
                 "additionalProperties": False
             }
@@ -550,6 +555,7 @@ class Agent:
         
         repeated_discovery = {}
         seen_mcp_discovers: set[str] = set()
+        vision_done = False
         final_only = False
         max_turns_reached = False
         turn_idx = 0
@@ -586,7 +592,14 @@ class Agent:
                 tool_results = []
                 for tool_call in response.tool_calls:
                     self._report_progress("tool")
-                    if tool_call.name == "isycode_mcp_discover":
+                    if vision_done and tool_call.name in VISION_FOLLOWUP_TOOLS and "flowsight" in json.dumps(tool_call.arguments or {}).lower():
+                        result = ExecutionResult(
+                            False,
+                            stderr="VISION_ALREADY_DONE: isycode_see_image ya te dio la visión completa de la imagen en este turno. No llames FlowSight por MCP; responde al usuario con ese resultado. Para un detalle usa isycode_see_image(token=..., crop='x:y:w:h').",
+                            returncode=1,
+                            error_code="VISION_ALREADY_DONE",
+                        )
+                    elif tool_call.name == "isycode_mcp_discover":
                         disc_key = json.dumps({
                             "server": (tool_call.arguments or {}).get("server") or "",
                             "query": (tool_call.arguments or {}).get("query") or "",
@@ -604,6 +617,8 @@ class Agent:
                             result = await self._execute_tool(tool_call)
                     else:
                         result = await self._execute_tool(tool_call)
+                    if result.success and tool_call.name == "isycode_see_image":
+                        vision_done = True
                     if result.success and tool_call.name in {"write", "edit", "run_command"}:
                         repeated_discovery.clear()
                     if result.success and tool_call.name in {"project_tree", "glob"}:
