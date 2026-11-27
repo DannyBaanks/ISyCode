@@ -83,8 +83,28 @@ def test_composer_pageup_pagedown_scroll_the_chat_not_the_caret(tmp_path, monkey
 
 # ── Finding 9: F1 help wraps and keeps its border ────────────────────────────
 
-def _screen_lines(app):
-    return [strip.text for strip in app.screen._compositor.render_strips()]
+def _screen_cells(app):
+    """One string per screen row, one character per terminal cell.
+
+    Wide glyphs (CJK titles) occupy two cells; ``Strip.text`` would shorten the
+    row and shift every column after it, so pad them here.
+    """
+    from rich.cells import cell_len
+    rows = []
+    for strip in app.screen._compositor.render_strips():
+        row = strip.text
+        if len(row) != strip.cell_length:
+            out = []
+            for char in row:
+                out.append(char)
+                if cell_len(char) == 2:
+                    out.append(" ")
+            row = "".join(out)
+        rows.append(row)
+    return rows
+
+
+_screen_lines = _screen_cells
 
 
 @pytest.mark.parametrize("locale", ["en", "es", "zh"])
