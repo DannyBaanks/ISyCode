@@ -1,0 +1,37 @@
+Tool: built-in image_gen. Mode: derivative mockup using conversation.png as the visual reference.
+Date anchor: 10 oct 2026. Canvas: wide desktop, approximately 1680 × 944.
+
+Create one high-fidelity GitHub screen for ISyCode IDE. Preserve the approved
+dark charcoal/cyan style, cat logo and project/provider/model/PLAN-CODER top bar.
+Select GitHub in the left navigation. Header: GitHub / Tus repositorios y sus
+carpetas locales. Show account DannyBaanks with gh verificado and Comprobar remotos.
+All repository data is fictional and the footer says Mockup · datos de ejemplo.
+
+Searchable repository list, Todos / Con actualizaciones. Selected ISyCode:
+~/Development/ISyCode, main → origin/main, 5 commits detrás, 0 por delante,
+Carpeta limpia. IsyMotron: Al día, 2 archivos modificados. FlowVid: Divergido,
+3 detrás · 2 por delante. Separate local modifications from branch counters.
+
+Selected repo detail: local SHA a84c2ef, remote SHA f72b910, clear comparison
+with 5 commits detrás. Incoming list: Corregir streaming del chat, Mejorar
+selector de providers, Ajustar permisos de herramientas. Showing 3 of 5.
+Sin cambios locales pendientes. Main CTA Actualizar carpeta · Pull, secondary
+Ver diferencias and Abrir en GitHub. Supporting copy: Solo avance directo.
+Si hay divergencia o cambios locales, revisa antes de actualizar.
+Metadata: Última comprobación: ahora; Sincroniza la rama vinculada.
+
+Readable Spanish text, crisp native desktop hierarchy, ample spacing, thin
+separators and restrained surfaces. No automatic pull, reset, deletion, bulk
+push, device bezel or browser chrome. Never imply a modified folder is 1:1.
+
+Exact generation prompt:
+Use case: ui-mockup. Edit the provided reference screenshot into ONE new high-fidelity desktop screen for ISyCode IDE called "GitHub". The reference is the approved app visual target: preserve its dark charcoal background, cyan accent, cat logo, top provider/model/PLAN-CODER toolbar, careful proportions, realistic readable typography and native desktop feel. Replace the conversation and code content with this GitHub workflow. This is a design reference with invented example data, not a claim about actual repositories.
+Target dimensions: match reference wide desktop ratio, approximately 1680 x 944. Date anchor: 10 oct 2026.
+Focused use case: a developer forgets to pull merged PRs; help them see which linked local folder is behind GitHub and update safely. Left navigation retains Conversación, Editor, Herramientas, Cambios, Pruebas, Evidencia, Sistema, Ajustes, Proveedores; add and select GitHub using a clean GitHub icon.
+Main header "GitHub" and smaller subtitle "Tus repositorios y sus carpetas locales". Top right a GitHub account identity "DannyBaanks" and green "gh verificado" with subtle check icon, and supporting outlined button "Comprobar remotos". Use example account data.
+Main content split into a generous repository list on the left (55%) and selected repo detail on the right (45%). Search field "Buscar repositorio…" plus compact filter "Todos" / "Con actualizaciones". Three clear repository rows separated by thin dividers, not nested cards:
+Selected repo "ISyCode", path "~/Development/ISyCode", branch "main → origin/main", amber "5 commits detrás", neutral "0 por delante", green "Carpeta limpia".
+Second row "IsyMotron", branch main, green "Al día", amber "2 archivos modificados".
+Third row "FlowVid", amber "Divergido", "3 detrás · 2 por delante", path not important.
+Right detail: large "ISyCode" heading; branch pills "main" and "origin/main"; a beautifully clear two-endpoint commit comparison showing "Tu carpeta" local SHA "a84c2ef" and "GitHub" remote SHA "f72b910", with text "5 commits detrás" centered and a restrained cyan/amber connecting line. Below a compact list headed "Cambios que llegarán" with THREE mock commit rows "Corregir streaming del chat", "Mejorar selector de providers", "Ajustar permisos de herramientas" and abbreviated hashes. Small caption "Mostrando 3 de 5 commits". Avoid showing fabricated file contents. Include readable green text "Sin cambios locales pendientes". One strong cyan primary button "Actualizar carpeta · Pull", smaller outlined "Ver diferencias", and a subtle link "Abrir en GitHub". Supporting copy "Solo avance directo. Si hay divergencia o cambios locales, revisa antes de actualizar." Bottom metadata "Última comprobación: ahora" and a concise status indicator "Sincroniza la rama vinculada"; app bottom right "Mockup · datos de ejemplo".
+No auto-pull toggle, no force reset, no delete, no push-all, no fake 1:1 when local files differ. Crisp beautiful shipped-software appearance, thin separators, clear hierarchy, ample spacing, line icons, no device bezel/browser chrome, no clutter, no stretched reference. Render exact Spanish text as specified. Preserve the accepted reference style.

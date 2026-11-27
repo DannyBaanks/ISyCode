@@ -1,0 +1,15 @@
+{
+  "scope": "Update the previously installed ISyCode IDE launcher to the verified new package; one exact file",
+  "paths": [
+    {
+      "path": "/home/danny/.local/bin/isycode-ide",
+      "tracked": false,
+      "action": "replace owned launcher",
+      "before_sha256": "e2ffc58225f09e7c541ca4eb215f6ff266fecd7b891a4fd5c89a1d4b24416652",
+      "equivalent_previous_content": "/home/danny/Development/ISyCode-IDE/docs/verification/polish-installation-20261011/previous-launcher.sh"
+    }
+  ],
+  "file_count": 1,
+  "recursive_directories": 0,
+  "reason": "User-authorized ongoing IDE implementation and installation"
+}

@@ -1,0 +1,14 @@
+{
+  "command": [
+    "env",
+    "QT_QPA_PLATFORM=offscreen",
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_ide_subscriptions.py",
+    "tests/test_ide_connector_protocol.py"
+  ],
+  "exit_status": 0,
+  "sha256": "4dc4feabf82044f80644aeaae10b0bc6089eecbf965a127149dd05e2360e8b43"
+}

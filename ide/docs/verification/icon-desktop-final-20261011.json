@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-10-11T05:37:16.232713+00:00",
+  "command": [
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport gi\nfrom gi.repository import Gio\napp=Gio.DesktopAppInfo.new(\"isycode-ide.desktop\")\nassert app and app.get_display_name()==\"ISyCode IDE\"\nicon=app.get_icon()\nassert isinstance(icon,Gio.FileIcon)\nassert icon.get_file().get_path()==\"/home/danny/.local/share/icons/hicolor/256x256/apps/isycode-ide.png\"\ntry:\n    old=Gio.DesktopAppInfo.new(\"isycode.desktop\")\nexcept TypeError:\n    old=None\nassert old is None\nassert Path(\"/home/danny/.local/bin/isycode\").is_file()\nassert not Path(\"/home/danny/Applications/ISyCode.AppImage\").exists()\nprint(\"GNOME/GIO: neon cat icon resolved; old GUI absent; TUI preserved.\")\n"
+  ],
+  "exit": 0,
+  "sha256": "2f27795297743996bf547a91736884f5102c12b387ef68ec3cf14f63e3c2178b",
+  "files": [
+    {
+      "path": "/home/danny/.local/share/applications/isycode-ide.desktop",
+      "sha256": "f6a8acdad68b8315d38e402a05b65ce1e01eba2ec150025cc2a43887067d70f5"
+    },
+    {
+      "path": "/home/danny/.local/share/icons/hicolor/256x256/apps/isycode-ide.png",
+      "sha256": "cf12089cdeed5d2483faa8cb655751430b2738e1aff0fce0d5f390d5623922e2"
+    },
+    {
+      "path": "/home/danny/Descargas/Icono neón de gato terminal veloz.png",
+      "sha256": "c61a8cce737e16bb6ce852ce116422c189f2d20a4cec04d02415e3f893882398"
+    },
+    {
+      "path": "/home/danny/Development/ISyCode-IDE/ui/assets/isycode.png",
+      "sha256": "c61a8cce737e16bb6ce852ce116422c189f2d20a4cec04d02415e3f893882398"
+    },
+    {
+      "path": "/home/danny/Development/ISyCode-IDE/packaging/install_ide.py",
+      "sha256": "5a0225f98c993742432293c354b9ca9c60eafaa12dc372b2fe6ecf21ba7196e6"
+    }
+  ],
+  "cache_refresh_commands": [
+    "update-desktop-database /home/danny/.local/share/applications",
+    "gtk-update-icon-cache --force --ignore-theme-index /home/danny/.local/share/icons/hicolor",
+    "desktop-file-validate /home/danny/.local/share/applications/isycode-ide.desktop"
+  ],
+  "scope": "Desktop icon lookup and exactly the two installed old GUI files. No running IDE stopped, source tree/config/TUI preserved. Application already embeds the exact supplied original image."
+}

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T02:49:43.131095+00:00",
+  "command": "QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q",
+  "exit": 0,
+  "sha256": "d618c244ebeaad147a096bb17377c3dc95f2941ab62eeec955ed513c7077bb6f",
+  "scope": "203 tests in temporary projects, isolated keyring, local HTTP/CLI fixtures; no real account requests"
+}

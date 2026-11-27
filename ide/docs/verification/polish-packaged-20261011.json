@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-10-11T10:48:31.349624+00:00",
+  "release": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T104258Z-de7a69",
+  "appimage": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T104258Z-de7a69/ISyCode-IDE-x86_64.AppImage",
+  "appimage_sha256": "2dbb2da65636e98ae518b2f4c41d0cc1169cebaf1b7a6431cca02b47f199c910",
+  "checks": [
+    {
+      "command": [
+        "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T104258Z-de7a69/ISyCode-IDE-x86_64.AppImage",
+        "--self-check"
+      ],
+      "exit_code": 0,
+      "log": "docs/verification/polish-appimage-selfcheck-20261011.log",
+      "sha256": "530b99eb570458571cc31bf4f027ddec40ef25c2ee8ac76e92b4b10e886416a4"
+    },
+    {
+      "command": [
+        "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T104258Z-de7a69/ISyCode-IDE-x86_64.AppImage",
+        "tui",
+        "--help"
+      ],
+      "exit_code": 0,
+      "log": "docs/verification/polish-appimage-tui-help-20261011.log",
+      "sha256": "b1690330e85a96f29b3fd066bcbe72961d306c8e16890263c0ca5a974a255432"
+    }
+  ],
+  "frozen_assets_identical": true,
+  "account_requests": 0
+}

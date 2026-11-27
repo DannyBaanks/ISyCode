@@ -1,0 +1,99 @@
+{
+  "repository": "https://github.com/lobehub/lobe-icons",
+  "commit": "c385b2b8d1f9e19aa86e628d4e23c91ee1111a47",
+  "license": "MIT",
+  "marks": "Brand marks belong to their respective owners; inclusion does not imply affiliation or authentication.",
+  "assets": [
+    {
+      "file": "nvidia-color.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/nvidia-color.svg",
+      "sha256": "8c941e4eb8b782eccaaea1240c059d20be33ab8eda28d7c9ed9b53ac802fe683",
+      "bytes": 1025,
+      "modified": false
+    },
+    {
+      "file": "openai.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/openai.svg",
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186",
+      "bytes": 1687,
+      "modified": false
+    },
+    {
+      "file": "anthropic.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/anthropic.svg",
+      "sha256": "e833fdfa7e7187a86a05b870925067556a506dcd4239089aed73e1e58c9366a3",
+      "bytes": 368,
+      "modified": false
+    },
+    {
+      "file": "claude-color.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/claude-color.svg",
+      "sha256": "a3101f3047a119aa11825ad9369510f0c472428c8c52d420e31bc62db44a8364",
+      "bytes": 1696,
+      "modified": false
+    },
+    {
+      "file": "gemini-color.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/gemini-color.svg",
+      "sha256": "8ab0a9bafec11f7e69bcb9fc4ffd8f1bc927d1ddcbbb6ff36dee5ae8b5a9d602",
+      "bytes": 2836,
+      "modified": false
+    },
+    {
+      "file": "grok.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/grok.svg",
+      "sha256": "9175fc90c22655160231976c849f25a03b888d7cc0e04c5f1b987b659bb07c95",
+      "bytes": 756,
+      "modified": false
+    },
+    {
+      "file": "groq.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/groq.svg",
+      "sha256": "078d5cf6e7a54905040c15ddacf5ea33c13042fe7739e820cedc2096e4406651",
+      "bytes": 568,
+      "modified": false
+    },
+    {
+      "file": "ollama.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/ollama.svg",
+      "sha256": "3a268218fb2e6e81fa31df70f70b51331625047794db81db21d35359428fae7a",
+      "bytes": 3290,
+      "modified": false
+    },
+    {
+      "file": "lmstudio.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/lmstudio.svg",
+      "sha256": "4a575e8382b52ce742ac5d21d361a7d2a08cea7c12390ee1bbb755ef7d3cc25b",
+      "bytes": 1253,
+      "modified": false
+    },
+    {
+      "file": "mistral-color.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/mistral-color.svg",
+      "sha256": "722f74b289d95486b43662fe24fa883b333701296f618406cd0ed502299170b6",
+      "bytes": 655,
+      "modified": false
+    },
+    {
+      "file": "deepseek-color.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/deepseek-color.svg",
+      "sha256": "deba5f98a5c1796e20fcac3149bcd7eb8a32f0bdd04d048819400b1f28bd1439",
+      "bytes": 2164,
+      "modified": false
+    },
+    {
+      "file": "openrouter-color.svg",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/packages/static-svg/icons/openrouter-color.svg",
+      "sha256": "17bede1b89166f824ee06753dc526a3f5e18b769706deaab09d04a3a98de1a78",
+      "bytes": 357,
+      "modified": false
+    },
+    {
+      "file": "LICENSE",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/c385b2b8d1f9e19aa86e628d4e23c91ee1111a47/LICENSE",
+      "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a",
+      "bytes": 1064,
+      "modified": false
+    }
+  ]
+}

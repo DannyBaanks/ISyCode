@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/home/danny/Development/ISyCode-IDE/.venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_ide_authority.py",
+    "tests/test_ide_linux.py",
+    "tests/test_ide_github.py",
+    "tests/test_ide_qt_shell.py",
+    "tests/test_ide_provider_streams.py",
+    "tests/test_provider_endpoints.py"
+  ],
+  "exit": 0,
+  "sha256": "cef3ce1b8a592154674307651970b2fa05208bec5527bc817518ae325767ba9a",
+  "scope": "Local services; Qt offscreen; real Linux namespaces; local Git with fixture network. Real account, full suite and complete workflows NOT_DEMONSTRATED.",
+  "raw": "local-services-20261010T020733.log"
+}

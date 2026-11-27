@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-10-11T13:23:21.361156+00:00",
+  "installed_launcher": "/home/danny/.local/bin/isycode-ide",
+  "launcher_sha256": "976c7c0ac743c666916d84819b35dcab7f87a74a8be381644d3589722cd262e1",
+  "previous_launcher_preserved": "/home/danny/Development/ISyCode-IDE/docs/verification/project-view-20261011T132140Z/previous-launcher.sh",
+  "appimage": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T132140Z-1c217d/ISyCode-IDE-x86_64.AppImage",
+  "appimage_sha256": "5b94e8cfb2a69dfa427603e417ef8bfef3ff807e1e85fd410532c58b0884ba90",
+  "package_manifest_sha256": "5d9fe83c087cf9cad37558a373fc41a189623d5729b10881d05314e4047923c2",
+  "build_log_sha256": "e4bb0cfa315892d8db9f91089e801ebc589b127f7cd5fa7b0e816c5722a4284d",
+  "source_manifest_sha256": "1c9642ab7b5740e5573c57f82af0deed0535a764cd821c30c3ae018e51ca253e",
+  "bundled_guide_identical": true,
+  "account_requests": 0,
+  "automated_tests_run": false,
+  "live_nemotron_streaming_cancel_and_project_view_e2e": "NOT_DEMONSTRATED",
+  "visual_regression": "NOT_DEMONSTRATED"
+}

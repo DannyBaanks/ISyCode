@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isycode-ide"
+version = "0.4.0"
+description = "ISyCode IDE — native coding environment with PLAN/CODER and configurable providers"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = [
+    "httpx>=0.27",
+    "PyYAML>=6.0",
+    "anthropic>=0.40",
+    "keyring>=25.0",
+    "rich>=13.0",
+    "textual>=8.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-qt>=4.5"]
+ui = ["PySide6>=6.7", "pyinstaller>=6.0", "Markdown>=3.6", "Pygments>=2.18"]
+
+[project.scripts]
+isycode-ide = "isycode_ide:main"
+isyvm = "isyvm:main"
+isycode-app = "ui.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bridge*", "core*", "engine*", "isycode_ide*", "isyvm*", "sandbox*", "verifier*", "ui*"]
+
+[tool.setuptools.package-data]
+ui = [
+    "assets/*.png",
+    "assets/*.svg",
+    "assets/providers/*.svg",
+    "assets/providers/LICENSE",
+    "assets/providers/provenance.json",
+    "assets/tabler/*.svg",
+    "assets/tabler/LICENSE",
+    "assets/tabler/manifest.json",
+    "assets/theme/*.svg",
+    "assets/vscode-icons/*.svg",
+    "assets/vscode-icons/LICENSE",
+    "assets/vscode-icons/*.md",
+    "assets/vscode-icons/manifest.json",
+]

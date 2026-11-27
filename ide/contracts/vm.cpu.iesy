@@ -1,0 +1,57 @@
+Identity: vm.cpu
+Version: 0.1.0
+Status: Active
+Layer: Core
+Category: IsolationContract
+Title: CPU minima stack-based -- separacion Harvard real codigo/datos
+
+Purpose: >
+  core/cpu.py ejecuta programas como lista fija de instrucciones
+  (Instruction), nunca como texto interpretado. A diferencia de
+  Layer_a (best-effort sobre Python real), esta CPU tiene una garantia
+  estructural: el segmento de codigo y el segmento de datos son tipos
+  Python distintos y no existe operacion que convierta uno en otro.
+
+Laws:
+  - Nombre: harvard_separation
+    Regla: >
+      Los saltos (JMP/JZ) SIEMPRE apuntan a un indice literal del
+      programa, fijado en la instruccion misma. Ningun opcode deriva
+      un destino de salto o una instruccion a ejecutar a partir de un
+      valor del stack o la memoria.
+    Violation: Salto o ejecucion calculada desde datos
+
+  - Nombre: fixed_instruction_set
+    Regla: >
+      Solo se ejecutan opcodes en OPCODES (frozenset cerrado). Un
+      opcode desconocido se rechaza en validate_program(), antes de
+      ejecutar una sola instruccion -- nunca se ignora silenciosamente.
+    Violation: Opcode fuera del set cerrado ejecutado o ignorado
+    Precedent: eBPF verifier (Linux kernel) -- mismo "cobol_rigor_static_first"
+      ya citado en IsyVM/README.md.
+
+  - Nombre: bounded_execution
+    Regla: >
+      Todo run() tiene un limite duro de pasos (MAX_STEPS) y de tamano
+      de stack (MAX_STACK). Exceder cualquiera de los dos levanta
+      StepLimitExceeded/StackOverflow de inmediato.
+    Violation: Loop infinito o crecimiento de stack sin limite
+
+  - Nombre: no_host_capability
+    Regla: >
+      El set de opcodes no incluye I/O, imports, filesystem, red, ni
+      subprocess -- solo aritmetica, stack, memoria fija (256 slots) y
+      control de flujo.
+    Violation: Opcode que exponga una capacidad del host
+
+  - Nombre: deterministic_halt
+    Regla: >
+      La ejecucion termina en exactamente uno de dos estados: HALT
+      (CPUResult normal) o una CPUFault nombrada (UnknownOpcode,
+      JumpOutOfBounds, StackUnderflow, StackOverflow,
+      MemoryOutOfBounds, DivisionByZero, StepLimitExceeded,
+      InvalidOperand). Nunca una excepcion generica de Python sin
+      nombrar.
+    Violation: Excepcion no nombrada o estado indefinido
+
+See: vm.isolation.iesy, vm.sandbox_interp.iesy

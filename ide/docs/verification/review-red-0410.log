@@ -1,0 +1,572 @@
+FFFFFFFFFFF                                                              [100%]
+=================================== FAILURES ===================================
+________ test_pull_preserves_ignored_incoming_collision[before_preview] ________
+
+checkout = (PosixPath('/tmp/pytest-of-danny/pytest-67/test_pull_preserves_ignored_in0/checkout'), <core.github_service.GitSyncService object at 0x7ff788137410>, 'c96f851dfd14ea33eade4b8f4a886f17817c4307', 'f9d4d693fbd357263d3f9e534dc031ab27d218be')
+when = 'before_preview'
+
+    @pytest.mark.parametrize("when", ["before_preview", "after_preview"])
+    def test_pull_preserves_ignored_incoming_collision(checkout, when):
+        root, sync, base, _ = checkout
+        git(root, "switch", "incoming")
+        (root / "local.txt").write_text("incoming replacement")
+        git(root, "add", "local.txt")
+        git(root, "commit", "-m", "incoming tracked file")
+        target = git(root, "rev-parse", "HEAD")
+        git(root, "switch", "local")
+        (root / ".git/info/exclude").write_text("local.txt\n")
+        original = sync._git
+        async def remote(args, **kwargs):
+            if args[0] == "fetch":
+                git(root, "update-ref", "refs/remotes/upstream/feature", target)
+                from core.processes import ProcessOutput
+                return ProcessOutput(0, b"", b"")
+            if args[0] == "ls-remote":
+                from core.processes import ProcessOutput
+                return ProcessOutput(0, (target + "\trefs/heads/feature\n").encode(), b"")
+            return await original(args, **kwargs)
+        sync._git = remote
+        async def run():
+            if when == "before_preview":
+                (root / "local.txt").write_text("keep ignored user data")
+                with pytest.raises(GitHubError, match="local|ignorado"):
+                    await sync.preview_pull("Fixture/project")
+            else:
+                preview = await sync.preview_pull("Fixture/project")
+                (root / "local.txt").write_text("keep ignored user data")
+                with pytest.raises(GitHubError, match="local|ignorado"):
+                    await sync.apply_pull(preview.id, operator_approved=True)
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        if when == "before_preview":
+            (root / "local.txt").write_text("keep ignored user data")
+>           with pytest.raises(GitHubError, match="local|ignorado"):
+E           Failed: DID NOT RAISE GitHubError
+
+tests/test_ide_review_regressions.py:44: Failed
+________ test_pull_preserves_ignored_incoming_collision[after_preview] _________
+
+checkout = (PosixPath('/tmp/pytest-of-danny/pytest-67/test_pull_preserves_ignored_in1/checkout'), <core.github_service.GitSyncService object at 0x7ff7881c1010>, 'c96f851dfd14ea33eade4b8f4a886f17817c4307', 'f9d4d693fbd357263d3f9e534dc031ab27d218be')
+when = 'after_preview'
+
+    @pytest.mark.parametrize("when", ["before_preview", "after_preview"])
+    def test_pull_preserves_ignored_incoming_collision(checkout, when):
+        root, sync, base, _ = checkout
+        git(root, "switch", "incoming")
+        (root / "local.txt").write_text("incoming replacement")
+        git(root, "add", "local.txt")
+        git(root, "commit", "-m", "incoming tracked file")
+        target = git(root, "rev-parse", "HEAD")
+        git(root, "switch", "local")
+        (root / ".git/info/exclude").write_text("local.txt\n")
+        original = sync._git
+        async def remote(args, **kwargs):
+            if args[0] == "fetch":
+                git(root, "update-ref", "refs/remotes/upstream/feature", target)
+                from core.processes import ProcessOutput
+                return ProcessOutput(0, b"", b"")
+            if args[0] == "ls-remote":
+                from core.processes import ProcessOutput
+                return ProcessOutput(0, (target + "\trefs/heads/feature\n").encode(), b"")
+            return await original(args, **kwargs)
+        sync._git = remote
+        async def run():
+            if when == "before_preview":
+                (root / "local.txt").write_text("keep ignored user data")
+                with pytest.raises(GitHubError, match="local|ignorado"):
+                    await sync.preview_pull("Fixture/project")
+            else:
+                preview = await sync.preview_pull("Fixture/project")
+                (root / "local.txt").write_text("keep ignored user data")
+                with pytest.raises(GitHubError, match="local|ignorado"):
+                    await sync.apply_pull(preview.id, operator_approved=True)
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        if when == "before_preview":
+            (root / "local.txt").write_text("keep ignored user data")
+            with pytest.raises(GitHubError, match="local|ignorado"):
+                await sync.preview_pull("Fixture/project")
+        else:
+            preview = await sync.preview_pull("Fixture/project")
+            (root / "local.txt").write_text("keep ignored user data")
+>           with pytest.raises(GitHubError, match="local|ignorado"):
+E           Failed: DID NOT RAISE GitHubError
+
+tests/test_ide_review_regressions.py:49: Failed
+_____________ test_actual_anthropic_sdk_request_contract[complete] _____________
+
+sdk_servers = ('http://127.0.0.1:42007', {'redirect': False}, [])
+method = 'complete'
+
+    @pytest.mark.parametrize("method", ["complete", "stream_completion", "stream"])
+    def test_actual_anthropic_sdk_request_contract(sdk_servers, method):
+        endpoint, _, seen = sdk_servers
+        async def run():
+            provider = AnthropicProvider(ProviderConfig("fixture", "anthropic", "fixture", endpoint), Credentials())
+            try:
+                messages = [{"role": "user", "content": "hello"}]
+                if method == "complete":
+                    assert (await provider.complete(messages)).content == "SDK reply"
+                elif method == "stream_completion":
+                    events = [e async for e in provider.stream_completion(messages)]
+                    assert events[-1].response.content == "SDK reply"
+                else:
+                    assert "".join([e async for e in provider.stream(messages)]) == "SDK reply"
+            finally:
+                await provider.close()
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_ide_review_regressions.py:129: in run
+    assert (await provider.complete(messages)).content == "SDK reply"
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+core/agent/providers/anthropic.py:63: in complete
+    resp = await client.messages.create(**kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (<anthropic.resources.messages.messages.AsyncMessages object at 0x7ff7880a0320>,)
+kwargs = {'model': 'fixture', 'messages': [{'role': 'user', 'content': 'hello'}], 'system': '', 'temperature': 0.7, ...}
+
+    @functools.wraps(func)
+    def wrapper(*args: object, **kwargs: object) -> object:
+        given_params: set[str] = set()
+        for i, _ in enumerate(args):
+            try:
+                given_params.add(positional[i])
+            except IndexError:
+                raise TypeError(
+                    f"{func.__name__}() takes {len(positional)} argument(s) but {len(args)} were given"
+                ) from None
+    
+        for key in kwargs.keys():
+            given_params.add(key)
+    
+        for variant in variants:
+            matches = all((param in given_params for param in variant))
+            if matches:
+                break
+        else:  # no break
+            if len(variants) > 1:
+                variations = human_join(
+                    ["(" + human_join([quote(arg) for arg in variant], final="and") + ")" for variant in variants]
+                )
+                msg = f"Missing required arguments; Expected either {variations} arguments to be given"
+            else:
+                assert len(variants) > 0
+    
+                # TODO: this error message is not deterministic
+                missing = list(set(variants[0]) - given_params)
+                if len(missing) > 1:
+                    msg = f"Missing required arguments: {human_join([quote(arg) for arg in missing])}"
+                else:
+                    msg = f"Missing required argument: {quote(missing[0])}"
+            raise TypeError(msg)
+>       return func(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncMessages.create() got an unexpected keyword argument 'temperature'
+
+.venv/lib/python3.12/site-packages/anthropic/_utils/_utils.py:294: TypeError
+________ test_actual_anthropic_sdk_request_contract[stream_completion] _________
+
+sdk_servers = ('http://127.0.0.1:44329', {'redirect': False}, [])
+method = 'stream_completion'
+
+    @pytest.mark.parametrize("method", ["complete", "stream_completion", "stream"])
+    def test_actual_anthropic_sdk_request_contract(sdk_servers, method):
+        endpoint, _, seen = sdk_servers
+        async def run():
+            provider = AnthropicProvider(ProviderConfig("fixture", "anthropic", "fixture", endpoint), Credentials())
+            try:
+                messages = [{"role": "user", "content": "hello"}]
+                if method == "complete":
+                    assert (await provider.complete(messages)).content == "SDK reply"
+                elif method == "stream_completion":
+                    events = [e async for e in provider.stream_completion(messages)]
+                    assert events[-1].response.content == "SDK reply"
+                else:
+                    assert "".join([e async for e in provider.stream(messages)]) == "SDK reply"
+            finally:
+                await provider.close()
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_ide_review_regressions.py:131: in run
+    events = [e async for e in provider.stream_completion(messages)]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.agent.providers.anthropic.AnthropicProvider object at 0x7ff787eb54c0>
+messages = [{'role': 'user', 'content': 'hello'}], tools = None
+
+    async def stream_completion(self, messages: list[dict], tools: list = None):
+        client = self._get_client()
+        kwargs = {"model": self.config.model,
+                  "messages": [message for message in messages if message["role"] != "system"],
+                  "system": next((message["content"] for message in messages if message["role"] == "system"), ""),
+                  "temperature": self.config.temperature, "max_tokens": self.config.max_tokens}
+        if tools:
+            kwargs["tools"] = self._convert_tools(tools)
+>       async with client.messages.stream(**kwargs) as stream:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncMessages.stream() got an unexpected keyword argument 'temperature'
+
+core/agent/providers/anthropic.py:18: TypeError
+______________ test_actual_anthropic_sdk_request_contract[stream] ______________
+
+sdk_servers = ('http://127.0.0.1:42269', {'redirect': False}, [])
+method = 'stream'
+
+    @pytest.mark.parametrize("method", ["complete", "stream_completion", "stream"])
+    def test_actual_anthropic_sdk_request_contract(sdk_servers, method):
+        endpoint, _, seen = sdk_servers
+        async def run():
+            provider = AnthropicProvider(ProviderConfig("fixture", "anthropic", "fixture", endpoint), Credentials())
+            try:
+                messages = [{"role": "user", "content": "hello"}]
+                if method == "complete":
+                    assert (await provider.complete(messages)).content == "SDK reply"
+                elif method == "stream_completion":
+                    events = [e async for e in provider.stream_completion(messages)]
+                    assert events[-1].response.content == "SDK reply"
+                else:
+                    assert "".join([e async for e in provider.stream(messages)]) == "SDK reply"
+            finally:
+                await provider.close()
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_ide_review_regressions.py:134: in run
+    assert "".join([e async for e in provider.stream(messages)]) == "SDK reply"
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.agent.providers.anthropic.AnthropicProvider object at 0x7ff787eb6ea0>
+messages = [{'role': 'user', 'content': 'hello'}], tools = None
+
+    async def stream(self, messages: list[dict], tools: list = None) -> AsyncIterator[str]:
+        client = self._get_client()
+        system = next((m["content"] for m in messages if m["role"] == "system"), "")
+        msgs = [m for m in messages if m["role"] != "system"]
+    
+        kwargs = {
+            "model": self.config.model,
+            "messages": msgs,
+            "system": system,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "stream": True,
+        }
+        if tools:
+            kwargs["tools"] = self._convert_tools(tools)
+    
+>       stream = await client.messages.stream(**kwargs)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncMessages.stream() got an unexpected keyword argument 'temperature'
+
+core/agent/providers/anthropic.py:139: TypeError
+_______ test_anthropic_sdk_never_forwards_key_to_redirect_origin[False] ________
+
+sdk_servers = ('http://127.0.0.1:42793', {'redirect': True}, [('source', {'max_tokens': 8, 'messages': [{'role': 'user', 'content': ...kens': 8, 'messages': [{'role': 'user', 'content': 'hello'}], 'model': 'fixture'}), ('sink', 'synthetic-fixture-key')])
+stream = False
+
+    @pytest.mark.parametrize("stream", [False, True])
+    def test_anthropic_sdk_never_forwards_key_to_redirect_origin(sdk_servers, stream):
+        endpoint, mode, seen = sdk_servers
+        mode["redirect"] = True
+        async def run():
+            provider = AnthropicProvider(ProviderConfig("fixture", "anthropic", "fixture", endpoint), Credentials())
+            try:
+                # Actual SDK call without optional parameters isolates transport safety.
+                with pytest.raises(anthropic.APIStatusError):
+                    if stream:
+                        async with provider._get_client().messages.stream(model="fixture", max_tokens=8, messages=[{"role": "user", "content": "hello"}]):
+                            pass
+                    else:
+                        await provider._get_client().messages.create(model="fixture", max_tokens=8, messages=[{"role": "user", "content": "hello"}])
+            finally:
+                await provider.close()
+        asyncio.run(run())
+>       assert not any(item[0] == "sink" for item in seen)
+E       assert not True
+E        +  where True = any(<generator object test_anthropic_sdk_never_forwards_key_to_redirect_origin.<locals>.<genexpr> at 0x7ff786b84110>)
+
+tests/test_ide_review_regressions.py:158: AssertionError
+________ test_anthropic_sdk_never_forwards_key_to_redirect_origin[True] ________
+
+sdk_servers = ('http://127.0.0.1:33433', {'redirect': True}, [('source', {'max_tokens': 8, 'messages': [{'role': 'user', 'content': ...ges': [{'role': 'user', 'content': 'hello'}], 'model': 'fixture', 'stream': True}), ('sink', 'synthetic-fixture-key')])
+stream = True
+
+    @pytest.mark.parametrize("stream", [False, True])
+    def test_anthropic_sdk_never_forwards_key_to_redirect_origin(sdk_servers, stream):
+        endpoint, mode, seen = sdk_servers
+        mode["redirect"] = True
+        async def run():
+            provider = AnthropicProvider(ProviderConfig("fixture", "anthropic", "fixture", endpoint), Credentials())
+            try:
+                # Actual SDK call without optional parameters isolates transport safety.
+                with pytest.raises(anthropic.APIStatusError):
+                    if stream:
+                        async with provider._get_client().messages.stream(model="fixture", max_tokens=8, messages=[{"role": "user", "content": "hello"}]):
+                            pass
+                    else:
+                        await provider._get_client().messages.create(model="fixture", max_tokens=8, messages=[{"role": "user", "content": "hello"}])
+            finally:
+                await provider.close()
+        asyncio.run(run())
+>       assert not any(item[0] == "sink" for item in seen)
+E       assert not True
+E        +  where True = any(<generator object test_anthropic_sdk_never_forwards_key_to_redirect_origin.<locals>.<genexpr> at 0x7ff787ecbe00>)
+
+tests/test_ide_review_regressions.py:158: AssertionError
+___________ test_qt_resume_restores_or_requires_saved_provider[True] ___________
+
+qtbot = <pytestqt.qtbot.QtBot object at 0x7ff787f0d1c0>
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-67/test_qt_resume_restores_or_req0')
+available = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff787f0c0b0>
+
+    @pytest.mark.parametrize("available", [True, False])
+    def test_qt_resume_restores_or_requires_saved_provider(qtbot, tmp_path, available, monkeypatch):
+        controller = AppController(tmp_path)
+        controller.provider_registry.add("first-api", "openai", "first-model", api_key="synthetic")
+        if available:
+            controller.provider_registry.add("saved-local", "ollama", "default-model")
+        session = controller.conversations.create(provider="saved-local", model="custom-saved-model")
+        widget = MainWindow(controller)
+        qtbot.addWidget(widget)
+        assert widget._session_id == session
+        if available:
+>           assert widget.provider_combo.currentData() == "saved-local"
+E           AssertionError: assert 'first-api' == 'saved-local'
+E             
+E             - saved-local
+E             + first-api
+
+tests/test_ide_review_regressions.py:172: AssertionError
+__________ test_qt_resume_restores_or_requires_saved_provider[False] ___________
+
+qtbot = <pytestqt.qtbot.QtBot object at 0x7ff786a9aa20>
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-67/test_qt_resume_restores_or_req1')
+available = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff786a70380>
+
+    @pytest.mark.parametrize("available", [True, False])
+    def test_qt_resume_restores_or_requires_saved_provider(qtbot, tmp_path, available, monkeypatch):
+        controller = AppController(tmp_path)
+        controller.provider_registry.add("first-api", "openai", "first-model", api_key="synthetic")
+        if available:
+            controller.provider_registry.add("saved-local", "ollama", "default-model")
+        session = controller.conversations.create(provider="saved-local", model="custom-saved-model")
+        widget = MainWindow(controller)
+        qtbot.addWidget(widget)
+        assert widget._session_id == session
+        if available:
+            assert widget.provider_combo.currentData() == "saved-local"
+            assert widget.model_combo.currentText() == "custom-saved-model"
+        else:
+            monkeypatch.setattr("ui.main_window.AgentWorker", lambda *a, **k: pytest.fail("missing provider must not start inference"))
+>           widget._start_agent("preserve draft")
+
+tests/test_ide_review_regressions.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ui/main_window.py:733: in _start_agent
+    self._worker = AgentWorker(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = (<ui.app.AppController object at 0x7ff786a9bc50>, 'preserve draft', 'first-api', 'first-model')
+k = {'max_turns': 20, 'session_id': 'e9ccbec4a906413b9e5069cd28f42f5c'}
+
+>   monkeypatch.setattr("ui.main_window.AgentWorker", lambda *a, **k: pytest.fail("missing provider must not start inference"))
+                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: missing provider must not start inference
+
+tests/test_ide_review_regressions.py:175: Failed
+__________ test_tui_resume_restores_or_requires_saved_provider[True] ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-67/test_tui_resume_restores_or_re0')
+available = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff786aad670>
+
+    @pytest.mark.parametrize("available", [True, False])
+    def test_tui_resume_restores_or_requires_saved_provider(tmp_path, available, monkeypatch):
+        from core.conversations import ConversationStore
+        app = IsycoAgentApp(working_dir=str(tmp_path))
+        app.provider_registry.add("first-api", "openai", "first-model", api_key="synthetic")
+        if available:
+            app.provider_registry.add("saved-local", "ollama", "default-model")
+        session = ConversationStore(tmp_path).create(provider="saved-local", model="custom-saved-model")
+        async def run():
+            async with app.run_test():
+                app.resume_conversation(session)
+                if available:
+                    assert app.context.provider_name == "saved-local"
+                    assert app.context.model == "custom-saved-model"
+                    assert app.status_bar.provider == "saved-local"
+                else:
+                    async def forbidden(*args, **kwargs):
+                        pytest.fail("missing provider must not start inference")
+                    monkeypatch.setattr(app.conversation_service, "run_agent", forbidden)
+                    await app.run_agent("hello")
+                    assert app.context.provider_name == ""
+                    await app.switch_provider("first-api")
+                    assert not app._provider_replacement_required
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:207: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        async with app.run_test():
+            app.resume_conversation(session)
+            if available:
+>               assert app.context.provider_name == "saved-local"
+E               AssertionError: assert 'openai' == 'saved-local'
+E                 
+E                 - saved-local
+E                 + openai
+
+tests/test_ide_review_regressions.py:196: AssertionError
+__________ test_tui_resume_restores_or_requires_saved_provider[False] __________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-67/test_tui_resume_restores_or_re1')
+available = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff786be6720>
+
+    @pytest.mark.parametrize("available", [True, False])
+    def test_tui_resume_restores_or_requires_saved_provider(tmp_path, available, monkeypatch):
+        from core.conversations import ConversationStore
+        app = IsycoAgentApp(working_dir=str(tmp_path))
+        app.provider_registry.add("first-api", "openai", "first-model", api_key="synthetic")
+        if available:
+            app.provider_registry.add("saved-local", "ollama", "default-model")
+        session = ConversationStore(tmp_path).create(provider="saved-local", model="custom-saved-model")
+        async def run():
+            async with app.run_test():
+                app.resume_conversation(session)
+                if available:
+                    assert app.context.provider_name == "saved-local"
+                    assert app.context.model == "custom-saved-model"
+                    assert app.status_bar.provider == "saved-local"
+                else:
+                    async def forbidden(*args, **kwargs):
+                        pytest.fail("missing provider must not start inference")
+                    monkeypatch.setattr(app.conversation_service, "run_agent", forbidden)
+                    await app.run_agent("hello")
+                    assert app.context.provider_name == ""
+                    await app.switch_provider("first-api")
+                    assert not app._provider_replacement_required
+>       asyncio.run(run())
+
+tests/test_ide_review_regressions.py:207: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        async with app.run_test():
+            app.resume_conversation(session)
+            if available:
+                assert app.context.provider_name == "saved-local"
+                assert app.context.model == "custom-saved-model"
+                assert app.status_bar.provider == "saved-local"
+            else:
+                async def forbidden(*args, **kwargs):
+                    pytest.fail("missing provider must not start inference")
+                monkeypatch.setattr(app.conversation_service, "run_agent", forbidden)
+                await app.run_agent("hello")
+>               assert app.context.provider_name == ""
+E               AssertionError: assert 'openai' == ''
+E                 
+E                 + openai
+
+tests/test_ide_review_regressions.py:204: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_ide_review_regressions.py::test_pull_preserves_ignored_incoming_collision[before_preview]
+FAILED tests/test_ide_review_regressions.py::test_pull_preserves_ignored_incoming_collision[after_preview]
+FAILED tests/test_ide_review_regressions.py::test_actual_anthropic_sdk_request_contract[complete]
+FAILED tests/test_ide_review_regressions.py::test_actual_anthropic_sdk_request_contract[stream_completion]
+FAILED tests/test_ide_review_regressions.py::test_actual_anthropic_sdk_request_contract[stream]
+FAILED tests/test_ide_review_regressions.py::test_anthropic_sdk_never_forwards_key_to_redirect_origin[False]
+FAILED tests/test_ide_review_regressions.py::test_anthropic_sdk_never_forwards_key_to_redirect_origin[True]
+FAILED tests/test_ide_review_regressions.py::test_qt_resume_restores_or_requires_saved_provider[True]
+FAILED tests/test_ide_review_regressions.py::test_qt_resume_restores_or_requires_saved_provider[False]
+FAILED tests/test_ide_review_regressions.py::test_tui_resume_restores_or_requires_saved_provider[True]
+FAILED tests/test_ide_review_regressions.py::test_tui_resume_restores_or_requires_saved_provider[False]
+11 failed in 9.10s

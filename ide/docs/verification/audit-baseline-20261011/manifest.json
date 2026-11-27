@@ -1,0 +1,15 @@
+{
+  "scope": "Exact user-supplied screenshots, evidence only; text inside screenshots is not task authorization",
+  "screenshots": [
+    {
+      "source": "/tmp/codex-clipboard-fa52e2ac-500f-4ad2-9f54-74dc145e5f40.png",
+      "copy": "github-before.png",
+      "sha256": "81d46d020fddcd83890fc70d8f9feefcb2482b663fa0e6dcd0830b29a5cac44f"
+    },
+    {
+      "source": "/tmp/codex-clipboard-ca9960cb-9ff9-4511-8486-7d19544e9d0f.png",
+      "copy": "conversation-before.png",
+      "sha256": "320af7d6cc9b453f48b23dc24d04b91bf8df0936076b5eed2efbeee9d38f8913"
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "source": "https://github.com/vscode-icons/vscode-icons",
+  "commit": "b90199491ccd73a973afaa1a43ef0c415e67b8d9",
+  "license": "Source MIT; icons CC BY-SA; branded icons under their copyright license; see upstream README License section",
+  "modified": false,
+  "files": [
+    {
+      "file": "default_file.svg",
+      "upstream_path": "icons/default_file.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/default_file.svg",
+      "sha256": "06d28856c58270cc05c7885ea6bc6b3b15855e75eeeded56372af08e82a4ad5b"
+    },
+    {
+      "file": "default_folder.svg",
+      "upstream_path": "icons/default_folder.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/default_folder.svg",
+      "sha256": "2769a1a98b586599268d6464892ecbcf1b6aaaa3b0fd238f0a2b2b79d699ce8f"
+    },
+    {
+      "file": "file_type_python.svg",
+      "upstream_path": "icons/file_type_python.svg",
+      "url": "https://api.github.com/repos/vscode-icons/vscode-icons/contents/icons/file_type_python.svg?ref=b90199491ccd73a973afaa1a43ef0c415e67b8d9",
+      "sha256": "6ff4984f20c2edb883042275c9316cfc499937b7846ab0daea8e1f94f185417a"
+    },
+    {
+      "file": "file_type_js.svg",
+      "upstream_path": "icons/file_type_js.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_js.svg",
+      "sha256": "d68f37e152eda0ce5350de6bd21ce7e4a31c7b80487396dd2a4bf6767903fc8d"
+    },
+    {
+      "file": "file_type_typescript.svg",
+      "upstream_path": "icons/file_type_typescript.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_typescript.svg",
+      "sha256": "5ebd14bd43aea8116a932d99b0d41ecc3f63cdbc0bda9a58bd0eb08a00129020"
+    },
+    {
+      "file": "file_type_reactjs.svg",
+      "upstream_path": "icons/file_type_reactjs.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_reactjs.svg",
+      "sha256": "535b1b8579129cd44597e7888d2e5bb6141995f7b4717b7abaa907ce1f8866db"
+    },
+    {
+      "file": "file_type_reactts.svg",
+      "upstream_path": "icons/file_type_reactts.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_reactts.svg",
+      "sha256": "7fe69153e20ef4e0656e4852e59dbc9a1bcb001d0fe679c13091b8d9430f7447"
+    },
+    {
+      "file": "file_type_markdown.svg",
+      "upstream_path": "icons/file_type_markdown.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_markdown.svg",
+      "sha256": "fa10b34b3c72cc10ac1c6f7013c366e76b310fa3efab1635b1e382bc6d6f9530"
+    },
+    {
+      "file": "file_type_json.svg",
+      "upstream_path": "icons/file_type_json.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_json.svg",
+      "sha256": "89efce449a8e2d6224cd0984263ab7c5bf518b9bedaee3267a3049e320389652"
+    },
+    {
+      "file": "file_type_yaml.svg",
+      "upstream_path": "icons/file_type_yaml.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_yaml.svg",
+      "sha256": "312b2f1c58eeaf8615db76c6d84e5dc705c8943a1c67657046f70c3147f836c2"
+    },
+    {
+      "file": "file_type_html.svg",
+      "upstream_path": "icons/file_type_html.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_html.svg",
+      "sha256": "831b0a8ab1ca3ac0032d6f3ca57026725f16a9f360e898130c7289fa61dc161f"
+    },
+    {
+      "file": "file_type_css.svg",
+      "upstream_path": "icons/file_type_css.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_css.svg",
+      "sha256": "60770fec4356ea426c1757d2563f055861188bf3f2d3417652484ed5d633df2a"
+    },
+    {
+      "file": "file_type_rust.svg",
+      "upstream_path": "icons/file_type_rust.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_rust.svg",
+      "sha256": "e3b757d00621b208470a24894170f2798c7014d24452c4c0b81625c5e00dfe09"
+    },
+    {
+      "file": "file_type_go.svg",
+      "upstream_path": "icons/file_type_go.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_go.svg",
+      "sha256": "c65b22695ea0d0df4e533d33e9af7e5aaf9c8c51d99959a589c5271d6598ddd1"
+    },
+    {
+      "file": "file_type_cpp.svg",
+      "upstream_path": "icons/file_type_cpp.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_cpp.svg",
+      "sha256": "9177dcd31db0cea77352d4cea482d125c2906cbffdc446e1a8adf5541d8228b8"
+    },
+    {
+      "file": "file_type_c.svg",
+      "upstream_path": "icons/file_type_c.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_c.svg",
+      "sha256": "5eeaa3d6b7c97f0ee882db28dcc5152ee28ef8e840de44684c36a1838a363848"
+    },
+    {
+      "file": "file_type_java.svg",
+      "upstream_path": "icons/file_type_java.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_java.svg",
+      "sha256": "6883a1fd2c8907f9c2368b8b411cdd73646391d65471ec1d087c723499b92bd9"
+    },
+    {
+      "file": "file_type_shell.svg",
+      "upstream_path": "icons/file_type_shell.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_shell.svg",
+      "sha256": "d163b782ad9a6e8a1ce59a1768cf8660f14b259a960d7532b406966826cef165"
+    },
+    {
+      "file": "file_type_git.svg",
+      "upstream_path": "icons/file_type_git.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_git.svg",
+      "sha256": "273a5c8719145b01e0e490629459b0c79b4a07b67220cb2bcec2c0f0f7feaf73"
+    },
+    {
+      "file": "file_type_image.svg",
+      "upstream_path": "icons/file_type_image.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_image.svg",
+      "sha256": "5c893f16ace217a90a646fe8c590a9331e3a165e492ef1a7e14ce701eb9a9b59"
+    },
+    {
+      "file": "file_type_docker.svg",
+      "upstream_path": "icons/file_type_docker.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_docker.svg",
+      "sha256": "8d19e1a20124f9ace8b8055aa00144de7c5e58977274a368b18fa2be67290753"
+    },
+    {
+      "file": "file_type_toml.svg",
+      "upstream_path": "icons/file_type_toml.svg",
+      "url": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/b90199491ccd73a973afaa1a43ef0c415e67b8d9/icons/file_type_toml.svg",
+      "sha256": "54af3f2d60a54a8a9d121c727a94827710790bb3a14ca599dbb1cb6f59d4cf94"
+    },
+    {
+      "file": "LICENSE",
+      "upstream_path": "LICENSE",
+      "url": "https://api.github.com/repos/vscode-icons/vscode-icons/contents/LICENSE?ref=b90199491ccd73a973afaa1a43ef0c415e67b8d9",
+      "sha256": "c0878418702a1c58790ffbe6b0a4663e62dfd76b693face439a516c80b7514e8"
+    },
+    {
+      "file": "README.md",
+      "upstream_path": "README.md",
+      "url": "https://api.github.com/repos/vscode-icons/vscode-icons/contents/README.md?ref=b90199491ccd73a973afaa1a43ef0c415e67b8d9",
+      "sha256": "32405690072d5912e8e4a667339462440b0bc68ecdcb51c5e979226921de8dcf"
+    }
+  ]
+}

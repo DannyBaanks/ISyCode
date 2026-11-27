@@ -1,0 +1,45 @@
+Identity: vm.sandbox_interp
+Version: 0.1.0
+Status: Active
+Layer: Membrane
+Category: IsolationContract
+Title: Filtro best-effort de la capa (a) -- NO es boundary de seguridad
+
+Purpose: >
+  Layer_a_Interpreter (sandbox/interp.py) es un filtro estatico + un
+  exec() con builtins restringidos. Atrapa intentos obvios y el vector
+  de escape real conocido (introspeccion via dunders, el mismo que
+  rompio rexec/Bastion en Python real, deprecados en 3.0). NO es, y
+  nunca se declara, un boundary de seguridad -- eso lo sostiene
+  Layer_c_OS (ver vm.isolation.iesy v0.2.0, Trust_Boundary_target).
+
+Laws:
+  - Nombre: static_verify_before_exec
+    Regla: >
+      run_program() SIEMPRE llama verify_program() primero. No existe
+      camino que ejecute codigo sin pasar por el analisis estatico.
+      (cobol_rigor_static_first, mismo principio que el bridge.)
+    Violation: Bypass del verificador
+
+  - Nombre: explicit_deny_lists
+    Regla: >
+      BANNED_IMPORT_MODULES, BANNED_CALL_NAMES, BANNED_ATTR_NAMES son
+      listas explicitas en el codigo, no heuristicas ni ML. Cualquier
+      adicion se hace a mano, con razon documentada.
+    Violation: Deny-list implicita
+
+  - Nombre: restricted_builtins_only
+    Regla: >
+      El namespace de ejecucion nunca recibe los __builtins__ reales
+      del host. Solo SAFE_BUILTINS, lista explicita y minima.
+    Violation: Fuga via builtins completos
+
+  - Nombre: no_boundary_claim
+    Regla: >
+      Ningun docstring, test, o reporte de esta capa puede decir que
+      "aisla" o "protege" -- solo que "filtra" o "detecta lo conocido".
+    Violation: Promesa mentirosa
+    Precedent: rexec/Bastion (Python 3.0), RestrictedPython (roto
+      recurrentemente).
+
+See: vm.isolation.iesy

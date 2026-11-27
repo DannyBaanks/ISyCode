@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-10-11T02:39:52.208486+00:00",
+  "raw_output": "appimage-final-check.log",
+  "exit_status": 0,
+  "sha256": "49785a05eddba13c1fffc80bd5bc025181f301f50b936f903520f18e9f9f6a01",
+  "command": "APPIMAGE_EXTRACT_AND_RUN=1 QT_QPA_PLATFORM=offscreen dist/ide-20261011T023558Z-85c153/ISyCode-IDE-x86_64.AppImage --self-check",
+  "scope": "private fixtures; no real account generation or GitHub user repositories"
+}
