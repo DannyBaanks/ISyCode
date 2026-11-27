@@ -6999,3 +6999,15 @@ msgstr "Tool blocked · {name} · {reason} · nothing was executed"
 
 msgid "unknown tool · not registered by ISyCode"
 msgstr "unknown tool · not registered by ISyCode"
+
+msgid "Connections · not checked"
+msgstr "Connections · not checked"
+
+msgid "Connections · {ready}/{total} ready"
+msgstr "Connections · {ready}/{total} ready"
+
+msgid "Connections · {failed} failed · {ready}/{total} ready"
+msgstr "Connections · {failed} failed · {ready}/{total} ready"
+
+msgid "Manage integrations…"
+msgstr "Manage integrations…"

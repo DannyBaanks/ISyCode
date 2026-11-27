@@ -454,16 +454,19 @@ class SidePanel(Vertical):
                     yield Static(tr("ISyCode skill catalog has not been checked."), id="skill-status", classes="rail-copy")
                     yield ActivateTree(tr("ISyCode skills"), id="skills-tree")
                     yield Static(tr(""), id="skill-detail", classes="rail-copy")
-                with Collapsible(title=tr("Connections · 4"), id="rail-connections", collapsed=True):
-                    with Collapsible(title=tr("ISyCo Gateway"), id="rail-gateway"):
-                        yield Static(tr("Gateway status has not been checked."), id="gateway-status", classes="rail-copy")
-                    with Collapsible(title=tr("Gateway MCP"), id="rail-gateway-mcp"):
-                        yield Static(tr("Tool catalog has not been checked."), id="gateway-mcp-status", classes="rail-copy")
-                    with Collapsible(title=tr("Mobile Host"), id="rail-mobile"):
-                        yield Static(tr("Not started"), id="mobile-host-status", classes="rail-copy")
-                        yield Static(tr("No mobile clients connected."), id="mobile-client-status", classes="rail-copy")
-                    with Collapsible(title=tr("Bridge Coordination"), id="rail-bridge"):
-                        yield Static(tr("Disabled · No Bridge Handshake"), id="bridge-status", classes="rail-copy")
+                # One section, flat rows: the title carries the summary, the body the detail.
+                # The visual standard keeps Overview sections flat (no nested frames).
+                with Collapsible(title=tr("Connections · not checked"), id="rail-connections", collapsed=True):
+                    yield Static(tr("ISyCo Gateway"), id="rail-gateway", classes="rail-subhead")
+                    yield Static(tr("Gateway status has not been checked."), id="gateway-status", classes="rail-copy")
+                    yield Static(tr("Gateway MCP"), id="rail-gateway-mcp", classes="rail-subhead")
+                    yield Static(tr("Tool catalog has not been checked."), id="gateway-mcp-status", classes="rail-copy")
+                    yield Static(tr("Mobile Host"), id="rail-mobile", classes="rail-subhead")
+                    yield Static(tr("Not started"), id="mobile-host-status", classes="rail-copy")
+                    yield Static(tr("No mobile clients connected."), id="mobile-client-status", classes="rail-copy")
+                    yield Static(tr("Bridge Coordination"), id="rail-bridge", classes="rail-subhead")
+                    yield Static(tr("Disabled · No Bridge Handshake"), id="bridge-status", classes="rail-copy")
+                    yield Button(tr("Manage integrations…"), id="rail-connections-open", compact=True)
                 with Collapsible(title=tr("Workspace"), id="rail-workspace"):
                     yield Static(tr(""), id="workspace-label", classes="rail-copy")
                     yield Static(tr(""), id="workspace-launch-label", classes="rail-copy")

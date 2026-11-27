@@ -2509,21 +2509,21 @@
     },
     {
       "file": "isycode/tui_app_remote.py",
-      "line": 610,
+      "line": 613,
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/tui_app_remote.py",
-      "line": 662,
+      "line": 665,
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/tui_app_remote.py",
-      "line": 792,
+      "line": 795,
       "callable": "isycode.tui_app_remote.RemoteMixin._open_lsp_server",
       "action": "lsp.start",
       "owner": "lsp_symbols"

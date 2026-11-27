@@ -18,6 +18,7 @@ import json
 from pathlib import Path
 from isycode.decision_view import verified_receipt_line
 from isycode.contracts import CatalogSnapshot
+from textual.app import ScreenStackError
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -101,8 +102,48 @@ class IdentityDialog(Dialog):
         self.dismiss(None)
 
 
+CONNECTION_KEYS = ("gateway", "gateway_mcp", "mobile", "bridge")
+CONNECTION_STATES = ("unchecked", "ready", "off", "error")
+
+
+def connections_summary(states: dict[str, str]) -> str:
+    """One title line for the Connections section, derived from semantic states.
+
+    The text, not the color, carries the state, so it reads the same in ASCII
+    and monochrome terminals. Unknown keys count as not checked. Failures come
+    first so a narrow rail that truncates the title still shows them.
+    """
+    values = [states.get(key, "unchecked") for key in CONNECTION_KEYS]
+    total = len(values)
+    ready = values.count("ready")
+    failed = values.count("error")
+    if failed:
+        return tr("Connections · {failed} failed · {ready}/{total} ready",
+                  ready=ready, total=total, failed=failed)
+    if values.count("unchecked") == total:
+        return tr("Connections · not checked")
+    return tr("Connections · {ready}/{total} ready", ready=ready, total=total)
+
+
 class RailMixin:
     """Sidebar files, skills, and the LSP rail."""
+
+    def _set_connection_state(self, key: str, state: str) -> None:
+        """Record one connection's semantic state and repaint the section summary."""
+        if key not in CONNECTION_KEYS or state not in CONNECTION_STATES:
+            raise ValueError(f"unknown connection state {key}={state}")
+        states = getattr(self, "_connection_states", None)
+        if states is None:
+            states = self._connection_states = {}
+        states[key] = state
+        self._paint_connections_summary()
+
+    def _paint_connections_summary(self) -> None:
+        try:
+            section = self.query_one("#rail-connections")
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        section.title = connections_summary(getattr(self, "_connection_states", None) or {})
 
     def _apply_rail_width(self, terminal_width: int) -> None:
         """Keep the rail inside the configured range and available columns."""

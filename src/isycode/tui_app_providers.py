@@ -2039,8 +2039,10 @@ class ProviderMixin:
                 self.query_one("#gateway-status", Static).update(Text(
                     tr("Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security."),
                     style=YELLOW))
+                self._set_connection_state("gateway", "off")
                 return
             available = await asyncio.to_thread(client.is_available)
+            state = "ready" if available else "off"
             if available:
                 message = "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
                 if not client.api_key:
@@ -2052,8 +2054,10 @@ class ProviderMixin:
         except Exception as exc:  # noqa: BLE001 - a background probe must never kill the app
             message = f"Gateway configuration error: {type(exc).__name__}"
             color = RED
+            state = "error"
         if self.is_mounted:
             self.query_one("#gateway-status", Static).update(Text(message, style=color))
+            self._set_connection_state("gateway", state)
 
     async def _check_gateway_mcp_async(self) -> None:
         status = self.query_one("#gateway-mcp-status", Static)
@@ -2066,6 +2070,7 @@ class ProviderMixin:
                 message, color = "Not checked · grant Gateway MCP discovery in Settings · Authority & Security.", YELLOW
                 if self.is_mounted:
                     status.update(Text(message, style=color))
+                    self._set_connection_state("gateway_mcp", "off")
                 return
             status.update(Text(tr("Loading · starting the native Gateway MCP tool catalog…")))
             tools = await discover_gateway_tools()
@@ -2087,6 +2092,8 @@ class ProviderMixin:
         self._gateway_mcp_snapshot = snapshot
         if self.is_mounted:
             self.query_one("#gateway-mcp-status", Static).update(Text(message, style=color))
+            self._set_connection_state(
+                "gateway_mcp", {"ready": "ready", "error": "error"}.get(snapshot.state, "off"))
 
     async def _check_provider_connection(self) -> None:
         """Explicit minimal provider request; credentials alone never authorize it."""
