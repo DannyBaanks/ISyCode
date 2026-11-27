@@ -24,7 +24,7 @@ class AgentContext:
     model: str
     system_prompt: str
     working_dir: str
-    max_turns: int = 20
+    max_turns: int | None = None
     temperature: float = 0.7
     session_id: str = ""
     mode: str = "coder"
@@ -415,8 +415,9 @@ class Agent:
         on_approval=None,
     ):
         self.ctx = context
-        if not isinstance(context.max_turns, int) or not 1 <= context.max_turns <= 1000:
-            raise ValueError("max_turns debe estar entre 1 y 1000.")
+        if context.max_turns is not None and (type(context.max_turns) is not int or not 0 <= context.max_turns <= 1000):
+            raise ValueError("max_turns debe ser None/0 (sin límite) o un entero entre 1 y 1000.")
+        self._turn_limit: int | None = context.max_turns if (isinstance(context.max_turns, int) and context.max_turns > 0) else None
         self.provider_registry = provider_registry
         self.policy = policy_engine
         self.runtime = runtime_registry
@@ -468,7 +469,7 @@ class Agent:
         self.phase = phase
         if self.on_progress is not None:
             self.on_progress({"phase": phase, "step": self.turn + 1,
-                              "max_steps": self.ctx.max_turns})
+                              "max_steps": self._turn_limit or 0})
 
     async def run(self, user_input: str) -> AsyncIterator[str]:
         """Own the provider client for this asyncio loop, including cancellation."""
@@ -505,8 +506,10 @@ class Agent:
         repeated_discovery = {}
         final_only = False
         max_turns_reached = False
-        for self.turn in range(self.ctx.max_turns):
-            if self.turn >= self.ctx.max_turns:
+        turn_idx = 0
+        while True:
+            self.turn = turn_idx
+            if self._turn_limit is not None and turn_idx >= self._turn_limit:
                 max_turns_reached = True
                 break
             # 1. Get model response
@@ -531,7 +534,7 @@ class Agent:
             if response.tool_calls:
                 if final_only:
                     raise ProviderError("AGENT_REPEATED_DISCOVERY", "El modelo siguió solicitando herramientas después de repetir la misma vista. Turno detenido sin ejecutar nuevas llamadas.")
-                if self.turn + 1 >= self.ctx.max_turns:
+                if self._turn_limit is not None and turn_idx + 1 >= self._turn_limit:
                     max_turns_reached = True
                     break
                 tool_results = []
@@ -606,6 +609,7 @@ class Agent:
                     # Some providers accept only the first system message.
                     self.messages[0]["content"] += "\n\nThe host observed three identical discovery pages in this turn. No new information was obtained. Tools are unavailable for the next response. Give the user a concise answer/plan from the evidence already received, disclose empty or partial views, and do not invent file contents or actions."
                 # Continue loop with tool results
+                turn_idx += 1
                 continue
             
             # Anthropic uses end_turn and Gemini STOP; no-tool responses end here.

@@ -127,3 +127,24 @@ def test_isymcp_hub_live_discover_and_route(tmp_path):
         assert route_data["motor"] == "hub_route"
 
     asyncio.run(_run())
+
+
+def test_unlimited_turns_default_and_configurable_pref(tmp_path, monkeypatch):
+    from core.agent.run import Agent, AgentContext
+    from core.agent.providers import ProviderRegistry
+    from core.secret_broker import SecretBroker
+    from core.ui_preferences import UiPreferences
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    prefs = UiPreferences()
+    assert prefs.load()["max_turns"] == 0
+    saved = prefs.save(max_turns=35)
+    assert saved["max_turns"] == 35
+    assert prefs.load()["max_turns"] == 35
+    assert prefs.save(max_turns=0)["max_turns"] == 0
+
+    ctx = AgentContext("openai", "gpt-4o", "sys", str(tmp_path))
+    assert ctx.max_turns is None
+    broker = SecretBroker()
+    agent = Agent(ctx, ProviderRegistry(broker), PolicyEngine(), RuntimeRegistry(tmp_path), broker)
+    assert agent._turn_limit is None

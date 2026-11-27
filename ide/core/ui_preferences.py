@@ -12,6 +12,7 @@ class UiPreferences:
         "remember_view": True,
         "last_workspace": "",
         "github_auto_verify": None,
+        "max_turns": 0,  # 0 = sin límite (libre por defecto); 1..1000 = límite explícito
     }
 
     def __init__(self):
@@ -36,6 +37,8 @@ class UiPreferences:
             values["last_workspace"] = data["last_workspace"]
         if "github_auto_verify" in data and data["github_auto_verify"] in {None, True, False}:
             values["github_auto_verify"] = data["github_auto_verify"]
+        if type(data.get("max_turns")) is int and 0 <= data["max_turns"] <= 1000:
+            values["max_turns"] = data["max_turns"]
         return values
 
     def save(self, **updates):
@@ -54,6 +57,8 @@ class UiPreferences:
                     raise ValueError("Ruta de proyecto no válida.")
                 if key == "github_auto_verify" and value not in {None, True, False}:
                     raise ValueError("Preferencia de GitHub no válida.")
+                if key == "max_turns" and (type(value) is not int or not 0 <= value <= 1000):
+                    raise ValueError("Límite de turnos no válido (usa 0 para sin límite o 1..1000).")
                 data[key] = value
             atomic_write(self.path, json.dumps(data, indent=2) + "\n")
             return data

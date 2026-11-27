@@ -50,6 +50,15 @@ class SettingsPanel(QWidget):
         self.font_size.setRange(9, 24)
         self.font_size.setSuffix(" pt")
         form.addRow("Fuente del editor", self.font_size)
+        self.limit_turns = QCheckBox("Limitar pasos máximos por turno (desactivado = libre / sin límite)")
+        self.max_turns_spin = QSpinBox()
+        self.max_turns_spin.setRange(1, 1000)
+        self.max_turns_spin.setValue(20)
+        self.max_turns_spin.setSuffix(" pasos")
+        self.max_turns_spin.setEnabled(False)
+        self.limit_turns.toggled.connect(self.max_turns_spin.setEnabled)
+        form.addRow("Límite de turnos", self.limit_turns)
+        form.addRow("Máximo de pasos", self.max_turns_spin)
         save = QPushButton("Guardar preferencias")
         save.setProperty("variant", "primary")
         save.clicked.connect(self.save)
@@ -125,6 +134,10 @@ class SettingsPanel(QWidget):
         self.view.setCurrentIndex(self.view.findData(values["view"]))
         self.remember.setChecked(values["remember_view"])
         self.font_size.setValue(values["editor_font_size"])
+        saved_turns = int(values.get("max_turns", 0) or 0)
+        self.limit_turns.setChecked(saved_turns > 0)
+        self.max_turns_spin.setValue(saved_turns if saved_turns > 0 else 20)
+        self.max_turns_spin.setEnabled(saved_turns > 0)
         if hasattr(self, "workspace_info"):
             self.workspace_info.setText(f"Carpeta activa: {self.controller.working_dir}")
         if hasattr(self, "migration_state_label"):
@@ -171,8 +184,13 @@ class SettingsPanel(QWidget):
 
     def save(self):
         try:
-            values = self.preferences.save(view=self.view.currentData(), remember_view=self.remember.isChecked(),
-                                            editor_font_size=self.font_size.value())
+            configured_turns = self.max_turns_spin.value() if self.limit_turns.isChecked() else 0
+            values = self.preferences.save(
+                view=self.view.currentData(),
+                remember_view=self.remember.isChecked(),
+                editor_font_size=self.font_size.value(),
+                max_turns=configured_turns,
+            )
         except (OSError, ValueError):
             self.notice.setText("No se pudieron guardar las preferencias. Revisa el estado global del IDE.")
             return

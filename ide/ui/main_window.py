@@ -1016,12 +1016,18 @@ class MainWindow(QMainWindow):
         self._total_tokens_estimated += max(1, len(prompt) // 4)
         self._update_context_meter(self._total_tokens_estimated)
         self.chat.add_user_message(prompt)
+        try:
+            configured_turns = int(UiPreferences().load().get("max_turns", 0) or 0)
+        except (OSError, ValueError):
+            configured_turns = 0
+        turns_text = f"máximo de pasos: {configured_turns}" if configured_turns > 0 else "pasos: sin límite"
         self.chat.add_system_message(
             f"Inicio de turno · provider: {provider}, modelo: {model}, "
-            f"modo: {self.controller.mode()}, máximo de pasos: {MAX_TURNS}")
+            f"modo: {self.controller.mode()}, {turns_text}")
 
         self._worker = AgentWorker(
-            self.controller, prompt, provider, model, max_turns=MAX_TURNS,
+            self.controller, prompt, provider, model,
+            max_turns=(configured_turns if configured_turns > 0 else None),
             session_id=self._session_id)
         self._worker.text_chunk.connect(self._on_chunk)
         self._worker.reasoning_chunk.connect(self._on_reasoning)

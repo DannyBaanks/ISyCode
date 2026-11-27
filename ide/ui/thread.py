@@ -33,7 +33,7 @@ class AgentWorker(QThread):
     session_done = Signal(str)
 
     def __init__(self, controller, prompt: str, provider: str, model: str,
-                 max_turns: int = 20, parent=None, session_id: str = ""):
+                 max_turns: int | None = None, parent=None, session_id: str = ""):
         super().__init__(parent)
         self._controller = controller
         self.prompt = prompt

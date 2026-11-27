@@ -1145,7 +1145,11 @@ class ChatPanel(QWidget):
         phase = self._progress_phase
         now = time.monotonic()
         elapsed = int(now - self._phase_at)
-        step = f" · paso {self._progress_step}/{self._progress_max_steps}" if self._progress_max_steps else ""
+        step = (
+            f" · paso {self._progress_step}/{self._progress_max_steps}"
+            if self._progress_max_steps
+            else (f" · paso {self._progress_step}" if self._progress_step else "")
+        )
         quiet = int(now - self._activity_at)
         waiting = f" · sin nuevos eventos {quiet}s" if quiet >= 15 and phase != "approval" else ""
         self._set_state("working", f"● {labels.get(phase, 'Preparando turno')} · {elapsed}s{step}{waiting}")
