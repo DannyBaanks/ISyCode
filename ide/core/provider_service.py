@@ -7,10 +7,14 @@ capabilities. Model listing is a connection diagnostic, not a generation test.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+import json
+import time
 
 import httpx
 
 from core.agent.providers.registry import ProviderRegistry
+from core.ide_state import atomic_write, state_home, state_lock
 
 
 @dataclass(frozen=True)
@@ -46,6 +50,63 @@ class ConnectionReport:
     message: str
     models: tuple[str, ...] = field(default_factory=tuple)
     listing_only: bool = True
+
+
+@dataclass(frozen=True)
+class PingResult:
+    provider: str
+    model: str
+    ok: bool
+    latency_ms: int
+    reply: str = ""
+    error: str = ""
+    checked_at: str = ""
+
+
+class ModelPingStore:
+    """Persist last pong latency or error per (provider, model) in IDE state."""
+
+    def __init__(self):
+        self.path = state_home() / "model_pings.json"
+
+    @staticmethod
+    def _key(provider: str, model: str) -> str:
+        return f"{provider}::{model}"
+
+    def load(self) -> dict[str, dict]:
+        if not self.path.exists():
+            return {}
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def get(self, provider: str, model: str) -> dict | None:
+        if not provider or not model:
+            return None
+        entry = self.load().get(self._key(provider, model))
+        return entry if isinstance(entry, dict) else None
+
+    def record(self, result: PingResult) -> dict:
+        entry = {
+            "provider": result.provider,
+            "model": result.model,
+            "ok": bool(result.ok),
+            "latency_ms": int(result.latency_ms),
+            "reply": (result.reply or "")[:120],
+            "error": (result.error or "")[:300],
+            "checked_at": result.checked_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        with state_lock(self.path.with_suffix(".lock")):
+            data = self.load()
+            data[self._key(result.provider, result.model)] = entry
+            # Keep bounded to last 200 entries
+            if len(data) > 200:
+                keys = list(data.keys())[-200:]
+                data = {k: data[k] for k in keys}
+            atomic_write(self.path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        return entry
 
 
 class ProviderService:
@@ -136,3 +197,56 @@ class ProviderService:
             return ConnectionReport(name, "network_error", "No se pudo conectar. Revisa el endpoint, la red o el servidor local.")
         except (ValueError, TypeError):
             return ConnectionReport(name, "invalid_response", "El endpoint no devolvió un catálogo válido.")
+
+    async def ping_model(self, name: str, model: str, *, store: ModelPingStore | None = None) -> PingResult:
+        """Send a minimal 'pong' probe to verify live model response and persist latency or error."""
+        checked_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        t0 = time.perf_counter()
+        provider = None
+        ping_store = store or ModelPingStore()
+        try:
+            provider = self.registry.get(name, model or None)
+            reply_chunks: list[str] = []
+            async for event in provider.stream_completion(
+                [{"role": "user", "content": "Reply with exactly one word: pong"}],
+                tools=None,
+            ):
+                if event.kind == "text" and event.text:
+                    reply_chunks.append(event.text)
+                elif event.kind == "completed" and event.response is not None:
+                    if not reply_chunks and event.response.content:
+                        reply_chunks.append(event.response.content)
+            elapsed_ms = max(1, int((time.perf_counter() - t0) * 1000))
+            reply = "".join(reply_chunks).strip()
+            result = PingResult(
+                provider=name,
+                model=model,
+                ok=True,
+                latency_ms=elapsed_ms,
+                reply=reply[:120] or "pong",
+                error="",
+                checked_at=checked_at,
+            )
+        except Exception as exc:
+            elapsed_ms = max(1, int((time.perf_counter() - t0) * 1000))
+            err_text = str(exc).strip() or type(exc).__name__
+            result = PingResult(
+                provider=name,
+                model=model,
+                ok=False,
+                latency_ms=elapsed_ms,
+                reply="",
+                error=err_text[:300],
+                checked_at=checked_at,
+            )
+        finally:
+            if provider is not None:
+                try:
+                    await provider.close()
+                except Exception:
+                    pass
+        try:
+            ping_store.record(result)
+        except OSError:
+            pass
+        return result

@@ -178,10 +178,17 @@ class ConfigPanel(QWidget):
         query_row = QHBoxLayout()
         self.inspect_button = QPushButton("Descubrir modelos")
         self.inspect_button.clicked.connect(self.inspect_models)
+        self.ping_button = QPushButton("Probar modelo (Pong)")
+        self.ping_button.setToolTip("Envía un pong real al modelo seleccionado, mide la latencia y guarda el resultado o error")
+        self.ping_button.clicked.connect(self.ping_selected_model)
+        self.ping_pill = QLabel("")
+        self.ping_pill.setVisible(False)
         self.cancel_button = QPushButton("Cancelar consulta")
         self.cancel_button.clicked.connect(self._cancel_inspection)
         self.cancel_button.setVisible(False)
         query_row.addWidget(self.inspect_button)
+        query_row.addWidget(self.ping_button)
+        query_row.addWidget(self.ping_pill)
         query_row.addWidget(self.cancel_button)
         query_row.addStretch()
         form_box.addLayout(query_row)
@@ -204,7 +211,9 @@ class ConfigPanel(QWidget):
         picker_box.addLayout(picker_hdr)
         self.model_browser = QListWidget()
         self.model_browser.setMaximumHeight(140)
-        self.model_browser.itemClicked.connect(lambda it: self.model_input.setCurrentText(it.text()))
+        self.model_browser.itemClicked.connect(
+            lambda it: self.model_input.setCurrentText(it.data(Qt.ItemDataRole.UserRole) or it.text())
+        )
         picker_box.addWidget(self.model_browser)
         form_box.addWidget(picker_frame)
         self.connection_status = QLabel("Sin comprobar. Guardar una conexión no verifica su funcionamiento.")
@@ -418,14 +427,88 @@ class ConfigPanel(QWidget):
     def _filter_model_browser(self, text: str) -> None:
         if not hasattr(self, "model_browser"):
             return
+        from core.provider_service import ModelPingStore
+        ping_map = ModelPingStore().load()
+        prov = self.name_input.text().strip()
         q = text.strip().casefold()
         all_models = getattr(self, "_current_browser_models", [])
         filtered = [m for m in all_models if not q or q in m.casefold()]
         self.model_browser.clear()
         for m in filtered[:250]:
-            self.model_browser.addItem(m)
+            entry = ping_map.get(f"{prov}::{m}") if prov else None
+            label = m
+            if isinstance(entry, dict):
+                if entry.get("ok"):
+                    label = f"{m}   ·   ✓ {entry.get('latency_ms', 0)} ms"
+                else:
+                    label = f"{m}   ·   ✗ error"
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, m)
+            if isinstance(entry, dict) and entry.get("error"):
+                item.setToolTip(f"Último error ({entry.get('checked_at', '')}): {entry.get('error')}")
+            elif isinstance(entry, dict) and entry.get("ok"):
+                item.setToolTip(f"Último pong OK: {entry.get('latency_ms', 0)} ms ({entry.get('checked_at', '')})")
+            self.model_browser.addItem(item)
         if hasattr(self, "picker_title"):
             self.picker_title.setText(f"Modelos disponibles ({len(filtered)}/{len(all_models)}) · clic para elegir")
+
+    def refresh_ping_badges(self) -> None:
+        self._filter_model_browser(self.model_filter.text() if hasattr(self, "model_filter") else "")
+
+    def ping_selected_model(self) -> None:
+        from core.provider_service import ModelPingStore
+        name = self.name_input.text().strip()
+        model = self.model_input.currentText().strip()
+        if not name or not model:
+            self.connection_status.setText("Indica nombre de conexión y modelo antes de probar (Pong).")
+            return
+        if name not in self.controller.providers():
+            self.connection_status.setText("Guarda primero la conexión para probar el modelo con Pong.")
+            return
+        self.ping_button.setEnabled(False)
+        self.ping_pill.setVisible(True)
+        self.ping_pill.setText("… enviando pong")
+        self.ping_pill.setStyleSheet(
+            "padding: 4px 10px; border-radius: 10px; background: #0d2a3d; color: #38bdf8; font-size: 11px; font-weight: 700;"
+        )
+
+        class _ConfigPingWorker(QThread):
+            done = Signal(object)
+
+            def __init__(self, service, prov, mod):
+                super().__init__()
+                self._service = service
+                self._prov = prov
+                self._mod = mod
+
+            def run(self):
+                import asyncio
+                res = asyncio.run(self._service.ping_model(self._prov, self._mod, store=ModelPingStore()))
+                self.done.emit(res)
+
+        worker = _ConfigPingWorker(self.service, name, model)
+        _INSPECTIONS.add(worker)
+
+        def _done(res):
+            self.ping_button.setEnabled(True)
+            if res.ok:
+                self.ping_pill.setText(f"✓ {res.latency_ms} ms · {res.reply[:24]}")
+                self.ping_pill.setStyleSheet(
+                    "padding: 4px 10px; border-radius: 10px; background: #0d3326; color: #34d399; font-size: 11px; font-weight: 700;"
+                )
+                self.connection_status.setText(f"Pong OK en {res.latency_ms} ms ({res.checked_at}). Respuesta: {res.reply}")
+            else:
+                self.ping_pill.setText(f"✗ error ({res.latency_ms} ms)")
+                self.ping_pill.setStyleSheet(
+                    "padding: 4px 10px; border-radius: 10px; background: #3b141a; color: #fb7185; font-size: 11px; font-weight: 700;"
+                )
+                self.connection_status.setText(f"Pong falló ({res.latency_ms} ms): {res.error}")
+            self.refresh_ping_badges()
+
+        worker.done.connect(_done)
+        worker.finished.connect(lambda w=worker: _INSPECTIONS.discard(w))
+        worker.finished.connect(worker.deleteLater)
+        worker.start()
 
     def discover_models_silent(self, provider_name: str, callback=None) -> None:
         """Background model discovery for error-recovery switcher without changing form selection."""

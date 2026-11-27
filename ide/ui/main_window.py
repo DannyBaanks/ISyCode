@@ -32,6 +32,8 @@ from .panels.workspace import WorkspacePanel
 from .shell import DesktopShell
 from .icons import icon, provider_icon
 from .panels.settings import SettingsPanel
+import os
+from core.provider_service import ModelPingStore, PingResult, ProviderService
 from core.ui_preferences import UiPreferences
 from .diff import render_diff
 
@@ -208,11 +210,25 @@ class MainWindow(QMainWindow):
         self.model_combo = QComboBox()
         self.model_combo.setMinimumWidth(220)
         self.model_combo.setMaximumWidth(360)
+        self.model_combo.setMaxVisibleItems(20)
         self.model_combo.setEditable(True)
         self.model_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        self.model_combo.setToolTip("Modelo del siguiente turno")
-        self.model_combo.currentTextChanged.connect(lambda txt: self.model_combo.setToolTip(f"Modelo: {txt}" if txt else "Modelo del siguiente turno"))
+        self.model_combo.setToolTip("Modelo del siguiente turno (selector desplegable con modelos del provider)")
+        self.model_combo.currentTextChanged.connect(self._on_model_changed)
         toolbar.addWidget(self.model_combo)
+        self.model_ping_button = QPushButton("Ping")
+        self.model_ping_button.setProperty("variant", "ghost")
+        self.model_ping_button.setToolTip("Enviar prueba pong al modelo seleccionado y guardar latencia o error")
+        self.model_ping_button.setFixedHeight(28)
+        self.model_ping_button.clicked.connect(self._ping_current_model)
+        toolbar.addWidget(self.model_ping_button)
+        self.model_ping_badge = QLabel("")
+        self.model_ping_badge.setObjectName("modelPingBadge")
+        self.model_ping_badge.setVisible(False)
+        toolbar.addWidget(self.model_ping_badge)
+        self._ping_store = ModelPingStore()
+        self._ping_worker = None
+        self._auto_discovered_providers: set[str] = set()
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         toolbar.addWidget(spacer)
@@ -702,6 +718,116 @@ class MainWindow(QMainWindow):
                 candidates.append(m)
         self.model_combo.clear()
         self.model_combo.addItems(candidates)
+        self._refresh_ping_badge()
+        if (
+            provider
+            and provider not in self._auto_discovered_providers
+            and provider not in self._discovered_models
+            and os.environ.get("QT_QPA_PLATFORM") != "offscreen"
+            and hasattr(self, "config_panel")
+        ):
+            self._auto_discovered_providers.add(provider)
+            self.config_panel.discover_models_silent(provider)
+
+    def _on_model_changed(self, txt: str) -> None:
+        self.model_combo.setToolTip(f"Modelo: {txt}" if txt else "Modelo del siguiente turno")
+        self._refresh_ping_badge()
+
+    def _refresh_ping_badge(self) -> None:
+        if not hasattr(self, "model_ping_badge"):
+            return
+        provider = self.provider_combo.currentData() or ""
+        model = self.model_combo.currentText().strip()
+        entry = self._ping_store.get(provider, model)
+        if not entry:
+            self.model_ping_badge.setVisible(False)
+            self.model_ping_badge.setText("")
+            self.model_ping_badge.setToolTip("")
+            return
+        self._apply_ping_badge(
+            ok=bool(entry.get("ok")),
+            latency_ms=int(entry.get("latency_ms", 0)),
+            reply=str(entry.get("reply", "")),
+            error=str(entry.get("error", "")),
+            checked_at=str(entry.get("checked_at", "")),
+        )
+
+    def _apply_ping_badge(self, *, ok: bool, latency_ms: int, reply: str = "", error: str = "", checked_at: str = "") -> None:
+        self.model_ping_badge.setVisible(True)
+        if ok:
+            self.model_ping_badge.setText(f"✓ {latency_ms} ms")
+            self.model_ping_badge.setStyleSheet(
+                "padding: 3px 8px; border-radius: 9px; background: #0d3326; color: #34d399; font-size: 11px; font-weight: 700;"
+            )
+            tip = f"Pong OK · {latency_ms} ms"
+            if reply:
+                tip += f"\nRespuesta: {reply}"
+            if checked_at:
+                tip += f"\nComprobado: {checked_at}"
+            self.model_ping_badge.setToolTip(tip)
+        else:
+            short_err = (error.splitlines()[0] if error else "error")[:28]
+            self.model_ping_badge.setText(f"✗ {short_err}")
+            self.model_ping_badge.setStyleSheet(
+                "padding: 3px 8px; border-radius: 9px; background: #3b141a; color: #fb7185; font-size: 11px; font-weight: 700;"
+            )
+            tip = f"Pong falló ({latency_ms} ms)\n{error or 'Error desconocido'}"
+            if checked_at:
+                tip += f"\nComprobado: {checked_at}"
+            self.model_ping_badge.setToolTip(tip)
+
+    def _ping_current_model(self) -> None:
+        provider = self.provider_combo.currentData() or ""
+        model = self.model_combo.currentText().strip()
+        if not provider or not model:
+            self.chat.add_system_message("Selecciona un provider y un modelo antes de hacer Ping.")
+            return
+        if self._ping_worker is not None and self._ping_worker.isRunning():
+            return
+        self.model_ping_button.setEnabled(False)
+        self.model_ping_badge.setVisible(True)
+        self.model_ping_badge.setText("… pong")
+        self.model_ping_badge.setStyleSheet(
+            "padding: 3px 8px; border-radius: 9px; background: #0d2a3d; color: #38bdf8; font-size: 11px; font-weight: 700;"
+        )
+        self.model_ping_badge.setToolTip(f"Probando {provider} / {model}…")
+
+        from PySide6.QtCore import QThread, Signal
+
+        class _ModelPingWorker(QThread):
+            done = Signal(object)
+
+            def __init__(self, registry, prov_name, mod_name, store, parent=None):
+                super().__init__(parent)
+                self._registry = registry
+                self._prov = prov_name
+                self._mod = mod_name
+                self._store = store
+
+            def cancel(self):
+                self.requestInterruption()
+
+            def run(self):
+                import asyncio
+                svc = ProviderService(self._registry)
+                res = asyncio.run(svc.ping_model(self._prov, self._mod, store=self._store))
+                self.done.emit(res)
+
+        worker = _ModelPingWorker(self.controller.provider_registry, provider, model, self._ping_store, self)
+        self._ping_worker = worker
+
+        def _on_done(res: PingResult):
+            self.model_ping_button.setEnabled(True)
+            if self.provider_combo.currentData() == res.provider and self.model_combo.currentText().strip() == res.model:
+                self._apply_ping_badge(
+                    ok=res.ok, latency_ms=res.latency_ms, reply=res.reply, error=res.error, checked_at=res.checked_at
+                )
+            if hasattr(self, "config_panel") and hasattr(self.config_panel, "refresh_ping_badges"):
+                self.config_panel.refresh_ping_badges()
+
+        worker.done.connect(_on_done)
+        worker.finished.connect(worker.deleteLater)
+        worker.start()
 
     def _on_models_discovered(self, provider: str, models: list) -> None:
         if not provider or not models:
@@ -1195,7 +1321,7 @@ class MainWindow(QMainWindow):
     def _running_workers(self) -> list:
         """Every QThread worker the window owns that is currently running."""
         candidates = []
-        for owner, attr in ((self, "_worker"), (self.config_panel, "_worker"),
+        for owner, attr in ((self, "_worker"), (self, "_ping_worker"), (self.config_panel, "_worker"),
                             (self.config_panel.subscriptions, "_worker"),
                             (self.github_panel, "_worker"), (self.tests_panel, "_worker"),
                             (getattr(self, "worktrees_panel", None), "_worker")):
