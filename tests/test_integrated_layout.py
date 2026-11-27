@@ -6,7 +6,7 @@ from isycode.tui import PromptArea, SidePanel, TUIApp, plain_text
 from test_daily_tui import configure
 
 
-@pytest.mark.parametrize('size', [(80, 24), (120, 40)])
+@pytest.mark.parametrize('size', [(80, 36), (120, 40)])
 def test_composer_and_idea_note_fit_beside_sidebar(tmp_path, monkeypatch, capsys, size):
     configure(tmp_path, monkeypatch)
 

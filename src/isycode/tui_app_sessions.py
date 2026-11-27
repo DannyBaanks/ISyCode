@@ -345,6 +345,12 @@ class SessionMixin:
         lane.turn_started_at = None
         self._paint_idea_box()
 
+    def _turn_busy(self) -> bool:
+        """Whether a model request or a tool operation is in flight."""
+        lane = self._active_lane()
+        return ((self._loop_task is not None and not self._loop_task.done())
+                or lane.operation_started_at is not None)
+
     def _paint_idea_box(self) -> None:
         if not self._lane_on_screen() or not self.is_mounted:
             return
@@ -357,11 +363,16 @@ class SessionMixin:
         except NoMatches:
             return
         body = self._idea_box or tr("Capture an idea · Ctrl+Shift+Enter")
+        if not box.display:
+            # The panel is collapsed on small terminals; keep the captured idea
+            # readable on the activity line instead of losing it.
+            if self._idea_box and not self._turn_busy():
+                self._set_activity(tr("Idea · {idea}", idea=self._idea_box), MUTED)
+            return
         is_narrow = getattr(self, "size", None) and self.size.width < 100
         box.border_title = tr("Idea · Space") if is_narrow else tr("Idea · Space expand")
         lane = self._active_lane()
-        busy = ((self._loop_task is not None and not self._loop_task.done())
-                or lane.operation_started_at is not None)
+        busy = self._turn_busy()
         activity = ""
         if busy:
             now = _time.monotonic()

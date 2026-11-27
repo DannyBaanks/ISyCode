@@ -847,9 +847,13 @@ class MenuMixin:
             self._open_settings_menu()
         elif getattr(self, "_models_scope", None):
             # Esc from a provider's models walks back to the provider list; the
-            # active provider/model was never changed on the way here.
+            # active provider/model was never changed on the way here. Say so,
+            # because the list looks the same as before the provider was chosen.
+            provider = self._models_scope
             self._models_scope = None
             self._open_provider_menu()
+            self._set_activity(tr("Back to providers · {provider} not selected · model unchanged",
+                                  provider=PRESETS.get(provider, {}).get("label", provider)), MUTED)
 
     def _register_builtin_plugins(self) -> None:
         """Register ISyCode commands and the optional planning runtime."""
@@ -1366,11 +1370,18 @@ class MenuMixin:
                 label = Text(entry["label"], style=TEXT)
             else:
                 label = Text(entry["label"])
+            if entry.get("kind") == "section":
+                # Section titles are headings, not choices. Disabled options are
+                # skipped by ↑/↓ and ignored by Enter, so the keyboard walks
+                # provider to provider and Enter never lands on a heading that
+                # does nothing (finding 13).
+                options.add_option(Option(label, disabled=True))
+                continue
             options.add_option(label)
-        highlight = 0 if self._menu_filtered else None
-        if self._menu_mode == "providers" and self._menu_filtered:
-            highlight = next((index for index, entry in enumerate(self._menu_filtered)
-                              if entry.get("kind") != "section"), 0)
+        # The first highlight is the first real choice; the headings around it
+        # are skipped, so every list starts on something Enter can open.
+        highlight = next((index for index, entry in enumerate(self._menu_filtered)
+                          if entry.get("kind") != "section"), None) if self._menu_filtered else None
         options.highlighted = highlight
         self._show_menu_detail(highlight or 0)
         self._size_action_menu()

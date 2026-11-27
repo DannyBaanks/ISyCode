@@ -673,6 +673,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
+        self._apply_idea_box_visibility()
         self._mount_idle_board()
         self.sub_title = (tr("{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}", name=self._workspace_root.name, workspace_root=self._workspace_root, launch_dir=self._launch_dir))
         self._sync_terminal_title()
@@ -767,11 +768,38 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if (width, height) != (self.size.width, self.size.height):
             self.post_message(Resize.from_dimensions((width, height), None))
 
+    # The Idea panel takes three to five rows above the composer. Below this
+    # size those rows are the difference between a readable transcript and a
+    # two-line chat, so the panel yields (the note itself stays reachable
+    # through Ctrl+Shift+Enter and the activity line).
+    IDEA_BOX_MIN_WIDTH = 80
+    IDEA_BOX_MIN_HEIGHT = 30
+
+    def _idea_box_fits(self, size=None) -> bool:
+        size = size or getattr(self, "size", None)
+        return bool(size) and size.width >= self.IDEA_BOX_MIN_WIDTH and size.height >= self.IDEA_BOX_MIN_HEIGHT
+
+    def _apply_idea_box_visibility(self, size=None) -> None:
+        """Show the Idea panel only on terminals with room for it (finding 7).
+
+        ``on_resize`` runs before ``self.size`` reflects the new grid, so the
+        caller passes the incoming size.
+        """
+        fits = self._idea_box_fits(size)
+        try:
+            self.query_one("#idea-box").display = fits and not self._shell_mode
+            self.query_one("#idea-box-row").set_class(not fits, "idea-collapsed")
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        if not fits:
+            self._paint_idea_box()
+
     def on_resize(self, event) -> None:
         if not self.is_mounted:
             return
         # The context bar is drawn to the column's width; redraw it once the new layout lands.
         self.call_after_refresh(self._refresh_usage)
+        self._apply_idea_box_visibility(event.size)
         rail = self.query_one(SidePanel)
         self._paint_workspace_chrome()
         self._apply_rail_width(event.size.width)
@@ -1094,14 +1122,53 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         super().action_toggle_shell_box()
         self.query_one("#idea-box-row").set_class(bool(self._shell_mode), "shell-mode")
 
+    def _focus_in_side_panel(self) -> bool:
+        """Whether the focused widget lives inside the workspace rail."""
+        node = self.focused
+        while node is not None:
+            if isinstance(node, SidePanel):
+                return True
+            node = node.parent
+        return False
+
+    def _close_rail_to_composer(self) -> None:
+        """Hide the rail and hand focus back to the composer (the rail's "esc back").
+
+        The rail is an on-demand surface: once it is closed the user must be
+        able to keep typing, and the rail's footer hint must not be painted
+        over the main column any more.
+        """
+        self._rail_visible = False
+        self._rail_visibility_override = False
+        self._rail_auto_hidden = False
+        rail = self.query_one(SidePanel)
+        rail.display = False
+        try:
+            self.query_one("#main").display = True
+        except NoMatches:
+            pass
+        self._apply_rail_width(self.size.width)
+        self.query_one("#prompt-input", PromptArea).focus()
+        self._update_model_button_visibility()
+        self.call_after_refresh(self._paint_workspace_chrome)
+
     def action_focus_next(self) -> None:
-        """Keep Tab inside the command menu while its overlay is open."""
+        """Keep Tab inside the command menu while its overlay is open.
+
+        The workspace rail only takes keyboard focus when the user asks for it
+        (F6 / Shift+F6 / a click / its buttons): Tab from the chat or the
+        composer cycles the command bar and comes back to the composer instead
+        of walking the dozens of rail controls (finding 6).
+        """
         if isinstance(self.screen, ModalScreen):
             super().action_focus_next()
             return
         menu = self.query_one("#action-menu", Vertical)
         if menu.display:
             self.screen.focus_next("#action-menu *")
+            return
+        if self._rail_visible and not self._focus_in_side_panel():
+            self.screen.focus_next("#main *")
             return
         super().action_focus_next()
 
@@ -1118,6 +1185,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         menu = self.query_one("#action-menu", Vertical)
         if menu.display:
             self.screen.focus_previous("#action-menu *")
+            return
+        if self._rail_visible and not self._focus_in_side_panel():
+            self.screen.focus_previous("#main *")
             return
         focus = self.focused
         node = focus
@@ -1162,17 +1232,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             return
         if getattr(self, "_rail_visible", False) and getattr(self, "size", None) and self.size.width < 100:
             self.action_toggle_sidebar()
+            self.query_one("#prompt-input", PromptArea).focus()
             return
         if getattr(self, "_rail_visible", False) and getattr(self, "_rail_view", "overview") == "doc":
-            focused = self.focused
-            in_side_panel = False
-            node = focused
-            while node is not None:
-                if isinstance(node, SidePanel):
-                    in_side_panel = True
-                    break
-                node = node.parent
-            if in_side_panel:
+            if self._focus_in_side_panel():
                 self._set_rail_view("files")
                 try:
                     files_list = self.query_one("#conversation-files-list", OptionList)
@@ -1183,6 +1246,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 except (NoMatches, NoScreen):
                     pass
                 return
+        # The rail footer promises "esc back": with focus in the rail, Escape
+        # closes it and returns to the composer at any terminal width, leaving
+        # no rail hint painted over the chat column.
+        if getattr(self, "_rail_visible", False) and self._focus_in_side_panel():
+            self._close_rail_to_composer()
+            return
         if self._review_request_task and not self._review_request_task.done():
             self._review_request_task.cancel()
             self._set_activity(tr("Stopping external review…"), YELLOW)
@@ -1623,6 +1692,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             # report its counters, because an unknown count is real information.
             widget.update("")
             return
+        try:
+            collapsed = self.query_one("#idea-box-row").has_class("idea-collapsed")
+        except NoMatches:
+            collapsed = False
+        if collapsed:
+            # One-row status (small terminal): three rows would overflow the composer line.
+            from isycode.context_meter import usage_row as usage_panel
         widget.update(usage_panel(
             self._context_meter_messages(), widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
@@ -1861,6 +1937,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._models_target = "chat"
         self._models_return_settings = False
         self.query_one("#prompt-input", PromptArea).focus()
+        # Esc used to close the menu silently; say where the keyboard is now so
+        # the next keypress is never a surprise (finding 13).
+        self._set_activity(tr("Menu closed · back to the composer · nothing changed"), MUTED)
 
 
     def _branch_entries(self, branch: str) -> list[dict[str, str]]:
@@ -2392,7 +2471,45 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         """
         if isinstance(screen, ModalScreen):
             self._reserve_rail_for_modal(screen)
+            self._cover_idle_for_modal()
         return super().push_screen(screen, callback, wait_for_dismiss, mode=mode)
+
+    def pop_screen(self):
+        """Bring the splash back once no modal is left covering it."""
+        result = super().pop_screen()
+        self.call_after_refresh(self._uncover_idle)
+        return result
+
+    def _cover_idle_for_modal(self) -> None:
+        """Hide the welcome landscape while a modal sits over the chat.
+
+        Modal screens dim the base screen by 58-70%, which is enough for text
+        but not for the block art: the landscape bled through the dialog border
+        and read as noise around the decision (finding 12). Any modal covers it;
+        the board itself stays mounted so chat history and the archived splash
+        are untouched.
+        """
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        if board.is_mounted and not board.has_class("startup-archived"):
+            board.add_class("modal-covered")
+
+    def _uncover_idle(self) -> None:
+        """Show the splash again once the last modal is gone.
+
+        ``pop_screen`` runs before the previous screen is active again, so the
+        check waits for the refresh. A dismissed (archived) board stays archived.
+        """
+        if isinstance(self.screen, ModalScreen):
+            return
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        if board.is_mounted:
+            board.remove_class("modal-covered")
 
     def _reserve_rail_for_modal(self, screen: ModalScreen) -> None:
         """Pad a modal screen on the right by the visible rail width."""
@@ -2500,8 +2617,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 if self._loop_task is not None and not self._loop_task.done():
                     return
                 from isycode.cat_activity import sleeping_cat
-                status.update(sleeping_cat(status.content_size.width, message, color,
-                                           ascii_only=self._ascii_only))
+                if self.query_one("#idea-box-row").has_class("idea-collapsed"):
+                    # One-row status (small terminal): the three-row cat does not
+                    # fit, so paint the caption with its sleeping mark on one row.
+                    from isycode.cat_activity import sleeping_cat_row
+                    status.update(sleeping_cat_row(status.content_size.width, message, color,
+                                                   ascii_only=self._ascii_only))
+                else:
+                    status.update(sleeping_cat(status.content_size.width, message, color,
+                                               ascii_only=self._ascii_only))
             except (NoMatches, NoScreen, ScreenStackError):
                 pass
 
@@ -2641,6 +2765,35 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._set_activity(tr("Could not save your global default; existing settings remain"), RED)
         self._open_user_defaults_menu()
 
+    def _restore_startup_focus(self) -> None:
+        """Hand the keyboard to the composer once startup is over, unless someone
+        already took it.
+
+        Startup runs as a worker after the first paint. The old unconditional
+        ``prompt.focus()`` pulled the keyboard out of whatever the user had
+        opened meanwhile: a /providers list highlighted by arrow keys lost its
+        focus mid-walk, so Enter landed in an empty composer and selected
+        nothing (finding 13). A modal, an open command menu or any other focused
+        widget means the user is in control; leave the focus where it is.
+        """
+        if isinstance(self.screen, ModalScreen):
+            return
+        try:
+            if self.query_one("#action-menu", Vertical).display:
+                return
+        except (NoMatches, NoScreen, ScreenStackError):
+            pass
+        focused = self.focused
+        if focused is not None and not isinstance(focused, PromptArea):
+            return
+        try:
+            if self._initial_view == "files":
+                self.query_one("#workspace-tree", Tree).focus()
+                return
+            self.query_one("#prompt-input", PromptArea).focus()
+        except (NoMatches, NoScreen, ScreenStackError):
+            pass
+
     async def _startup_workspace(self) -> None:
         """Offer recurrence once, then choose persistent or temporary chat storage."""
         try:
@@ -2697,10 +2850,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             warning = self._shared_root_warning()
             if warning:
                 self._append_startup(f"  {warning}", YELLOW)
-            if self._initial_view == "files":
-                self.query_one("#workspace-tree", Tree).focus()
-            else:
-                self.query_one("#prompt-input", PromptArea).focus()
+            self._restore_startup_focus()
 
             # Transcripts are saved only through the chat_sessions owner, only for
             # recurring workspaces, and only while the explicit session grants are

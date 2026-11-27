@@ -205,7 +205,10 @@ class ModelsScreen(ModalScreen):
         self._detail_target: tuple[str, str] | None = None
         # Textual chooses initial focus before refresh callbacks run. The
         # current row assigns its concrete selector while compose builds it.
-        self.AUTO_FOCUS = "#models-search"
+        # A provider-scoped list is the step after choosing a provider with the
+        # keyboard, so its rows get the focus: Enter picks the highlighted model
+        # straight away instead of typing into the search box (finding 13).
+        self.AUTO_FOCUS = "" if provider_scope else "#models-search"
         # Draft reasoning level per provider|model; applied only with Choose.
         self.effort_drafts: dict[str, str] = {}
 
@@ -303,7 +306,8 @@ class ModelsScreen(ModalScreen):
         self.choices[key] = entry
         is_gus = getattr(self.app, "_models_target", "chat") == "gus"
         wanted = self.selected_model_value or self._current_target_model_value()
-        if entry.get("value") == wanted:
+        if entry.get("value") == wanted or not self.AUTO_FOCUS:
+            # The current row, or the first row of a scoped list when none is current.
             self.AUTO_FOCUS = f"#{key}"
         label = Text(model_display_name(model), style=TEXT)
         if entry.get("custom"):
@@ -340,23 +344,32 @@ class ModelsScreen(ModalScreen):
         not yet in the tree.
         """
         wanted = self.selected_model_value or self._current_target_model_value()
-        for key, entry in list(self.choices.items()):
-            if entry.get("kind") != "model" or entry.get("value") != wanted:
-                continue
+        current_key = next((key for key, entry in self.choices.items()
+                            if entry.get("kind") == "model" and entry.get("value") == wanted), None)
+        button = None
+        if current_key is not None:
             provider, model = wanted.split("|", 1)
             self.show_details(provider, model)
             try:
-                button = self.query_one(f"#{key}", ModelChoice)
+                button = self.query_one(f"#{current_key}", ModelChoice)
             except NoMatches:
                 if attempt < 3:
                     self.call_after_refresh(self._reveal_current, attempt + 1)
                 return
-            if button.display:
-                button.scroll_visible()
-                self.set_focus(button)
-            return
-        if attempt < 3 and not self.choices:
-            self.call_after_refresh(self._reveal_current, attempt + 1)
+        if (button is None and self.provider_scope and not self.search_query
+                and self.selected_model_value is None):
+            # No row matches the model in use (first time on this provider) and
+            # nothing was previewed yet: the keyboard lands on a model row, never
+            # on the search box. A previewed model is never replaced silently by
+            # its neighbour when a catalog refresh drops its row.
+            button = next((row for row in self.query(ModelChoice)
+                           if row.display and self.choices.get(row.id, {}).get("kind") == "model"), None)
+            if button is None and attempt < 3:
+                self.call_after_refresh(self._reveal_current, attempt + 1)
+                return
+        if button is not None and button.display:
+            button.scroll_visible()
+            self.set_focus(button)
 
     def on_resize(self, event) -> None:
         self._apply_width(event.size.width)

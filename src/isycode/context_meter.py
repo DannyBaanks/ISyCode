@@ -132,4 +132,49 @@ def usage_panel(messages: list[dict[str, Any]], width: int, rate_line: str, *,
     return panel
 
 
-__all__ = ["compact_context_label", "context_snapshot", "usage_panel"]
+def usage_row(messages: list[dict[str, Any]], width: int, rate_line: str, *,
+              provider_limit_tokens: int | None = None,
+              reported_tokens: int | None = None,
+              limit_source: str = "unknown",
+              quota_line: str = ""):
+    """The usage panel on one row, for the collapsed (small-terminal) composer.
+
+    Same marks as :func:`usage_panel` (``~`` estimate, ``≈`` snapshot window,
+    ``?`` unknown window); the bar shrinks first, then the rate/quota tail.
+    """
+    from rich.text import Text
+
+    width = max(8, width)
+    snap = context_snapshot(messages, provider_limit_tokens=provider_limit_tokens,
+                            reported_tokens=reported_tokens, limit_source=limit_source)
+    used = int(snap["used_tokens"] or 0)
+    used_mark = "~" if snap["used_source"] == "local-estimate" else ""
+    limit = snap["provider_limit_tokens"]
+    percent = snap["percent"]
+    window = "?" if limit is None else ("≈" if limit_source == "snapshot" else "") + _compact_tokens(int(limit))
+    head = f"ctx {used_mark}{_compact_tokens(used)}/{window}"
+    tail = " ?" if percent is None else f" {percent}%"
+    extra = quota_line or rate_line.split(" · ")[-1]
+    extra = f" · {extra}" if extra else ""
+    color = next(c for bound, c in _BAR_COLORS if (percent or 0) < bound)
+    cells = min(10, width - len(head) - 3 - len(tail) - len(extra))
+    if cells < 3:
+        extra = ""
+        cells = min(10, width - len(head) - 3 - len(tail))
+    row = Text(head, style="#9aa3ad")
+    if cells >= 3:
+        filled = 0 if percent is None else min(cells, round(cells * int(percent) / 100))
+        if percent is not None and percent > 0:
+            filled = max(1, filled)
+        row.append(" [", style="#6b7280")
+        row.append("█" * filled, style=color)
+        row.append(("░" if percent is not None else "·") * (cells - filled), style="#3f4450")
+        row.append("]", style="#6b7280")
+    row.append(tail, style=color if percent is not None else "#6b7280")
+    if extra:
+        row.append(extra, style="#77d8b0" if quota_line else "#9aa3ad")
+    row.truncate(width)
+    return row
+
+
+__all__ = ["compact_context_label", "context_snapshot", "usage_panel", "usage_row"]

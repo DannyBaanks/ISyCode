@@ -2665,6 +2665,9 @@ msgstr "Plega o despliega la lista de tareas"
 msgid "ISyCode · Keyboard Shortcuts & Quick Help"
 msgstr "ISyCode · Atajos de teclado y ayuda rápida"
 
+msgid "Idea · {idea}"
+msgstr "Idea · {idea}"
+
 msgid "Idea box"
 msgstr "Cuadro de ideas"
 
@@ -6884,6 +6887,12 @@ msgstr "{root}\nClassic (recomendado): revisión acotada al workspace de edicion
 
 msgid "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
 msgstr "Flow da acceso amplio al host: lecturas, ediciones, movimientos, borrados, comandos de shell con red y MCPs locales configurados corren sin preguntar. Las herramientas directas de archivos siguen bloqueando archivos sensibles como .env, pero los comandos de shell corren con tu acceso normal de usuario (no es un sandbox). /undo restaura preimágenes verificadas del workspace capturadas por ISyCode, no efectos externos ni archivos fuera de límite. Commits de archivos editados por humanos, push y cambios de autoridad siguen preguntando. Usa Classic para sandbox acotado al workspace o Security para permisos explícitos por acción."
+
+msgid "Menu closed · back to the composer · nothing changed"
+msgstr "Menú cerrado · de vuelta al compositor · nada cambió"
+
+msgid "Back to providers · {provider} not selected · model unchanged"
+msgstr "De vuelta a proveedores · {provider} no seleccionado · modelo sin cambios"
 
 msgid "Switch account · {provider} [{slot}] ({count})…"
 msgstr "Cambiar cuenta · {provider} [{slot}] ({count})…"

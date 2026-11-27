@@ -4,7 +4,9 @@ from isycode.tui import TUIApp, IdeaNoteScreen, plain_text
 from test_daily_tui import configure
 
 
-@pytest.mark.parametrize('size', [(80, 24), (120, 40)])
+# 80x30 is the smallest grid that shows the Idea panel (IDEA_BOX_MIN_*); below it
+# the panel collapses, covered by the small-terminal test below.
+@pytest.mark.parametrize('size', [(80, 30), (120, 40)])
 def test_full_idea_note_opens_updates_and_closes_without_resizing_box(tmp_path, monkeypatch, size):
     configure(tmp_path, monkeypatch)
     async def scenario():
@@ -48,6 +50,26 @@ def test_full_idea_note_opens_updates_and_closes_without_resizing_box(tmp_path, 
             await command.handler(app, '')
             await pilot.pause()
             assert isinstance(app.screen, IdeaNoteScreen)
+            await pilot.click('#idea-note-close')
+            await pilot.pause()
+            assert not isinstance(app.screen, IdeaNoteScreen)
+    asyncio.run(scenario())
+
+
+def test_small_terminal_hides_idea_box_but_slash_idea_still_opens_the_note(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            assert not app.query_one('#idea-box').display
+            assert app.query_one('#idea-box-row').has_class('idea-collapsed')
+            app._idea_box = 'A long note. ' * 100
+            _, command, _ = app._plugins.route('/idea')
+            await command.handler(app, '')
+            await pilot.pause()
+            assert isinstance(app.screen, IdeaNoteScreen)
+            assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
             await pilot.click('#idea-note-close')
             await pilot.pause()
             assert not isinstance(app.screen, IdeaNoteScreen)

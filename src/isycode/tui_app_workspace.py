@@ -343,7 +343,7 @@ class WorkspaceMixin:
 
     def action_toggle_shell_box(self):
         self._shell_mode = not self._shell_mode
-        self.query_one("#idea-box", IdeaBox).display = not self._shell_mode
+        self._apply_idea_box_visibility()
         self.query_one("#shell-box", ShellBox).display = self._shell_mode
         self._paint_shell_box()
 
