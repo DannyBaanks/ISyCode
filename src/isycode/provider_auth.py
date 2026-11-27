@@ -15,7 +15,9 @@ AUTH_HOSTS = ('auth.openai.com', 'chatgpt.com')
 CHATGPT_ENDPOINT = 'https://chatgpt.com/backend-api/codex'
 ANTIGRAVITY_AUTH_HOSTS = ('accounts.google.com', 'daily-cloudcode-pa.googleapis.com')
 ANTIGRAVITY_ENDPOINT = 'https://daily-cloudcode-pa.googleapis.com'
-SUBSCRIPTION_PROVIDERS = ('chatgpt', 'antigravity')
+CLAUDE_AUTH_HOSTS = ('claude.com', 'claude.ai', 'api.anthropic.com')
+CLAUDE_ENDPOINT = 'https://api.anthropic.com'
+SUBSCRIPTION_PROVIDERS = ('chatgpt', 'antigravity', 'claude')
 
 
 def auth_methods(name: str) -> list[dict]:
@@ -28,6 +30,8 @@ def auth_methods(name: str) -> list[dict]:
                 dict(id='device', label='ChatGPT subscription · device code', billing='ChatGPT plan limits')]
     if name == 'antigravity':
         return [dict(id='browser', label='Google Antigravity · browser OAuth', billing='Antigravity subscription limits')]
+    if name == 'claude':
+        return [dict(id='browser', label='Claude subscription · browser sign-in', billing='Claude plan limits')]
     if not PRESETS[name].get('key_required', True):
         return [dict(id='local', label='Local endpoint', billing='Local compute')]
     return [dict(id='api_key', label='API key', billing='Provider API quota')]
@@ -43,11 +47,18 @@ def antigravity_home(slot: str | None = None) -> Path:
     return slot_home('antigravity', slot)
 
 
+def claude_home(slot: str | None = None) -> Path:
+    from isycode.account_slots import slot_home
+    return slot_home('claude', slot)
+
+
 def subscription_home(provider: str, slot: str | None = None) -> Path:
     if provider == 'chatgpt':
         return connector_home(slot)
     if provider == 'antigravity':
         return antigravity_home(slot)
+    if provider == 'claude':
+        return claude_home(slot)
     raise ValueError(f'Unsupported subscription provider: {provider}')
 
 
@@ -56,6 +67,8 @@ def subscription_auth_hosts(provider: str) -> tuple[str, ...]:
         return AUTH_HOSTS
     if provider == 'antigravity':
         return ANTIGRAVITY_AUTH_HOSTS
+    if provider == 'claude':
+        return CLAUDE_AUTH_HOSTS
     raise ValueError(f'Unsupported subscription provider: {provider}')
 
 
@@ -76,6 +89,16 @@ def antigravity_executable() -> str:
     path = Path(candidate).expanduser().resolve(strict=True)
     if not path.is_file() or not os.access(path, os.X_OK):
         raise ValueError('Official Antigravity CLI (agy) is not executable')
+    return str(path)
+
+
+def claude_executable() -> str:
+    candidate = os.environ.get('ISYCODE_CLAUDE_EXECUTABLE') or shutil.which('claude')
+    if not candidate:
+        raise ValueError('Official Claude Code CLI (claude) is not installed')
+    path = Path(candidate).expanduser().resolve(strict=True)
+    if not path.is_file() or not os.access(path, os.X_OK):
+        raise ValueError('Official Claude Code CLI (claude) is not executable')
     return str(path)
 
 
@@ -103,12 +126,26 @@ def antigravity_identity(executable: str | None = None, *, slot: str | None = No
     return identity
 
 
+def claude_identity(executable: str | None = None, *, slot: str | None = None) -> dict:
+    from isycode.account_slots import PRIMARY_SLOT, active_slot, validate_slot_name
+    resolved_slot = validate_slot_name(slot) if slot is not None else active_slot('claude')
+    identity = {'auth_method': 'claude', 'executable': executable or claude_executable(),
+                'home': str(claude_home(resolved_slot)), 'credential_store': 'official-cli',
+                'environment_access': False, 'protocol': 'claude-code-stream-json-v1',
+                'hosts': list(CLAUDE_AUTH_HOSTS)}
+    if resolved_slot != PRIMARY_SLOT:
+        identity['account_slot'] = resolved_slot
+    return identity
+
+
 def subscription_identity(provider: str, executable: str | None = None, *,
                           slot: str | None = None) -> dict:
     if provider == 'chatgpt':
         return connector_identity(executable, slot=slot)
     if provider == 'antigravity':
         return antigravity_identity(executable, slot=slot)
+    if provider == 'claude':
+        return claude_identity(executable, slot=slot)
     raise ValueError(f'Unsupported subscription provider: {provider}')
 
 
@@ -135,6 +172,8 @@ class ProviderAuthOwner:
             self.executable = executable
         elif provider == 'antigravity':
             self.executable = antigravity_executable()
+        elif provider == 'claude':
+            self.executable = claude_executable()
         else:
             self.executable = codex_executable()
         self.connector_factory = connector_factory
@@ -145,7 +184,7 @@ class ProviderAuthOwner:
         self.challenge = None
 
     def request(self, operation: str, method: str = 'device', *, slot: str | None = None) -> ActionRequest:
-        allowed_methods = {'browser'} if self.provider == 'antigravity' else {'browser', 'device'}
+        allowed_methods = {'browser'} if self.provider in {'antigravity', 'claude'} else {'browser', 'device'}
         if operation not in {'login', 'logout'} or method not in allowed_methods:
             raise ValueError('Unsupported authentication operation')
         from isycode.account_slots import validate_slot_name
@@ -212,7 +251,12 @@ class ProviderAuthOwner:
         self.active_slot = req_slot
         home = subscription_home(self.provider, req_slot)
         if self.connector_factory is None:
-            if self.provider == 'antigravity':
+            if self.provider == 'claude':
+                from isycode.claude_connector import ClaudeConnector
+                self.connector = ClaudeConnector(
+                    self.executable, home, timeout_s=300,
+                    allow_browser_capture=(request.parameters['operation'] == 'login'))
+            elif self.provider == 'antigravity':
                 from isycode.antigravity_connector import AntigravityConnector
                 self.connector = AntigravityConnector(
                     self.executable, home, timeout_s=300,

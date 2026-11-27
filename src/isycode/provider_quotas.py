@@ -352,6 +352,16 @@ def record_codex_rate_limits(payload: Any) -> dict[str, Any] | None:
     return _save_snapshot("chatgpt", parsed)
 
 
+def record_claude_rate_limit(snapshot: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Store a parsed Claude Code ``rate_limit_event`` (5h / 7d windows)."""
+    if not isinstance(snapshot, dict) or snapshot.get("provider") != "claude":
+        return None
+    existing = get_provider_quota("claude")
+    if existing and not snapshot.get("buckets") and existing.get("buckets"):
+        snapshot = {**snapshot, "buckets": existing["buckets"]}
+    return _save_snapshot("claude", snapshot)
+
+
 # ── API-key HTTP rate-limit & quota headers ─────────────────────────────
 
 _HEADER_BUCKETS: tuple[tuple[str, str, str, str, str], ...] = (

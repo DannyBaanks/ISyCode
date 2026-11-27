@@ -391,7 +391,10 @@ def format_quota_line(quota: dict[str, Any] | None, model_name: str = "", *,
 class _MemoryOAuthCapture:
     """Receive an OAuth URL over loopback in memory only — never written to disk."""
 
-    def __init__(self) -> None:
+    def __init__(self, validator: Callable[[Any], str] | None = None) -> None:
+        # Destination check for the captured URL: Google OAuth by default; other
+        # official CLIs (Claude Code) pass their own host validator.
+        self._validate = validator or _auth_url
         self._token = secrets.token_hex(16)
         self._server: asyncio.AbstractServer | None = None
         self._future: asyncio.Future[str] | None = None
@@ -408,7 +411,7 @@ class _MemoryOAuthCapture:
                 text = raw.decode("utf-8", errors="strict")
                 prefix, sep, url = text.partition("\n")
                 if sep and secrets.compare_digest(prefix.strip(), self._token):
-                    validated = _auth_url(url.strip())
+                    validated = self._validate(url.strip())
                     if self._future is not None and not self._future.done():
                         self._future.set_result(validated)
             except Exception:

@@ -37,6 +37,10 @@ PRESETS: dict[str, dict[str, Any]] = {
                     "label": "Google Antigravity (OAuth)", "default_model": "auto",
                     "key_required": False, "supports_tools": True, "api": "antigravity",
                     "auth_hosts": ["accounts.google.com", "daily-cloudcode-pa.googleapis.com"]},
+    "claude": {"base_url": "https://api.anthropic.com", "key_env": "",
+               "label": "Claude subscription (Claude Code)", "default_model": "auto",
+               "key_required": False, "supports_tools": True, "api": "claude-code",
+               "auth_hosts": ["claude.com", "claude.ai", "api.anthropic.com"]},
     "nvidia": {"base_url": "https://integrate.api.nvidia.com/v1",
                "key_env": "NVIDIA_NIM_API_KEY",
                "key_env_aliases": ("NVIDIA_API_KEY",),
@@ -165,6 +169,7 @@ PROVIDER_SCREEN: tuple[tuple[str, str, str, str], ...] = (
     ("popular", "nvidia", "NVIDIA NIM", "Nemotron via NVIDIA NIM"),
     ("popular", "openai", "OpenAI", "API key or ChatGPT subscription"),
     ("popular", "anthropic", "Anthropic", "Claude models via API key"),
+    ("popular", "claude", "Claude subscription", "Claude Pro/Max sign-in through the official Claude Code CLI"),
     ("popular", "opencode", "OpenCode Zen", "OpenCode catalog, OpenAI-compatible"),
     ("popular", "opencode-go", "OpenCode Go", "OpenCode Go endpoint"),
     ("popular", "isyco-web", "ISyCo Web (ChatGPT)", "ChatGPT Web via the local bridge on 127.0.0.1:8792"),
@@ -640,7 +645,7 @@ def use_session_key(name: str, secret: str) -> None:
 
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
-    if name in {"chatgpt", "antigravity"}:
+    if name in {"chatgpt", "antigravity", "claude"}:
         return ""
     if name in _SESSION_KEYS:
         return _SESSION_KEYS[name]
@@ -675,7 +680,7 @@ def provider_credential_state(name: str) -> str:
     preset = PRESETS.get(provider)
     if preset is None:
         return "unavailable"
-    if preset.get("api") in {"codex", "antigravity"}:
+    if preset.get("api") in {"codex", "antigravity", "claude-code"}:
         return "subscription"
     if provider == "xai":
         from isycode.grok_session import status as grok_status, xai_auth_mode
@@ -748,10 +753,17 @@ class Provider:
             except (ValueError, OSError) as exc:
                 raise ProviderError("Official Antigravity CLI (agy) is required for Antigravity OAuth login") from exc
             self.base_url = ANTIGRAVITY_ENDPOINT
+        elif preset.get("api") == "claude-code":
+            from isycode.provider_auth import CLAUDE_ENDPOINT, claude_identity
+            try:
+                self.connector_identity = claude_identity()
+            except (ValueError, OSError) as exc:
+                raise ProviderError("Official Claude Code CLI (claude) is required for Claude subscription login") from exc
+            self.base_url = CLAUDE_ENDPOINT
         self.key_env = preset["key_env"]
         self.key_required = preset.get("key_required", True)
         self.supports_tools = provider_supports_tools(self.name)
-        self.api_key = "" if preset.get("api") in {"codex", "antigravity"} else (api_key if api_key is not None else load_provider_key(self.name))
+        self.api_key = "" if preset.get("api") in {"codex", "antigravity", "claude-code"} else (api_key if api_key is not None else load_provider_key(self.name))
         self.token_limit_field = preset.get("token_limit_field", "max_tokens")
         from isycode.reasoning_options import effective_reasoning
         self.reasoning_effort = effective_reasoning(self.name, self.model, preset.get("reasoning_effort"))
@@ -784,6 +796,9 @@ class Provider:
                                                 Path(self.connector_identity["home"])) as connector:
                     return await connector.models()
             return asyncio.run(catalog())
+        if PRESETS[self.name].get("api") == "claude-code":
+            from isycode.claude_connector import CLAUDE_MODELS
+            return list(CLAUDE_MODELS)
         if not self.configured():
             raise ProviderError(f"no credential configured for {self.name}")
         from isycode.egress import EgressDenied, open_reviewed, review_destination

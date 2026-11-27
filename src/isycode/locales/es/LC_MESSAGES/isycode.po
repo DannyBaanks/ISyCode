@@ -6900,6 +6900,82 @@ msgstr "Cambiar cuenta · {provider} [{slot}] ({count})…"
 msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
 msgstr "Cuentas de suscripción · Antigravity / ChatGPT / Grok…"
 
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Claude subscriptions."
+msgstr "Slot activo: [{slot}] · {count} cuenta(s). Cambia, añade o quita suscripciones de Claude aisladas."
+
+msgid "Claude [{slot}] · plan limits"
+msgstr "Claude [{slot}] · límites del plan"
+
+msgid "Claude account disconnected. API keys are unchanged."
+msgstr "Cuenta de Claude desconectada. Las API keys no cambiaron."
+
+msgid "Claude connection unavailable ({name}). Install the official Claude Code CLI and check Authority grants."
+msgstr "Conexión con Claude no disponible ({name}). Instala el CLI oficial de Claude Code y revisa los permisos de Authority."
+
+msgid "Claude reports the 5h and weekly limits with each reply; none recorded yet."
+msgstr "Claude informa los límites de 5 h y semanal con cada respuesta; aún no hay ninguno registrado."
+
+msgid "Claude sign-in blocked · {value}"
+msgstr "Inicio de sesión de Claude bloqueado · {value}"
+
+msgid "Claude sign-in cancelled."
+msgstr "Inicio de sesión de Claude cancelado."
+
+msgid "Claude sign-in not completed · {value}"
+msgstr "Inicio de sesión de Claude sin completar · {value}"
+
+msgid "Claude sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+msgstr "Sesión de Claude verificada [{slot}] · plan {plan} · aplican los límites de 5 h y semanal"
+
+msgid "Claude subscription · sign-in & plan limits…"
+msgstr "Suscripción de Claude · inicio de sesión y límites del plan…"
+
+msgid "Claude · subscription"
+msgstr "Claude · suscripción"
+
+msgid "Disconnect Claude account…"
+msgstr "Desconectar la cuenta de Claude…"
+
+msgid "Manage Claude accounts [{slot}] ({count})…"
+msgstr "Gestionar cuentas de Claude [{slot}] ({count})…"
+
+msgid "No Claude plan limits recorded yet; they arrive with the next reply."
+msgstr "Aún no hay límites del plan de Claude registrados; llegan con la próxima respuesta."
+
+msgid "Remaining: {windows}"
+msgstr "Restante: {windows}"
+
+msgid "Runs the official Claude Code CLI at {executable}. Private isolated home: {home}. Contacts claude.com, claude.ai and api.anthropic.com. ISyCode never extracts or copies OAuth tokens, Claude Code's own tools are removed, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply."
+msgstr "Ejecuta el CLI oficial de Claude Code en {executable}. Home privado y aislado: {home}. Contacta claude.com, claude.ai y api.anthropic.com. ISyCode nunca extrae ni copia tokens OAuth, se quitan las herramientas propias de Claude Code y todas las herramientas del workspace siguen detrás de IsySentinel. Aplican los límites del plan (5 h y semanal)."
+
+msgid "Runs the official claude sign-in inside isolated slot [{slot}]; ISyCode never reads its credentials."
+msgstr "Ejecuta el inicio de sesión oficial de claude dentro del slot aislado [{slot}]; ISyCode nunca lee sus credenciales."
+
+msgid "Sign in through the official Claude Code CLI, see 5h/weekly plan limits, or disconnect."
+msgstr "Inicia sesión con el CLI oficial de Claude Code, consulta los límites de 5 h/semanales o desconecta."
+
+msgid "Sign in with Claude"
+msgstr "Iniciar sesión con Claude"
+
+msgid "Sign in with Claude [{slot}] · browser"
+msgstr "Iniciar sesión con Claude [{slot}] · navegador"
+
+msgid "Subscription 5h & weekly quota is available when Google Antigravity or Claude is selected."
+msgstr "La cuota de suscripción de 5 h y semanal está disponible cuando eliges Google Antigravity o Claude."
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Claude / Grok…"
+msgstr "Cuentas de suscripción · Antigravity / ChatGPT / Claude / Grok…"
+
+msgid "Use saved Claude sign-in · checked on request"
+msgstr "Usar la sesión guardada de Claude · se comprueba al pedirla"
+
+msgid "Uses the official Claude Code CLI in an isolated home with its built-in tools removed. ISyCode never reads OAuth tokens; tools stay behind IsySentinel."
+msgstr "Usa el CLI oficial de Claude Code en un home aislado y sin sus herramientas integradas. ISyCode nunca lee tokens OAuth; las herramientas siguen detrás de IsySentinel."
+
+msgid "Claude Pro/Max sign-in through the official Claude Code CLI"
+msgstr "Inicio de sesión de Claude Pro/Max con el CLI oficial de Claude Code"
+
+
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "Ejecutando /{name} mientras el turno actual sigue en segundo plano."
 

@@ -6900,6 +6900,82 @@ msgstr "切换账号 · {provider} [{slot}]（{count}）…"
 msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
 msgstr "订阅账号 · Antigravity / ChatGPT / Grok…"
 
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Claude subscriptions."
+msgstr "当前 slot：[{slot}] · {count} 个账户。切换、添加或移除隔离的 Claude 订阅。"
+
+msgid "Claude [{slot}] · plan limits"
+msgstr "Claude [{slot}] · 套餐限额"
+
+msgid "Claude account disconnected. API keys are unchanged."
+msgstr "Claude 账户已断开。API key 未更改。"
+
+msgid "Claude connection unavailable ({name}). Install the official Claude Code CLI and check Authority grants."
+msgstr "Claude 连接不可用（{name}）。请安装官方 Claude Code CLI 并检查 Authority 授权。"
+
+msgid "Claude reports the 5h and weekly limits with each reply; none recorded yet."
+msgstr "Claude 会在每次回复时报告 5 小时和每周限额；目前尚无记录。"
+
+msgid "Claude sign-in blocked · {value}"
+msgstr "Claude 登录被阻止 · {value}"
+
+msgid "Claude sign-in cancelled."
+msgstr "Claude 登录已取消。"
+
+msgid "Claude sign-in not completed · {value}"
+msgstr "Claude 登录未完成 · {value}"
+
+msgid "Claude sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+msgstr "Claude 登录已验证 [{slot}] · 套餐 {plan} · 适用 5 小时和每周限额"
+
+msgid "Claude subscription · sign-in & plan limits…"
+msgstr "Claude 订阅 · 登录与套餐限额…"
+
+msgid "Claude · subscription"
+msgstr "Claude · 订阅"
+
+msgid "Disconnect Claude account…"
+msgstr "断开 Claude 账户…"
+
+msgid "Manage Claude accounts [{slot}] ({count})…"
+msgstr "管理 Claude 账户 [{slot}]（{count}）…"
+
+msgid "No Claude plan limits recorded yet; they arrive with the next reply."
+msgstr "尚未记录 Claude 套餐限额；它们会随下一次回复到达。"
+
+msgid "Remaining: {windows}"
+msgstr "剩余：{windows}"
+
+msgid "Runs the official Claude Code CLI at {executable}. Private isolated home: {home}. Contacts claude.com, claude.ai and api.anthropic.com. ISyCode never extracts or copies OAuth tokens, Claude Code's own tools are removed, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply."
+msgstr "运行位于 {executable} 的官方 Claude Code CLI。私有隔离 home：{home}。连接 claude.com、claude.ai 和 api.anthropic.com。ISyCode 从不提取或复制 OAuth token，Claude Code 自带的工具会被移除，所有工作区工具仍受 IsySentinel 管控。适用套餐限额（5 小时和每周）。"
+
+msgid "Runs the official claude sign-in inside isolated slot [{slot}]; ISyCode never reads its credentials."
+msgstr "在隔离 slot [{slot}] 内运行官方 claude 登录；ISyCode 从不读取其凭据。"
+
+msgid "Sign in through the official Claude Code CLI, see 5h/weekly plan limits, or disconnect."
+msgstr "通过官方 Claude Code CLI 登录、查看 5 小时/每周套餐限额，或断开连接。"
+
+msgid "Sign in with Claude"
+msgstr "使用 Claude 登录"
+
+msgid "Sign in with Claude [{slot}] · browser"
+msgstr "使用 Claude 登录 [{slot}] · 浏览器"
+
+msgid "Subscription 5h & weekly quota is available when Google Antigravity or Claude is selected."
+msgstr "选择 Google Antigravity 或 Claude 时可查看 5 小时和每周订阅配额。"
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Claude / Grok…"
+msgstr "订阅账户 · Antigravity / ChatGPT / Claude / Grok…"
+
+msgid "Use saved Claude sign-in · checked on request"
+msgstr "使用已保存的 Claude 登录 · 按需检查"
+
+msgid "Uses the official Claude Code CLI in an isolated home with its built-in tools removed. ISyCode never reads OAuth tokens; tools stay behind IsySentinel."
+msgstr "在隔离 home 中使用官方 Claude Code CLI，并移除其内置工具。ISyCode 从不读取 OAuth token；工具仍受 IsySentinel 管控。"
+
+msgid "Claude Pro/Max sign-in through the official Claude Code CLI"
+msgstr "通过官方 Claude Code CLI 登录 Claude Pro/Max"
+
+
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "当前回合继续在后台运行，同时执行 /{name}。"
 

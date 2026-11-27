@@ -33,6 +33,13 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         async with AntigravityConnector(identity['executable'], Path(identity['home'])) as connector:
             return await connector.complete(provider.model, messages, tools, on_chunk,
                                             effort=provider.reasoning_effort)
+    if api == 'claude-code':
+        from pathlib import Path
+        from isycode.claude_connector import ClaudeConnector
+        identity = provider.connector_identity
+        async with ClaudeConnector(identity['executable'], Path(identity['home'])) as connector:
+            return await connector.complete(provider.model, messages, tools, on_chunk,
+                                            effort=provider.reasoning_effort)
     if uses_anthropic(provider):
         from isycode.anthropic_provider import anthropic_stream_complete
 

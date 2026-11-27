@@ -88,6 +88,7 @@ FEATURED_PROVIDERS: tuple[str, ...] = (
     "nvidia",
     "chatgpt",
     "antigravity",
+    "claude",
     "openai",
     "anthropic",
     "openrouter",
@@ -104,7 +105,7 @@ OTHER_CLOUD_PROVIDERS: tuple[str, ...] = tuple(
     if name not in FEATURED_PROVIDERS and name not in LOCAL_PROVIDERS
 )
 
-OAUTH_PROVIDERS = frozenset({"chatgpt", "antigravity"})
+OAUTH_PROVIDERS = frozenset({"chatgpt", "antigravity", "claude"})
 WORKSPACE_MODES = ("classic", "flow", "security")
 NEW_WORKSPACE_MODES = ("ask", "classic", "security")
 NEW_WORKSPACE_CHOICES = ("ask", "temporary", "recurring")
