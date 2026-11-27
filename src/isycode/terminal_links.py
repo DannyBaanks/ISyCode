@@ -189,6 +189,51 @@ def _encode_markdown_file_links(text: str) -> str:
     return _MD_LINK_RE.sub(_replace, text)
 
 
+_BOX_CHAR_RE = re.compile(r"[\u2500-\u257f]")
+_ASCII_BORDER_RE = re.compile(r"^\s*\+[-=+:]{3,}\+?\s*$")
+_ASCII_SIDE_RE = re.compile(r"^\s*[|+].*[|+]\s*$")
+
+
+def _art_line(line: str) -> int:
+    """2 = drawn border (box-drawing run or ``+---+``), 1 = a side/inner row, 0 = prose."""
+    if _ASCII_BORDER_RE.match(line) or len(_BOX_CHAR_RE.findall(line)) >= 2:
+        return 2
+    if _BOX_CHAR_RE.search(line) or _ASCII_SIDE_RE.match(line):
+        return 1
+    return 0
+
+
+def fence_box_art(text: str) -> str:
+    """Keep boxes the model drew in prose verbatim by fencing them as ``text``.
+
+    Markdown strips leading spaces and reads ``*``/``_``/``|`` inside a drawn
+    box, which breaks its columns. A run of at least two drawn lines, one of
+    them a real border, becomes a fenced block; Markdown pipe tables have no
+    drawn border, so they stay tables. Existing fences are left untouched.
+    """
+    pieces = _FENCE_RE.split(text)
+    for index in range(0, len(pieces), 2):
+        lines = pieces[index].split("\n")
+        out = []
+        cursor = 0
+        while cursor < len(lines):
+            if not _art_line(lines[cursor]) or lines[cursor].startswith("    "):
+                out.append(lines[cursor])
+                cursor += 1
+                continue
+            end = cursor
+            while end < len(lines) and _art_line(lines[end]):
+                end += 1
+            run = lines[cursor:end]
+            if len(run) >= 2 and any(_art_line(line) == 2 for line in run):
+                out.extend(["```text", *run, "```"])
+            else:
+                out.extend(run)
+            cursor = end
+        pieces[index] = "\n".join(out)
+    return "".join(pieces)
+
+
 _HTML_PARSER = MarkdownIt().enable("strikethrough").enable("table")
 
 
@@ -264,7 +309,7 @@ def rich_markdown(text: str, *, root: Path | str | None = None) -> RichMarkdown:
     """
     repo_url = repository_web_url(root) if root is not None else None
     shown = strip_terminal_controls(text)
-    linked = _encode_markdown_file_links(linkify_markdown(literal_html(shown), repo_url))
+    linked = _encode_markdown_file_links(linkify_markdown(literal_html(fence_box_art(shown)), repo_url))
     return RichMarkdown(linked, code_theme="monokai")
 
 

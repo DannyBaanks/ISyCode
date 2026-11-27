@@ -2777,9 +2777,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self._paint_workspace_chrome()
 
-    async def _load_project_context(self) -> bool:
-        """Explicitly read root AGENTS.md; the file never supplies grants or tools."""
-        return await self._load_context_file("AGENTS.md")
+    async def _load_project_context(self, *, refresh: bool = False) -> bool:
+        """Explicitly read root AGENTS.md; the file never supplies grants or tools.
+
+        ``refresh`` is the per-turn re-read: it still goes through the read
+        owner (so a revoked grant drops the context), but stays quiet unless
+        the text changed since the copy already in use.
+        """
+        return await self._load_context_file("AGENTS.md", refresh=refresh)
 
     def copy_to_clipboard(self, text: str) -> None:
         """Every copy Textual makes (selection, Ctrl+C, text fields) goes through the owner."""
@@ -3123,8 +3128,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         mode = {"classic": "Classic", "flow": "Flow"}.get(self._workspace_mode(), "Security")
         return f"Root Source · {source}{broad} · {mode} Mode"
 
-    async def _load_context_file(self, relative_path: str) -> bool:
+    async def _load_context_file(self, relative_path: str, *, refresh: bool = False) -> bool:
         """Load one selected workspace document through the read owner and receipt."""
+        previous = self._agent_context if (self._agent_context or {}).get("path") == relative_path else None
         self._agent_context = None
         owner = LocalWorkspaceReadOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
         outcome = await asyncio.to_thread(owner.execute, "workspace.context.inject", {"path": relative_path})
@@ -3132,7 +3138,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if text and outcome.receipt is not None:
             self._agent_context = {"path": relative_path, "text": text,
                                    "receipt_id": outcome.receipt.receipt_id, "verification": "PASS"}
-            self._append("  " + tr("Context loaded · {relative_path} · owned read; no permissions changed.", relative_path=relative_path), MUTED)
+            if not refresh or previous is None:
+                self._append("  " + tr("Context loaded · {relative_path} · owned read; no permissions changed.", relative_path=relative_path), MUTED)
+            elif previous.get("text") != text:
+                self._append("  " + tr("Context updated · {relative_path} changed; this turn uses the new text.", relative_path=relative_path), MUTED)
         else:
             self._append("  " + tr("Context not loaded · {value}", value=outcome.reason[:160]), YELLOW)
         if self._lane_on_screen():
