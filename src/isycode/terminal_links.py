@@ -11,10 +11,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from markdown_it import MarkdownIt
 from rich.markdown import Markdown as RichMarkdown
 from rich.text import Text
 
 from isycode.sidebar_files import FileLink, parse_local_file_link
+from isycode.terminal_safety import strip_terminal_controls
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, YELLOW
 
 _PR_RE = re.compile(r"\bPR\s+#?(\d{1,7})\b", re.IGNORECASE)
@@ -232,10 +234,82 @@ def fence_box_art(text: str) -> str:
     return "".join(pieces)
 
 
+_HTML_PARSER = MarkdownIt().enable("strikethrough").enable("table")
+
+
+_CODE_SPAN_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)", re.DOTALL)
+
+
+def _escape_tags(block: str, tags: list[str]) -> str:
+    """Escape ``<``/``>`` of each tag in ``block``, in order, outside code spans.
+
+    The tags come from markdown-it without columns, so they are found by text.
+    A code span (`` `<b>` ``) can hold the same characters as a real tag; it is
+    masked first, so the search lands on the tag markdown-it saw and the code
+    stays exactly as written.
+    """
+    masked = _CODE_SPAN_RE.sub(lambda match: "\0" * len(match.group(0)), block)
+    found: list[tuple[int, int]] = []
+    offset = 0
+    for tag in tags:
+        position = masked.find(tag, offset)
+        if position < 0:
+            continue
+        found.append((position, position + len(tag)))
+        offset = position + len(tag)
+    pieces: list[str] = []
+    cursor = 0
+    for a, b in found:
+        pieces.append(block[cursor:a])
+        pieces.append(block[a:b].replace("<", "&lt;").replace(">", "&gt;"))
+        cursor = b
+    pieces.append(block[cursor:])
+    return "".join(pieces)
+
+
+def literal_html(text: str) -> str:
+    """Show raw HTML from a model reply as literal text instead of dropping it.
+
+    markdown-it classifies ``<script>``, ``<b>`` or ``<!-- -->`` as ``html_inline``
+    and a tag alone on its line as ``html_block``; every renderer (Rich's and
+    ``selectable_markdown``) then hides those tokens, so ``<script>alert(1)</script>``
+    reached the screen as ``alert(1)``. Escaping the angle brackets with entities
+    turns each tag into ordinary ``text`` that prints verbatim, while fenced and
+    indented code blocks never produce HTML tokens and stay untouched.
+    """
+    if "<" not in text:
+        return text
+    lines = text.split("\n")
+    # Longest ranges first so earlier replacements never shift later ones.
+    spans: list[tuple[int, int, list[str]]] = []
+    for token in _HTML_PARSER.parse(text):
+        if token.type == "html_block" and token.map:
+            spans.append((token.map[0], token.map[1], []))
+        elif token.type == "inline" and token.map and token.children:
+            tags = [child.content for child in token.children if child.type == "html_inline"]
+            if tags:
+                spans.append((token.map[0], token.map[1], tags))
+    for start, end, tags in sorted(spans, reverse=True):
+        if not tags:  # whole block is HTML
+            for index in range(start, min(end, len(lines))):
+                lines[index] = lines[index].replace("<", "&lt;").replace(">", "&gt;")
+            continue
+        stop = min(end, len(lines))
+        lines[start:stop] = _escape_tags("\n".join(lines[start:stop]), tags).split("\n")
+    return "\n".join(lines)
+
+
 def rich_markdown(text: str, *, root: Path | str | None = None) -> RichMarkdown:
-    """Markdown with autolinks and the repository's PR anchors."""
+    """Markdown with autolinks and the repository's PR anchors; raw HTML shown literally.
+
+    Terminal sequences are removed first (Textual's final strip filter only drops
+    control bytes): otherwise an OSC 8 hyperlink survives as ``URL\x07label`` and
+    the autolinker glues the hidden target to the visible label. Only the label
+    stays. ``selection_text`` keeps the original reply for copy.
+    """
     repo_url = repository_web_url(root) if root is not None else None
-    linked = _encode_markdown_file_links(linkify_markdown(fence_box_art(text), repo_url))
+    shown = strip_terminal_controls(text)
+    linked = _encode_markdown_file_links(linkify_markdown(literal_html(fence_box_art(shown)), repo_url))
     return RichMarkdown(linked, code_theme="monokai")
 
 
@@ -269,9 +343,14 @@ def _append_linked(result: Text, text: str, repo_url: str | None, style: str) ->
 
 
 def semantic_plain(text: str, *, root: Path | str | None = None) -> Text:
-    """Plain output with links and conservative status colors, not a new parser."""
+    """Plain output with links and conservative status colors, not a new parser.
+
+    Terminal sequences are removed first so a hidden OSC 8 target cannot be
+    autolinked into the visible label (same rule as ``rich_markdown``).
+    """
     repo_url = repository_web_url(root) if root is not None else None
     result = Text()
+    text = strip_terminal_controls(text)
     for line in text.splitlines(keepends=True):
         lowered = line.lstrip().casefold()
         if lowered.startswith(("error", "failed", "failure", "exception", "traceback")):
@@ -290,6 +369,7 @@ __all__ = [
     "FileLink",
     "classify_link",
     "linkify_markdown",
+    "literal_html",
     "repository_web_url",
     "rich_markdown",
     "semantic_plain",

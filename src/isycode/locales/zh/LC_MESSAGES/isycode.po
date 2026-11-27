@@ -6884,3 +6884,27 @@ msgstr "{root}\nClassic（推荐）：在工作区范围内审查编辑和沙盒
 
 msgid "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
 msgstr "Flow 提供广泛的主机访问权限：读取、编辑、移动、删除、带网络的主机 Shell 命令以及已配置的本地 MCP 无需询问即可运行。直接文件工具仍会阻止 .env 等敏感文件，但主机 Shell 命令使用你的普通用户权限运行（并非沙盒）。/undo 仅恢复 ISyCode 捕获并验证的工作区前像，不涵盖任意外部或超限影响。人工编辑文件的提交、推送和权限变更仍会询问。如需工作区沙盒请使用 Classic，如需逐项显式授权请使用 Security。"
+
+msgid "Running /{name} while the current turn keeps going in the background."
+msgstr "当前回合继续在后台运行，同时执行 /{name}。"
+
+msgid "Unknown command /{name} · type /help for available commands"
+msgstr "未知命令 /{name} · 输入 /help 查看可用命令"
+
+msgid "Unknown command /{name}"
+msgstr "未知命令 /{name}"
+
+msgid "The turn ended without an answer because a tool call was blocked · {names} · nothing was executed; the prompt is kept in the composer."
+msgstr "回合因工具调用被拦截而结束，未给出回答 · {names} · 未执行任何操作；提示词保留在输入框中。"
+
+msgid "/clear · wait for the running turn to finish, or use /new for a clean conversation."
+msgstr "/clear · 请等待当前回合结束，或使用 /new 开始一个干净的对话。"
+
+msgid "Chat cleared · the saved conversation keeps the earlier messages."
+msgstr "聊天已清空 · 已保存的对话仍保留之前的消息。"
+
+msgid "Tool blocked · {name} · {reason} · nothing was executed"
+msgstr "工具已拦截 · {name} · {reason} · 未执行任何操作"
+
+msgid "unknown tool · not registered by ISyCode"
+msgstr "未知工具 · 未在 ISyCode 注册"
