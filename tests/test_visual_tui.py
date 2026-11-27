@@ -525,7 +525,11 @@ def test_landscape_follows_the_chat_and_leaves_when_it_cannot_be_read(tmp_path, 
                 else:
                     assert len(lines) <= 2 and "ISYCODE" in lines[0]
             assert shown[(160, 45)] and shown[(100, 30)] and shown[(60, 36)]
-            assert not (shown[(200, 24)] or shown[(60, 24)] or shown[(50, 40)] or shown[(40, 12)])
+            # 200x24 shows the whole picture since the Idea panel yields its
+            # rows on small terminals (finding 7); the others still cannot fit
+            # it beside the startup notices.
+            assert shown[(200, 24)]
+            assert not (shown[(60, 24)] or shown[(50, 40)] or shown[(40, 12)])
 
     with capsys.disabled():
         asyncio.run(scenario())

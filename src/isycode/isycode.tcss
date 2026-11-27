@@ -112,6 +112,12 @@
         width: 1fr; height: auto; min-height: 3; max-height: 5;
         align-horizontal: center; margin: 0 1; background: transparent;
     }
+    /* Small terminals: the Idea panel yields its rows to the transcript and the
+       two status columns collapse onto one line beside the composer. */
+    #idea-box-row.idea-collapsed { min-height: 1; height: 1; margin: 0; }
+    #idea-box-row.idea-collapsed #activity-status,
+    #idea-box-row.idea-collapsed #usage-status { height: 1; width: 1fr; min-width: 0; padding: 0 1; }
+    #idea-box-row.idea-collapsed #activity-status { text-align: left; }
     #shell-box { display: none; width: 60%; height: auto; min-height: 3; max-height: 5; padding: 0 1; border: round #514d5a; background: #1e1f22; }
     #idea-box {
         width: 60%; height: auto; min-height: 3; max-height: 5; padding: 0 1;

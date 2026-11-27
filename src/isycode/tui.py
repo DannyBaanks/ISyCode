@@ -673,6 +673,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
+        self._apply_idea_box_visibility()
         self._mount_idle_board()
         self.sub_title = (tr("{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}", name=self._workspace_root.name, workspace_root=self._workspace_root, launch_dir=self._launch_dir))
         self._sync_terminal_title()
@@ -767,11 +768,38 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if (width, height) != (self.size.width, self.size.height):
             self.post_message(Resize.from_dimensions((width, height), None))
 
+    # The Idea panel takes three to five rows above the composer. Below this
+    # size those rows are the difference between a readable transcript and a
+    # two-line chat, so the panel yields (the note itself stays reachable
+    # through Ctrl+Shift+Enter and the activity line).
+    IDEA_BOX_MIN_WIDTH = 80
+    IDEA_BOX_MIN_HEIGHT = 30
+
+    def _idea_box_fits(self, size=None) -> bool:
+        size = size or getattr(self, "size", None)
+        return bool(size) and size.width >= self.IDEA_BOX_MIN_WIDTH and size.height >= self.IDEA_BOX_MIN_HEIGHT
+
+    def _apply_idea_box_visibility(self, size=None) -> None:
+        """Show the Idea panel only on terminals with room for it (finding 7).
+
+        ``on_resize`` runs before ``self.size`` reflects the new grid, so the
+        caller passes the incoming size.
+        """
+        fits = self._idea_box_fits(size)
+        try:
+            self.query_one("#idea-box").display = fits and not self._shell_mode
+            self.query_one("#idea-box-row").set_class(not fits, "idea-collapsed")
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        if not fits:
+            self._paint_idea_box()
+
     def on_resize(self, event) -> None:
         if not self.is_mounted:
             return
         # The context bar is drawn to the column's width; redraw it once the new layout lands.
         self.call_after_refresh(self._refresh_usage)
+        self._apply_idea_box_visibility(event.size)
         rail = self.query_one(SidePanel)
         self._paint_workspace_chrome()
         self._apply_rail_width(event.size.width)
@@ -2522,8 +2550,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 if self._loop_task is not None and not self._loop_task.done():
                     return
                 from isycode.cat_activity import sleeping_cat
-                status.update(sleeping_cat(status.content_size.width, message, color,
-                                           ascii_only=self._ascii_only))
+                if self.query_one("#idea-box-row").has_class("idea-collapsed"):
+                    # One-row status (small terminal): the three-row cat does not
+                    # fit, so paint the caption with its sleeping mark on one row.
+                    from isycode.cat_activity import sleeping_cat_row
+                    status.update(sleeping_cat_row(status.content_size.width, message, color,
+                                                   ascii_only=self._ascii_only))
+                else:
+                    status.update(sleeping_cat(status.content_size.width, message, color,
+                                               ascii_only=self._ascii_only))
             except (NoMatches, NoScreen, ScreenStackError):
                 pass
 

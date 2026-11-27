@@ -16,8 +16,14 @@ def test_status_flanks_idea_box_and_animation_stops(tmp_path, monkeypatch, size)
             usage = app.query_one('#usage-status', Static)
             idea = app.query_one('#idea-box', Static)
             prompt = app.query_one('#prompt-input')
-            assert activity.region.right <= idea.region.x
-            assert idea.region.right <= usage.region.x
+            if idea.display:
+                assert activity.region.right <= idea.region.x
+                assert idea.region.right <= usage.region.x
+            else:
+                # Small terminal (finding 7): the panel is collapsed, and the
+                # status columns share one row instead of flanking it.
+                assert not activity.region.overlaps(usage.region)
+                assert activity.region.height == 1
             assert not activity.region.overlaps(prompt.region)
             assert not usage.region.overlaps(prompt.region)
             assert 'cost' not in plain_text(usage)

@@ -239,7 +239,7 @@ def test_tab_from_the_composer_never_enters_the_rail(tmp_path, monkeypatch):
 
 # ── Finding 7: Idea box on small terminals ────────────────────────────────────
 
-@pytest.mark.parametrize("size", [(80, 24), (60, 20), (79, 40), (120, 23)])
+@pytest.mark.parametrize("size", [(80, 24), (60, 20), (79, 40), (120, 23), (80, 29)])
 def test_idea_box_collapses_on_small_terminals(tmp_path, monkeypatch, size):
     configure(tmp_path, monkeypatch)
 
@@ -254,6 +254,28 @@ def test_idea_box_collapses_on_small_terminals(tmp_path, monkeypatch, size):
             assert idea.display is False, (size, idea.region)
             assert row.region.height <= 1, (size, row.region)
             assert chat.region.height >= size[1] - 10, (size, chat.region)
+            # The two status columns share the single collapsed row without
+            # touching the composer, and the captured idea stays readable there.
+            activity = app.query_one("#activity-status")
+            usage = app.query_one("#usage-status")
+            assert activity.region.height == 1 and usage.region.height == 1
+            assert not activity.region.overlaps(usage.region)
+            prompt = app.query_one("#prompt-input", PromptArea)
+            assert not activity.region.overlaps(prompt.region)
+            assert activity.region.bottom <= prompt.region.y
+            app._idea_box = "Verificar el fix del parser; luego correr la suite."
+            app._paint_idea_box()
+            await pilot.pause()
+            assert "Verificar el fix" in plain_text(activity), plain_text(activity)
+            # The note stays reachable without the panel: Ctrl+Shift+Enter on
+            # an empty composer opens the full Idea note.
+            prompt.focus()
+            await pilot.press("ctrl+shift+enter")
+            await pilot.pause()
+            await pilot.pause()
+            from isycode.tui_screens_sessions import IdeaNoteScreen
+            assert isinstance(app.screen, IdeaNoteScreen), type(app.screen).__name__
+            assert "Verificar el fix" in plain_text(app.screen.query_one("#idea-note-content"))
 
     asyncio.run(scenario())
 

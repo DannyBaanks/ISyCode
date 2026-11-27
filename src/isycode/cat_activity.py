@@ -218,6 +218,24 @@ def _wrapped_status(label: str, width: int, style: str) -> Text:
     return result
 
 
+def sleeping_cat_row(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad",
+                     ascii_only: bool = False) -> Text:
+    """The sleeping status on a single row (small-terminal composer).
+
+    Keeps the sleeping mark ("z") the three-row cat shows, so the resting
+    state stays recognisable when the Idea panel is collapsed.
+    """
+    width = max(1, width)
+    label = " ".join((caption or "Chat ready").split()) or "Chat ready"
+    mark = "=-.-= z" if ascii_only else "z"
+    if width < 6:
+        return Text(_clip_cells(label, width), style=caption_style)
+    result = Text(_clip_cells(label, max(1, width - cell_len(mark) - 1)), style=caption_style)
+    result.append(" ")
+    result.append(mark, style=_CAT)
+    return result
+
+
 def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad",
                  ascii_only: bool = False) -> Text:
     """Curled kitten with a visible tail and stepped sleep marks when space permits.

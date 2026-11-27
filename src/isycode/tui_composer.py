@@ -145,6 +145,10 @@ class PromptArea(TextArea):
             self.app._idea_backlog.append(text)
             self.load_text("")
             self.app.notify(tr("Idea captured · {len} pending · /ideas reviews", len=len(self.app._idea_backlog)))
+        elif not self.app.query_one("#idea-box").display:
+            # The Idea panel is collapsed on this terminal; an empty composer
+            # opens the full note instead of doing nothing.
+            self.app._open_idea_note()
 
     def action_paste_clipboard(self):
         self.app.run_worker(self.app._request_clipboard_paste(self), group="clipboard-user")

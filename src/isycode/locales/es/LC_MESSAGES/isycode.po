@@ -2665,6 +2665,9 @@ msgstr "Plega o despliega la lista de tareas"
 msgid "ISyCode · Keyboard Shortcuts & Quick Help"
 msgstr "ISyCode · Atajos de teclado y ayuda rápida"
 
+msgid "Idea · {idea}"
+msgstr "Idea · {idea}"
+
 msgid "Idea box"
 msgstr "Cuadro de ideas"
 
