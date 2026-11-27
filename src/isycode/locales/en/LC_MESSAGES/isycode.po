@@ -6885,6 +6885,12 @@ msgstr "{root}\nClassic (recommended): workspace-bounded review of edits and san
 msgid "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
 msgstr "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
 
+msgid "Switch account · {provider} [{slot}] ({count})…"
+msgstr "Switch account · {provider} [{slot}] ({count})…"
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
+msgstr "Subscription accounts · Antigravity / ChatGPT / Grok…"
+
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "Running /{name} while the current turn keeps going in the background."
 

@@ -71,3 +71,19 @@ def test_usage_panel_draws_a_bounded_bar_and_never_divides_by_an_unknown_window(
     assert "ctx ~1k/≈1M" in snap  # estimate and snapshot window are both marked
     live = usage_panel(messages, 24, "x", provider_limit_tokens=1_000_000, reported_tokens=900).plain
     assert "ctx 900/1M" in live
+
+
+def test_context_meter_tracks_active_turn_tool_messages_while_generating():
+    from types import SimpleNamespace
+    from isycode.tui import TUIApp
+
+    history = [{"role": "user", "content": "hola"}]
+    active = history + [{"role": "tool", "content": "x" * 40_000}]
+    running = SimpleNamespace(done=lambda: False)
+    stub = SimpleNamespace(_history=history, _active_context_messages=active, _loop_task=running)
+    assert TUIApp._context_meter_messages(stub) is active
+    stub._loop_task = SimpleNamespace(done=lambda: True)
+    assert TUIApp._context_meter_messages(stub) is history
+    assert stub._active_context_messages is None
+    stub._loop_task = running  # a new turn before its first request: not the old one
+    assert TUIApp._context_meter_messages(stub) is history

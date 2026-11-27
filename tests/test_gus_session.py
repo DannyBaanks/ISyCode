@@ -341,3 +341,44 @@ def test_gus_uses_isymem_context_and_native_tool(repo, monkeypatch):
     combined_prompt = "\n".join(str(m.get("content", "")) for m in first_messages)
     assert "Shared Multi-Harness Memory (`isymem`" in combined_prompt
     assert "Verify top-right provider button in GusScreen" in combined_prompt
+
+
+@pytest.mark.parametrize("size", [(120, 40), (80, 24)])
+def test_gus_transcript_scrolls_and_keeps_input_visible(tmp_path, monkeypatch, size):
+    from textual.app import App
+    from textual.containers import VerticalScroll
+    from textual.widgets import Input
+
+    from isycode.gus_roots import GusRoots
+    from isycode.gus_session import GusState
+    from isycode.tui_screens_gus import GusScreen
+
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    roots = GusRoots(repo)
+    state = GusState(repo)
+    for idx in range(30):
+        state.append("user", f"pregunta {idx}")
+        state.append("assistant", f"respuesta larga {idx}\n" + ("linea de detalle\n" * 3))
+
+    class Host(App):
+        def on_mount(self) -> None:
+            self.push_screen(GusScreen(roots, "test-model"))
+
+    async def scenario():
+        app = Host()
+        async with app.run_test(size=size) as pilot:
+            await pilot.pause()
+            screen = app.screen
+            assert isinstance(screen, GusScreen)
+            transcript = screen.query_one("#gus-transcript", VerticalScroll)
+            assert transcript.max_scroll_y > 0
+            assert transcript.scroll_y == transcript.max_scroll_y
+            assert screen.query_one("#gus-input", Input).region.height > 0
+            before = transcript.scroll_y
+            await pilot.press("pageup")
+            await pilot.pause()
+            assert transcript.scroll_y < before
+
+    asyncio.run(scenario())

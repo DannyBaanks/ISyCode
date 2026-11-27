@@ -104,8 +104,33 @@ class ProviderMixin:
         return resolved_state, status
 
     def _open_provider_menu(self) -> None:
+        from isycode.account_slots import active_slot, list_accounts
         active = selected_provider_name()
         entries = []
+        slot_labels = {
+            "antigravity": "Google Antigravity",
+            "chatgpt": "ChatGPT (Codex)",
+            "grok": "xAI Grok",
+        }
+        entries.append(self._entry("Accounts", "section"))
+        if active in {"antigravity", "chatgpt", "xai"}:
+            slot_key = "grok" if active == "xai" else active
+            cur_slot = active_slot(slot_key)
+            count = len(list_accounts(slot_key))
+            title = slot_labels[slot_key]
+            entries.append(self._entry(
+                tr("Switch account · {provider} [{slot}] ({count})…",
+                   provider=title, slot=cur_slot, count=count),
+                "account_slots_open", slot_key,
+                tr("Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated subscriptions.",
+                   slot=cur_slot, count=count),
+                translate=False))
+        entries.append(self._entry(
+            tr("Subscription accounts · Antigravity / ChatGPT / Grok…"),
+            "account_slots_open", "",
+            tr("Switch active subscription or add isolated accounts for {provider}.",
+               provider="Antigravity / ChatGPT / Grok"),
+            translate=False))
         group = ""
         for section, key, label, blurb in PROVIDER_SCREEN:
             if section != group:
@@ -121,12 +146,16 @@ class ProviderMixin:
                 display_provider = "chatgpt" if key == "openai" and active == "chatgpt" else key
                 display_preset = PRESETS.get(display_provider, preset)
                 catalog_default = provider_default_model(display_provider) or display_preset.get("default_model") or DEFAULT_MODEL
+                detail = tr("{blurb}. {status}. Default model: {default}",
+                            blurb=tr(blurb), status=status,
+                            default=catalog_default)
+                if display_provider in {"antigravity", "chatgpt", "xai"}:
+                    skey = "grok" if display_provider == "xai" else display_provider
+                    detail += f" · [{active_slot(skey)}] ({len(list_accounts(skey))})"
                 entries.append(self._entry(
                     tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
-                    tr("{blurb}. {status}. Default model: {default}",
-                       blurb=tr(blurb), status=status,
-                       default=catalog_default),
+                    detail,
                     translate=False))
                 entries[-1]["display_name"] = label
             else:
