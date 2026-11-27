@@ -110,6 +110,12 @@ class PromptArea(TextArea):
         Binding("shift+enter", "insert_line_break", "New line", show=False, priority=True),
         Binding("ctrl+j", "insert_line_break", "New line", show=False, priority=True),
         Binding("alt+enter", "insert_line_break", "New line", show=False, priority=True),
+        # TextArea maps pageup/pagedown to cursor_page_up/down, which only moves the
+        # caret inside a (usually short) draft. The transcript is what a reader wants
+        # to page through after a long reply, so page keys scroll #chat instead.
+        # Home/End keep their TextArea meaning (line start / line end).
+        Binding("pageup", "chat_page_up", "Chat page up", show=False, priority=True),
+        Binding("pagedown", "chat_page_down", "Chat page down", show=False, priority=True),
         Binding("escape", "escape_to_app", "Cancel / back", show=False,
                 priority=True),
     ]
@@ -191,6 +197,26 @@ class PromptArea(TextArea):
 
     def action_escape_to_app(self) -> None:
         self.app.action_escape_to_chat()
+
+    def _scroll_chat_page(self, direction: int) -> None:
+        """Page the chat transcript, not the composer caret (finding 11)."""
+        from isycode.tui_widgets import ChatArea
+        try:
+            chat = self.screen.query_one(ChatArea)
+        except Exception:
+            return
+        if not chat.display:
+            return
+        if direction < 0:
+            chat.action_page_up()
+        else:
+            chat.action_page_down()
+
+    def action_chat_page_up(self) -> None:
+        self._scroll_chat_page(-1)
+
+    def action_chat_page_down(self) -> None:
+        self._scroll_chat_page(1)
 
 
 
