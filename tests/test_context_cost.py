@@ -79,7 +79,11 @@ def test_context_meter_tracks_active_turn_tool_messages_while_generating():
 
     history = [{"role": "user", "content": "hola"}]
     active = history + [{"role": "tool", "content": "x" * 40_000}]
-    stub = SimpleNamespace(_history=history, _active_context_messages=active, _generating=True)
+    running = SimpleNamespace(done=lambda: False)
+    stub = SimpleNamespace(_history=history, _active_context_messages=active, _loop_task=running)
     assert TUIApp._context_meter_messages(stub) is active
-    stub._generating = False
+    stub._loop_task = SimpleNamespace(done=lambda: True)
+    assert TUIApp._context_meter_messages(stub) is history
+    assert stub._active_context_messages is None
+    stub._loop_task = running  # a new turn before its first request: not the old one
     assert TUIApp._context_meter_messages(stub) is history

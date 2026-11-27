@@ -1558,10 +1558,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         return super()._request_is_quiet(request)
 
     def _context_meter_messages(self) -> list[dict]:
-        if getattr(self, "_generating", False):
+        """The messages of the request in flight while a turn runs, else the history.
+
+        A turn with tools sends several requests (prompt, calls, results) before
+        it appends to _history; the meter follows the last one sent. Nothing
+        sets a `_generating` flag, so the running loop task is the signal.
+        """
+        task = getattr(self, "_loop_task", None)
+        if task is not None and not task.done():
             active = getattr(self, "_active_context_messages", None)
             if active:
                 return active
+        else:
+            self._active_context_messages = None  # never show a finished turn's request
         return self._history
 
     def _usage_status_text(self) -> str:
