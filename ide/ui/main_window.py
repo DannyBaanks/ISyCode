@@ -227,12 +227,17 @@ class MainWindow(QMainWindow):
         )
         self.model_ping_button.clicked.connect(self._ping_current_model)
         toolbar.addWidget(self.model_ping_button)
-        self.model_ping_badge = QLabel("")
+        self.model_ping_badge = QPushButton("")
         self.model_ping_badge.setObjectName("modelPingBadge")
+        self.model_ping_badge.setFixedHeight(26)
+        self.model_ping_badge.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.model_ping_badge.clicked.connect(self._show_last_ping_popup)
+        self.model_ping_badge_action = toolbar.addWidget(self.model_ping_badge)
+        self.model_ping_badge_action.setVisible(False)
         self.model_ping_badge.setVisible(False)
-        toolbar.addWidget(self.model_ping_badge)
         self._ping_store = ModelPingStore()
         self._ping_worker = None
+        self._ping_popup = None
         self._auto_discovered_providers: set[str] = set()
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -744,6 +749,12 @@ class MainWindow(QMainWindow):
         self.model_combo.setToolTip(f"Modelo: {txt}" if txt else "Modelo del siguiente turno")
         self._refresh_ping_badge()
 
+    def _set_ping_badge_visible(self, visible: bool) -> None:
+        if hasattr(self, "model_ping_badge_action") and self.model_ping_badge_action is not None:
+            self.model_ping_badge_action.setVisible(visible)
+        if hasattr(self, "model_ping_badge"):
+            self.model_ping_badge.setVisible(visible)
+
     def _refresh_ping_badge(self) -> None:
         if not hasattr(self, "model_ping_badge"):
             return
@@ -751,7 +762,7 @@ class MainWindow(QMainWindow):
         model = self.model_combo.currentText().strip()
         entry = self._ping_store.get(provider, model)
         if not entry:
-            self.model_ping_badge.setVisible(False)
+            self._set_ping_badge_visible(False)
             self.model_ping_badge.setText("")
             self.model_ping_badge.setToolTip("")
             return
@@ -764,42 +775,114 @@ class MainWindow(QMainWindow):
         )
 
     def _apply_ping_badge(self, *, ok: bool, latency_ms: int, reply: str = "", error: str = "", checked_at: str = "") -> None:
-        self.model_ping_badge.setVisible(True)
+        self._set_ping_badge_visible(True)
         if ok:
             self.model_ping_badge.setText(f"✓ {latency_ms} ms")
             self.model_ping_badge.setStyleSheet(
-                "padding: 3px 8px; border-radius: 9px; background: #0d3326; color: #34d399; font-size: 11px; font-weight: 700;"
+                "QPushButton { padding: 2px 9px; border-radius: 9px; border: 1px solid #10b981; "
+                "background: #0d3326; color: #34d399; font-size: 11px; font-weight: 700; } "
+                "QPushButton:hover { background: #134e3a; }"
             )
-            tip = f"Pong OK · {latency_ms} ms"
+            tip = f"Responde · {latency_ms} ms"
             if reply:
                 tip += f"\nRespuesta: {reply}"
             if checked_at:
                 tip += f"\nComprobado: {checked_at}"
             self.model_ping_badge.setToolTip(tip)
         else:
-            short_err = (error.splitlines()[0] if error else "error")[:28]
-            self.model_ping_badge.setText(f"✗ {short_err}")
+            short_err = (error.splitlines()[0] if error else "sin respuesta")[:22]
+            self.model_ping_badge.setText(f"✗ {latency_ms} ms · {short_err}")
             self.model_ping_badge.setStyleSheet(
-                "padding: 3px 8px; border-radius: 9px; background: #3b141a; color: #fb7185; font-size: 11px; font-weight: 700;"
+                "QPushButton { padding: 2px 9px; border-radius: 9px; border: 1px solid #f43f5e; "
+                "background: #3b141a; color: #fb7185; font-size: 11px; font-weight: 700; } "
+                "QPushButton:hover { background: #521b24; }"
             )
-            tip = f"Pong falló ({latency_ms} ms)\n{error or 'Error desconocido'}"
+            tip = f"No responde ({latency_ms} ms)\n{error or 'Error desconocido'}"
             if checked_at:
                 tip += f"\nComprobado: {checked_at}"
             self.model_ping_badge.setToolTip(tip)
+
+    def _show_ping_popup(self, *, provider: str, model: str, ok: bool, latency_ms: int, reply: str = "", error: str = "", checked_at: str = "") -> None:
+        """Show a non-blocking floating popup right below the Ping button (never clutters chat)."""
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            return
+        if self._ping_popup is not None:
+            try:
+                self._ping_popup.close()
+                self._ping_popup.deleteLater()
+            except RuntimeError:
+                pass
+            self._ping_popup = None
+
+        popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        border = "#10b981" if ok else "#f43f5e"
+        accent = "#34d399" if ok else "#fb7185"
+        popup.setStyleSheet(
+            f"QFrame {{ background: #0f172a; border: 1px solid {border}; border-radius: 10px; }}"
+        )
+        box = QVBoxLayout(popup)
+        box.setContentsMargins(14, 12, 14, 12)
+        box.setSpacing(6)
+
+        hdr = QLabel(f"{'✓ Modelo responde' if ok else '✗ Modelo no responde'} · {latency_ms} ms")
+        hdr.setStyleSheet(f"color: {accent}; font-size: 12px; font-weight: 700; border: none;")
+        box.addWidget(hdr)
+
+        meta = QLabel(f"{provider} / {model}")
+        meta.setStyleSheet("color: #cbd5e1; font-size: 11px; border: none;")
+        meta.setWordWrap(True)
+        box.addWidget(meta)
+
+        detail_text = f"Respuesta: {reply or 'pong'}" if ok else (error or "Sin detalle de error")
+        detail = QLabel(detail_text[:360])
+        detail.setTextFormat(Qt.TextFormat.PlainText)
+        detail.setWordWrap(True)
+        detail.setStyleSheet("color: #94a3b8; font-size: 11px; border: none;")
+        box.addWidget(detail)
+
+        if checked_at:
+            ts = QLabel(f"Guardado · {checked_at}")
+            ts.setStyleSheet("color: #64748b; font-size: 10px; border: none;")
+            box.addWidget(ts)
+
+        popup.setMinimumWidth(280)
+        popup.setMaximumWidth(420)
+        popup.adjustSize()
+        anchor = self.model_ping_button.mapToGlobal(self.model_ping_button.rect().bottomLeft())
+        popup.move(anchor.x(), anchor.y() + 6)
+        popup.show()
+        self._ping_popup = popup
+        QTimer.singleShot(6000, lambda p=popup: p.close() if p.isVisible() else None)
+
+    def _show_last_ping_popup(self) -> None:
+        provider = self.provider_combo.currentData() or ""
+        model = self.model_combo.currentText().strip()
+        entry = self._ping_store.get(provider, model)
+        if not entry:
+            return
+        self._show_ping_popup(
+            provider=provider,
+            model=model,
+            ok=bool(entry.get("ok")),
+            latency_ms=int(entry.get("latency_ms", 0)),
+            reply=str(entry.get("reply", "")),
+            error=str(entry.get("error", "")),
+            checked_at=str(entry.get("checked_at", "")),
+        )
 
     def _ping_current_model(self) -> None:
         provider = self.provider_combo.currentData() or ""
         model = self.model_combo.currentText().strip()
         if not provider or not model:
-            self.chat.add_system_message("Selecciona un provider y un modelo antes de hacer Ping.")
             return
         if self._ping_worker is not None and self._ping_worker.isRunning():
             return
         self.model_ping_button.setEnabled(False)
-        self.model_ping_badge.setVisible(True)
+        self._set_ping_badge_visible(True)
         self.model_ping_badge.setText("… pong")
         self.model_ping_badge.setStyleSheet(
-            "padding: 3px 8px; border-radius: 9px; background: #0d2a3d; color: #38bdf8; font-size: 11px; font-weight: 700;"
+            "QPushButton { padding: 2px 9px; border-radius: 9px; border: 1px solid #38bdf8; "
+            "background: #0d2a3d; color: #38bdf8; font-size: 11px; font-weight: 700; }"
         )
         self.model_ping_badge.setToolTip(f"Probando {provider} / {model}…")
 
@@ -833,6 +916,15 @@ class MainWindow(QMainWindow):
                 self._apply_ping_badge(
                     ok=res.ok, latency_ms=res.latency_ms, reply=res.reply, error=res.error, checked_at=res.checked_at
                 )
+            self._show_ping_popup(
+                provider=res.provider,
+                model=res.model,
+                ok=res.ok,
+                latency_ms=res.latency_ms,
+                reply=res.reply,
+                error=res.error,
+                checked_at=res.checked_at,
+            )
             if hasattr(self, "config_panel") and hasattr(self.config_panel, "refresh_ping_badges"):
                 self.config_panel.refresh_ping_badges()
 

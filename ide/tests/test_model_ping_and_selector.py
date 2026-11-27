@@ -87,10 +87,12 @@ def test_main_window_model_selector_and_ping_badge(tmp_path, monkeypatch):
 
     win.model_combo.setCurrentText("model-a")
     win._refresh_ping_badge()
+    assert win.model_ping_badge_action.isVisible() is True
     assert "245 ms" in win.model_ping_badge.text()
 
     win.model_combo.setCurrentText("model-b")
     win._refresh_ping_badge()
+    assert win.model_ping_badge_action.isVisible() is True
     assert "✗" in win.model_ping_badge.text()
     assert "503" in win.model_ping_badge.toolTip()
     win.close()
