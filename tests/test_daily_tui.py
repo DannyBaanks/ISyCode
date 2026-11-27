@@ -456,3 +456,34 @@ def test_work_status_timer_tolerates_an_app_that_is_shutting_down(tmp_path, monk
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_per_turn_project_context_refresh_is_quiet_until_the_file_changes(tmp_path, monkeypatch, capsys):
+    root = configure(tmp_path, monkeypatch)
+    (root / 'AGENTS.md').write_text('Use pytest.')
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            notes = []
+            real_append = app._append
+            monkeypatch.setattr(app, '_append', lambda text, *a, **k: (notes.append(str(text)), real_append(text, *a, **k)))
+            assert await app._load_project_context()
+            assert sum('Context loaded' in note for note in notes) == 1
+            first_receipt = app._agent_context['receipt_id']
+            # Unchanged file: still an owned read (fresh receipt), no repeated notice.
+            assert await app._load_project_context(refresh=True)
+            assert app._agent_context['receipt_id'] != first_receipt
+            assert sum('Context' in note for note in notes) == 1
+            (root / 'AGENTS.md').write_text('Use unittest.')
+            assert await app._load_project_context(refresh=True)
+            assert app._agent_context['text'] == 'Use unittest.'
+            assert sum('Context updated' in note for note in notes) == 1
+            # A revoked grant still drops the context on the next turn.
+            WorkspaceAuthority(root).set_mode('security')
+            assert not await app._load_project_context(refresh=True)
+            assert app._agent_context is None
+            assert any('Context not loaded' in note for note in notes)
+    with capsys.disabled():
+        asyncio.run(scenario())

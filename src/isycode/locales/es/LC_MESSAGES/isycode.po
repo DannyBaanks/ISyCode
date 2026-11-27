@@ -3456,6 +3456,9 @@ msgstr "Sigo trabajando. Tu mensaje sigue en el compositor; envíalo de nuevo cu
 msgid "Context loaded · {relative_path} · owned read; no permissions changed."
 msgstr "Contexto cargado · {relative_path} · lectura propia; no cambió ningún permiso."
 
+msgid "Context updated · {relative_path} changed; this turn uses the new text."
+msgstr "Contexto actualizado · {relative_path} cambió; este turno usa el texto nuevo."
+
 msgid "Context not loaded · {value}"
 msgstr "Contexto no cargado · {value}"
 
@@ -6962,6 +6965,7 @@ msgstr "Usa el CLI oficial de Claude Code en un home aislado y sin sus herramien
 
 msgid "Claude Pro/Max sign-in through the official Claude Code CLI"
 msgstr "Inicio de sesión de Claude Pro/Max con el CLI oficial de Claude Code"
+
 
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "Ejecutando /{name} mientras el turno actual sigue en segundo plano."

@@ -3456,6 +3456,9 @@ msgstr "Still working. Your message remains in the composer; send it again when 
 msgid "Context loaded · {relative_path} · owned read; no permissions changed."
 msgstr "Context loaded · {relative_path} · owned read; no permissions changed."
 
+msgid "Context updated · {relative_path} changed; this turn uses the new text."
+msgstr "Context updated · {relative_path} changed; this turn uses the new text."
+
 msgid "Context not loaded · {value}"
 msgstr "Context not loaded · {value}"
 
@@ -6962,6 +6965,7 @@ msgstr "Uses the official Claude Code CLI in an isolated home with its built-in 
 
 msgid "Claude Pro/Max sign-in through the official Claude Code CLI"
 msgstr "Claude Pro/Max sign-in through the official Claude Code CLI"
+
 
 msgid "Running /{name} while the current turn keeps going in the background."
 msgstr "Running /{name} while the current turn keeps going in the background."

@@ -954,12 +954,24 @@ class SelectableText(Static):
         original = static_content(self)
         content = super().render()
         if isinstance(original, RichMarkdown):
-            if getattr(self, "_markdown_source", None) is not original:
+            width = getattr(self, "_markdown_width", None) or self.content_size.width or None
+            if (getattr(self, "_markdown_source", None) is not original
+                    or getattr(self, "_markdown_rendered_width", None) != width):
                 self._markdown_source = original
-                self._markdown_text = selectable_markdown(original)
+                self._markdown_rendered_width = width
+                self._markdown_text = selectable_markdown(original, width)
             content = self._markdown_text
         self._selection_plain = getattr(content, "plain", str(content))
         return content
+
+    def get_content_height(self, container, viewport, width: int) -> int:
+        # Tables and rules are drawn for the content width: when the layout
+        # offers a new width, drop the cached visual so the height is measured
+        # on the box actually drawn, not on a soft-wrapped older one.
+        if isinstance(static_content(self), RichMarkdown) and width and width != getattr(self, "_markdown_width", None):
+            self._markdown_width = width
+            self._layout_cache.pop("_render.visual", None)
+        return super().get_content_height(container, viewport, width)
 
     def set_selectable_content(self, content, selection_text: str) -> None:
         self.selection_text = selection_text
