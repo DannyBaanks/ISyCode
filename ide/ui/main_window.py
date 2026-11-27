@@ -211,15 +211,20 @@ class MainWindow(QMainWindow):
         self.model_combo.setMinimumWidth(220)
         self.model_combo.setMaximumWidth(360)
         self.model_combo.setMaxVisibleItems(20)
-        self.model_combo.setEditable(True)
-        self.model_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        self.model_combo.setToolTip("Modelo del siguiente turno (selector desplegable con modelos del provider)")
+        self.model_combo.setEditable(False)
+        self.model_combo.setPlaceholderText("Selecciona un modelo…")
+        self.model_combo.setToolTip("Modelo del siguiente turno (clic para desplegar los modelos del provider)")
         self.model_combo.currentTextChanged.connect(self._on_model_changed)
         toolbar.addWidget(self.model_combo)
         self.model_ping_button = QPushButton("Ping")
-        self.model_ping_button.setProperty("variant", "ghost")
         self.model_ping_button.setToolTip("Enviar prueba pong al modelo seleccionado y guardar latencia o error")
         self.model_ping_button.setFixedHeight(28)
+        self.model_ping_button.setStyleSheet(
+            "QPushButton { padding: 3px 10px; border-radius: 6px; border: 1px solid #2b4162; "
+            "background: #132238; color: #7dd3fc; font-size: 11px; font-weight: 700; } "
+            "QPushButton:hover { border-color: #38bdf8; background: #1a3152; } "
+            "QPushButton:disabled { color: #64748b; border-color: #1e293b; }"
+        )
         self.model_ping_button.clicked.connect(self._ping_current_model)
         toolbar.addWidget(self.model_ping_button)
         self.model_ping_badge = QLabel("")
@@ -486,6 +491,8 @@ class MainWindow(QMainWindow):
         self.config_panel.providers_changed.connect(self._refresh_provider_models)
         if hasattr(self.config_panel, "models_discovered"):
             self.config_panel.models_discovered.connect(self._on_models_discovered)
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
+            QTimer.singleShot(250, self._trigger_active_provider_discovery)
         self.config_collapsible = self.panel_bar.add_panel(
             "Config", self.config_panel, status="")
 
@@ -719,6 +726,10 @@ class MainWindow(QMainWindow):
         self.model_combo.clear()
         self.model_combo.addItems(candidates)
         self._refresh_ping_badge()
+        self._trigger_active_provider_discovery()
+
+    def _trigger_active_provider_discovery(self) -> None:
+        provider = self.provider_combo.currentData() or ""
         if (
             provider
             and provider not in self._auto_discovered_providers

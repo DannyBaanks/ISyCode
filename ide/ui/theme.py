@@ -116,7 +116,28 @@ QLineEdit, QPlainTextEdit, QTextEdit, QTextBrowser, QComboBox, QSpinBox {{
 QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QComboBox:focus {{
     border-color: {ACCENT};
 }}
-QComboBox::drop-down {{ border: none; width: 20px; }}
+QComboBox {{
+    padding-right: 26px;
+}}
+QComboBox::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid {BORDER};
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background: {SURFACE_3};
+}}
+QComboBox::down-arrow {{
+    width: 0px;
+    height: 0px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid {TEXT_DIM};
+}}
+QComboBox::down-arrow:hover {{
+    border-top-color: {ACCENT};
+}}
 QComboBox QAbstractItemView {{
     background: {SURFACE_2}; border: 1px solid {BORDER}; selection-background-color: {SURFACE_3};
 }}
