@@ -49,10 +49,14 @@ def test_escape_sequences_are_removed_whole_from_the_reply():
     assert "\x1b" not in plain and "\x07" not in plain and "\r" not in plain
 
 
-def test_c1_osc_form_is_treated_as_a_sequence_not_as_text():
-    plain = _rendered("a \x9b8;;http://evil.example\x07link b")
+def test_c1_osc_and_csi_forms_are_treated_as_sequences_not_as_text():
+    # C1 OSC (0x9d): 8-bit equivalent of ESC ]
+    plain = _rendered("a \x9d8;;http://evil.example\x07link b")
     assert plain.split() == ["a", "link", "b"], plain
     assert "8;;" not in plain
+    # C1 CSI (0x9b): 8-bit equivalent of ESC [ (e.g. \x9b31m for red)
+    plain_csi = _rendered("a \x9b31mROJO\x9bm b")
+    assert "ROJO" in plain_csi.split(), plain_csi
 
 
 def test_string_terminator_and_unterminated_sequences():
