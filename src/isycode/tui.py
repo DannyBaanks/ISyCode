@@ -2915,6 +2915,17 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         except (OSError, ValueError):
             self._set_activity(tr("Draft not saved · private state unavailable"), YELLOW)
 
+    # Typed by hand in _accept_prompt before the plugin registry sees them.
+    # /model stays out of the registry on purpose (tests pin route("/model") is
+    # None); the alias is resolved here so it never reaches the chat as text.
+    SLASH_ALIASES = {"/model": "/models"}
+
+    @staticmethod
+    def _view_command_handlers() -> frozenset:
+        """Built-in handlers allowed while a turn streams (they only change the view)."""
+        from isycode.tui_app_menu import _clear_cmd, _exit_cmd, _new_cmd, _settings_cmd
+        return frozenset({_new_cmd, _clear_cmd, _settings_cmd, _exit_cmd})
+
     def _is_slash_command_input(self, text: str) -> bool:
         """True for slash commands, False for absolute filesystem paths like /home/user/..."""
         if not text.startswith("/"):
@@ -2922,7 +2933,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         first = text.split(None, 1)[0]
         cmd = first.lower()
         if cmd in {"/steer", "/queue", "/msg", "/idea", "/ideas", "/backlog",
-                   "/clear", "/new", "/retry", "/resume", "/exit", "/quit"}:
+                   "/clear", "/new", "/retry", "/resume", "/exit", "/quit",
+                   "/settings", "/model"}:
             return True
         if self._plugins.route(text)[1] is not None:
             return True
@@ -2958,6 +2970,26 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if text == "/msg" or text.startswith("/msg "):
             prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
             self.run_worker(self._deliver_session_message(text), group="session-message", exit_on_error=False)
+            return
+        # /model is the alias of /models; resolve it before anything routes it.
+        first, _, rest = text.partition(" ")
+        alias = self.SLASH_ALIASES.get(first.lower())
+        if alias is not None:
+            text = alias + (" " + rest if rest else "")
+        # Built-in commands that only change the view (/new, /clear, /settings,
+        # /exit, /quit) run even while a turn is streaming: /new leaves the
+        # running lane in the background, the rest do not touch the turn.
+        # Only those handlers: /undo, /commit, /run, /compact, /retry, a user
+        # plugin… would act on the workspace or history under the running turn,
+        # so they keep the "Still working" answer below.
+        _plugin, cmd, arg = self._plugins.route(text)
+        if (self._loop_task and not self._loop_task.done()
+                and cmd is not None and cmd.handler in self._view_command_handlers()):
+            prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+            self._append("  " + tr("Running /{name} while the current turn keeps going in the background.", name=cmd.name), MUTED)
+            # Not _start_operation: that would replace the running turn's
+            # loop_task and its lane activity with the view command's own.
+            self._pin_task(cmd.handler(self, arg))
             return
         if self._loop_task and not self._loop_task.done():
             if text.startswith("/steer "):
