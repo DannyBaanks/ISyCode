@@ -14,6 +14,13 @@ from core.runtime.base import ExecutionResult, ToolCall
 from core.tool_settings import ToolSettings
 from core.command_grants import GrantStore
 from core.runtime.linux import CommandError
+from core.isycode_tools import (
+    MUTATING_ISYCODE_TOOLS,
+    READONLY_ISYCODE_TOOLS,
+    execute_isycode_mutating_tool,
+    execute_isycode_readonly_tool,
+    preview_isycode_mutating_tool,
+)
 
 
 class ToolExecutionService:
@@ -43,7 +50,7 @@ class ToolExecutionService:
         if actor == "AGENT":
             if mode not in {"plan", "coder"}:
                 return self._deny("INVALID_MODE", "El modo del agente no es válido.")
-            if mode == "plan" and name in {"write", "edit", "python", "run_command"}:
+            if mode == "plan" and name in ({"write", "edit", "python", "run_command"} | MUTATING_ISYCODE_TOOLS):
                 return self._deny("PLAN_MODE_WRITE_DENIED", "PLAN permite inspeccionar y proponer; cambia a CODER para aplicar.")
         if not self.settings.available(name):
             return self._deny("UNAVAILABLE_TOOL", "Esta herramienta no tiene un runtime habilitado.")
@@ -65,7 +72,8 @@ class ToolExecutionService:
                 targeted = any(r.get("type") == "modify" and r.get("path") == relative for r in records)
                 if not (approved and targeted):
                     return self._deny("PROTECTED_ZONE_REQUIRES_APPROVAL", "Esta ruta requiere un plan aprobado que la incluya.")
-        action = {"write": "write", "edit": "write", "verify": "verify", "run_command": "execute"}.get(name, "read")
+        action = {"write": "write", "edit": "write", "verify": "verify", "run_command": "execute",
+                  "isycode_mkdir": "write", "isycode_move_file": "write", "isycode_delete_file": "write"}.get(name, "read")
         decision = self.policy.evaluate(action, name, {"tool": name, "args": arguments,
                                                       "trusted": name != "run_command", "isolated_linux": name == "run_command",
                                                       "mode": mode, "actor": actor})
@@ -231,6 +239,22 @@ class ToolExecutionService:
                 result = ExecutionResult(True, stdout=json.dumps(guidance, ensure_ascii=False))
             elif name == "resident_scan":
                 result = ExecutionResult(True, stdout=json.dumps(SelfScanner(self.workspace).scan(), ensure_ascii=False))
+            elif name in READONLY_ISYCODE_TOOLS:
+                result = await execute_isycode_readonly_tool(self.workspace, name, arguments)
+            elif name in MUTATING_ISYCODE_TOOLS:
+                diff_preview = preview_isycode_mutating_tool(self.workspace, name, arguments)
+                if actor == "AGENT":
+                    if approve is None:
+                        return self._deny("APPROVAL_REQUIRED", "Esta operación de archivo requiere aprobación del operador.")
+                    preview = ToolCall(name, copy.deepcopy(arguments), call_id)
+                    preview.prepared_diff = diff_preview
+                    answer = await approve(preview)
+                    if answer is not True:
+                        return self._deny("USER_REJECTED", "El operador rechazó la operación.")
+                decision = self._gate(name, arguments, mode, actor, plan)
+                if isinstance(decision, ExecutionResult):
+                    return decision
+                result = execute_isycode_mutating_tool(self.workspace, name, arguments)
             else:
                 result = await self.runtimes.get(decision.runtime).execute(ToolCall(name, arguments, call_id))
             result.evidence = {**(result.evidence or {}), "actor": actor,

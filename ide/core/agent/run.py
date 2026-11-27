@@ -183,6 +183,117 @@ AVAILABLE_TOOLS = [
             "parameters": {"type": "object", "properties": {}}
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_git_status",
+            "description": "Read-only Git status (branch, ahead/behind, staged/unstaged/untracked files) for the active repository.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_git_diff",
+            "description": "Read-only unified Git diff for working tree or staged changes (bounded output).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "staged": {"type": "boolean", "default": False},
+                    "path": {"type": "string", "description": "Optional relative file or directory path"}
+                },
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_git_log",
+            "description": "Read-only recent Git commit history (oneline with branch/tag decorations).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 15}
+                },
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_worktrees",
+            "description": "List Git worktrees associated with the active repository (path, branch, head, locked/prunable).",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_isymem_recall",
+            "description": "Search the shared ISyCo isymem memory bank for relevant project facts, rules, or prior findings.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Keywords to search"},
+                    "project": {"type": "string", "description": "Optional project filter (e.g. isycode, isyinfer)"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 15, "default": 6}
+                },
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_mcp_servers",
+            "description": "Inspect ISyMCP Hub status (:8798/:8799) and registered MCP servers from ~/.config/isycode/mcp.json.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_mkdir",
+            "description": "Create a directory inside the project workspace (CODER mode, requires host approval).",
+            "parameters": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_move_file",
+            "description": "Move or rename a file within the project workspace (CODER mode, requires host approval).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "src": {"type": "string"},
+                    "dst": {"type": "string"}
+                },
+                "required": ["src", "dst"],
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isycode_delete_file",
+            "description": "Delete a single regular file inside the project workspace (CODER mode, requires host approval).",
+            "parameters": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False
+            }
+        }
+    },
 ]
 
 
@@ -271,7 +382,8 @@ class Agent:
         ]
 
     def _available_tools(self) -> list[dict]:
-        denied = {"write", "edit", "python", "run_command"} if self.ctx.mode == "plan" else set()
+        from ..isycode_tools import MUTATING_ISYCODE_TOOLS
+        denied = ({"write", "edit", "python", "run_command"} | MUTATING_ISYCODE_TOOLS) if self.ctx.mode == "plan" else set()
         return [tool for tool in AVAILABLE_TOOLS
                 if tool["function"]["name"] not in denied
                 and self.tool_execution.settings.enabled(tool["function"]["name"])]

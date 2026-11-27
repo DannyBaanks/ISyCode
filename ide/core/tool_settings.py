@@ -25,8 +25,9 @@ class ToolSettings:
         if name == "run_command":
             from core.runtime.linux import installation_status
             return installation_status()["installed"]
+        from core.isycode_tools import ALL_ISYCODE_TOOLS
         # Legacy Python interpreter execution is intentionally unavailable.
-        return name in {"read", "write", "edit", "project_tree", "glob", "grep", "verify", "resident_query", "resident_scan"}
+        return name in ({"read", "write", "edit", "project_tree", "glob", "grep", "verify", "resident_query", "resident_scan"} | ALL_ISYCODE_TOOLS)
 
     def enabled(self, name):
         return self.available(name) and self._load().get(name, True)

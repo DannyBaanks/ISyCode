@@ -955,6 +955,16 @@ class MainWindow(QMainWindow):
             p = self.controller.working_dir
             self.workspace_label.setText(p.name[:24] + ("…" if len(p.name) > 24 else ""))
             self.workspace_label.setToolTip(str(p))
+        if hasattr(self, "chat") and hasattr(self.chat, "set_composer_notice"):
+            if mode == "PLAN":
+                self.chat.set_composer_notice(
+                    "plan_mode",
+                    "Modo PLAN (solo lectura: inspección y análisis). Cambia a CODER para editar archivos y ejecutar comandos.",
+                    "Cambiar a CODER",
+                    lambda: self._set_mode("coder"),
+                )
+            else:
+                self.chat.clear_composer_notice("plan_mode")
 
     # --- agent lifecycle ------------------------------------------------
 
