@@ -2901,6 +2901,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
     # None); the alias is resolved here so it never reaches the chat as text.
     SLASH_ALIASES = {"/model": "/models"}
 
+    @staticmethod
+    def _view_command_handlers() -> frozenset:
+        """Built-in handlers allowed while a turn streams (they only change the view)."""
+        from isycode.tui_app_menu import _clear_cmd, _exit_cmd, _new_cmd, _settings_cmd
+        return frozenset({_new_cmd, _clear_cmd, _settings_cmd, _exit_cmd})
+
     def _is_slash_command_input(self, text: str) -> bool:
         """True for slash commands, False for absolute filesystem paths like /home/user/..."""
         if not text.startswith("/"):
@@ -2954,9 +2960,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         # Built-in commands that only change the view (/new, /clear, /settings,
         # /exit, /quit) run even while a turn is streaming: /new leaves the
         # running lane in the background, the rest do not touch the turn.
+        # Only those handlers: /undo, /commit, /run, /compact, /retry, a user
+        # plugin… would act on the workspace or history under the running turn,
+        # so they keep the "Still working" answer below.
+        _plugin, cmd, arg = self._plugins.route(text)
         if (self._loop_task and not self._loop_task.done()
-                and self._plugins.route(text)[1] is not None):
-            _plugin, cmd, arg = self._plugins.route(text)
+                and cmd is not None and cmd.handler in self._view_command_handlers()):
             prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
             self._append("  " + tr("Running /{name} while the current turn keeps going in the background.", name=cmd.name), MUTED)
             # Not _start_operation: that would replace the running turn's

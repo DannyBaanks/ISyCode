@@ -348,3 +348,67 @@ def test_turn_that_ends_on_a_blocked_tool_says_why_and_keeps_the_prompt(tmp_path
             assert prompt.cursor_location == (0, len("ADV:tool_bogus"))
 
     asyncio.run(scenario())
+
+
+# ── audit follow-ups ─────────────────────────────────────────────────────────
+
+
+def test_only_view_commands_run_while_a_turn_is_streaming(tmp_path, monkeypatch):
+    """/undo, /commit, /run… act on the workspace; during a turn they wait."""
+    configure(tmp_path, monkeypatch)
+    ready, finish = asyncio.Event(), asyncio.Event()
+    ran: list[str] = []
+
+    async def chat(self, text, **_kwargs):
+        self._chat_turn_task = asyncio.current_task()
+        ready.set()
+        await finish.wait()
+        self._chat_turn_task = None
+
+    monkeypatch.setattr(TUIApp, "_run_chat", chat)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            for name in ("undo", "commit", "compact"):
+                _plugin, cmd, _arg = app._plugins.route(f"/{name}")
+                assert cmd is not None, name
+                original = cmd.handler
+
+                async def spy(app_, arg, _name=name):
+                    ran.append(_name)
+
+                cmd.handler = spy
+                assert original not in app._view_command_handlers()
+            prompt = app.query_one(PromptArea)
+            prompt.load_text("first")
+            await pilot.press("enter")
+            await asyncio.wait_for(ready.wait(), 5)
+            for name in ("undo", "commit", "compact"):
+                prompt.load_text(f"/{name}")
+                # Straight to the submit path: Enter would accept the open
+                # command menu's completion instead.
+                app._accept_prompt(prompt, prompt.text)
+                await pilot.pause()
+                # The draft is kept and the command never ran under the turn.
+                assert prompt.text == f"/{name}"
+            assert ran == []
+            assert any("Still working" in line for line in _notes(app))
+            finish.set()
+            for _ in range(50):
+                await pilot.pause(0.02)
+
+    asyncio.run(scenario())
+
+
+def test_tool_blocked_note_is_only_for_calls_refused_before_running():
+    deny = TUIApp._is_tool_denial
+    assert deny({"error": "tool is not registered by ISyCode"})
+    assert deny({"error": "ISyCode denied the action", "reason": "outside workspace"})
+    assert deny({"error": "webfetch requires a public HTTPS URL", "decision": "DENY"})
+    assert deny({"status": "denied", "error": "one title string is required"})
+    # A tool that ran and failed, or an MCP server error, was executed.
+    assert not deny({"error": "[Errno 2] No such file or directory: 'x'"})
+    assert not deny({"error": "that MCP tool is not available; the server may be stopped"})
+    assert not deny({"error": "RuntimeError: upstream 500"})

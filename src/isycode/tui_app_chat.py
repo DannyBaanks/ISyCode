@@ -1559,7 +1559,7 @@ class ChatMixin:
                                     blocked = json.loads(tool_result)
                                 except (ValueError, TypeError):
                                     blocked = {}
-                                if isinstance(blocked, dict) and blocked.get("error"):
+                                if isinstance(blocked, dict) and blocked.get("error") and self._is_tool_denial(blocked):
                                     blocked_calls.append((_tool_name, self._tool_denial_reason(_tool_name, blocked)))
                             if not is_idea_box:
                                 try:

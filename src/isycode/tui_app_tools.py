@@ -160,7 +160,8 @@ class ToolMixin:
                     # card only, so the transcript never showed why the turn
                     # ended; remember it for one visible line after the context
                     # is released below.
-                    blocked_reason = self._tool_denial_reason(name, material)
+                    if self._is_tool_denial(material):
+                        blocked_reason = self._tool_denial_reason(name, material)
                 elif material.get("timed_out"):
                     state = "Timed out"
                 elif material.get("exit_code") is not None:
@@ -186,6 +187,25 @@ class ToolMixin:
                     and current_card.is_mounted and self._lane_on_screen()):
                 current_group.finish_leaf(current_card, event["label"])
                 self.query_one(ChatArea).follow_tail()
+
+    # Errors returned before anything ran: the registry refused the call or its
+    # arguments, or the owner denied it. Any other ``error`` (an exception
+    # inside a tool that did run, an MCP server failure) is not a block, and
+    # "nothing was executed" would be false for it.
+    _PRE_EXECUTION_ERRORS = frozenset({
+        "tool is not registered by ISyCode",
+        "tool arguments are malformed or too large",
+        "tool arguments must be a JSON object",
+        "ISyCode denied the action",
+        "ISyCode authorization or read owner unavailable",
+    })
+
+    @classmethod
+    def _is_tool_denial(cls, material: dict) -> bool:
+        """Whether an error payload means the call was refused before it ran."""
+        return (str(material.get("decision") or "").upper() == "DENY"
+                or material.get("status") == "denied"
+                or material.get("error") in cls._PRE_EXECUTION_ERRORS)
 
     def _tool_denial_reason(self, name, material: dict) -> str:
         """One short reason for a denied or unknown tool, from its error payload."""
