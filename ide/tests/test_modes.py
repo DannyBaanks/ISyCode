@@ -38,7 +38,9 @@ def test_plan_mode_denies_write_and_coder_mode_allows_it(tmp_path):
     assert {tool["function"]["name"] for tool in agent._available_tools()} == {
         "read", "glob", "grep", "project_tree", "verify", "resident_query", "resident_scan",
         "isycode_git_status", "isycode_git_diff", "isycode_git_log",
-        "isycode_worktrees", "isycode_isymem_recall", "isycode_mcp_servers",
+        "isycode_worktrees", "isycode_isymem_recall", "isycode_motor",
+        "isycode_attachment_inspect", "isycode_see_image",
+        "isycode_mcp_servers", "isycode_mcp_discover", "isycode_mcp_describe",
     }
     denied = asyncio.run(agent._execute_tool(ToolCall("write", {"path": "x.py", "content": "x"}, "plan-write")))
     assert not denied.success

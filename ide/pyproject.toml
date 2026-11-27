@@ -32,4 +32,18 @@ where = ["."]
 include = ["bridge*", "core*", "engine*", "isycode_ide*", "isyvm*", "sandbox*", "verifier*", "ui*"]
 
 [tool.setuptools.package-data]
-ui = ["assets/*.png", "assets/*.svg", "assets/tabler/*.svg", "assets/tabler/LICENSE", "assets/tabler/manifest.json", "assets/vscode-icons/*.svg", "assets/vscode-icons/LICENSE", "assets/vscode-icons/*.md", "assets/vscode-icons/manifest.json"]
+ui = [
+    "assets/*.png",
+    "assets/*.svg",
+    "assets/providers/*.svg",
+    "assets/providers/LICENSE",
+    "assets/providers/provenance.json",
+    "assets/tabler/*.svg",
+    "assets/tabler/LICENSE",
+    "assets/tabler/manifest.json",
+    "assets/theme/*.svg",
+    "assets/vscode-icons/*.svg",
+    "assets/vscode-icons/LICENSE",
+    "assets/vscode-icons/*.md",
+    "assets/vscode-icons/manifest.json",
+]

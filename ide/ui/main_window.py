@@ -765,9 +765,11 @@ class MainWindow(QMainWindow):
         models = self.controller.default_models()
         candidates = []
         configured = self.controller.providers().get(provider)
-        if configured and configured.get("model"):
-            candidates.append(configured["model"])
-        default = models.get(provider)
+        configured_model = (configured.get("default_model") or configured.get("model")) if configured else None
+        if configured_model:
+            candidates.append(configured_model)
+        ptype = configured.get("provider_type", provider) if configured else provider
+        default = models.get(provider) or models.get(ptype)
         if default and default not in candidates:
             candidates.append(default)
         for m in self._discovered_models.get(provider, []):
@@ -775,6 +777,8 @@ class MainWindow(QMainWindow):
                 candidates.append(m)
         self.model_combo.clear()
         self.model_combo.addItems(candidates)
+        if candidates:
+            self.model_combo.setCurrentIndex(0)
         self._refresh_ping_badge()
         self._trigger_active_provider_discovery()
 
