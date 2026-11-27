@@ -11,19 +11,22 @@ Supports ANY file extension pasted or attached in the chat composer:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import mimetypes
+import os
 import re
 import shutil
 import struct
 import time
+import uuid
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from core.ide_state import project_state
+from core.ide_state import atomic_write, project_state, state_lock
 from core.runtime.base import ExecutionResult
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff", ".tif", ".ico", ".svg"}
@@ -247,7 +250,52 @@ def stage_attachment(
     raise ValueError("Se requiere source_path o raw_bytes para adjuntar un archivo.")
 
 
-def build_hidden_attachment_prompt(attachments: list[str | Path]) -> str:
+def issue_attachment_token(workspace: Path, path: str | Path) -> str:
+    """Issue and persist a reusable per-attachment token (`att_<hex>`) for FlowSight / image tools."""
+    root = Path(workspace).resolve()
+    resolved = str(Path(path).resolve())
+    tok_path = project_state(root) / "attachments" / "tokens.json"
+    tok_path.parent.mkdir(parents=True, exist_ok=True)
+    with state_lock(tok_path.with_suffix(".lock")):
+        data: dict[str, str] = {}
+        if tok_path.is_file():
+            try:
+                loaded = json.loads(tok_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    data = {str(k): str(v) for k, v in loaded.items()}
+            except (OSError, ValueError):
+                data = {}
+        for existing_tok, existing_path in data.items():
+            if existing_path == resolved:
+                return existing_tok
+        token = f"att_{uuid.uuid4().hex[:12]}"
+        data[token] = resolved
+        if len(data) > 200:
+            keys = list(data.keys())[-200:]
+            data = {k: data[k] for k in keys}
+        atomic_write(tok_path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        return token
+
+
+def resolve_attachment_token(workspace: Path, token: str) -> Path | None:
+    """Resolve an `att_<hex>` token back to its staged/workspace file path."""
+    if not token or not isinstance(token, str):
+        return None
+    tok_path = project_state(Path(workspace).resolve()) / "attachments" / "tokens.json"
+    if not tok_path.is_file():
+        return None
+    try:
+        data = json.loads(tok_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    raw = data.get(token.strip()) if isinstance(data, dict) else None
+    if not isinstance(raw, str):
+        return None
+    p = Path(raw).resolve()
+    return p if p.is_file() else None
+
+
+def build_hidden_attachment_prompt(attachments: list[str | Path], workspace: Path | None = None) -> str:
     """Build hidden system guidance for attached files (semantic extension-to-tool RAG)."""
     if not attachments:
         return ""
@@ -257,13 +305,184 @@ def build_hidden_attachment_prompt(attachments: list[str | Path]) -> str:
         "El usuario adjuntó los siguientes archivos en este turno. Usa la ruta semántica de herramienta según su extensión:",
     ]
     for idx, r in enumerate(routes, 1):
+        tok_part = ""
+        if workspace is not None and r.category == "image":
+            try:
+                tok = issue_attachment_token(workspace, r.path)
+                tok_part = f", token={tok}"
+                extra_guide = (
+                    f"Imagen adjunta '{r.name}' ({r.ext}) · token='{tok}' · path='{r.path}'. "
+                    "REGLA DE VISIÓN: Si tu modelo tiene visión nativa y ya ve la imagen, IGNORA isycode_see_image y responde directo. "
+                    f"Si NO tienes visión nativa, llama EN UN SOLO PASO: isycode_see_image(token='{tok}') — "
+                    "esto ejecuta FlowSight completo (map + bloques + stitch) automáticamente en 1 sola llamada, SIN discover ni describe."
+                )
+            except OSError:
+                extra_guide = r.instruction
+        else:
+            extra_guide = r.instruction
         mcp_part = f" | ISyMCP: {', '.join(r.mcp_servers)}" if r.mcp_servers else ""
         lines.append(
-            f"{idx}. {r.name} (ext={r.ext}, cat={r.category}, size={r.size_bytes}B, path={r.path})\n"
+            f"{idx}. {r.name} (ext={r.ext}, cat={r.category}, size={r.size_bytes}B{tok_part}, path={r.path})\n"
             f"   Tools: {', '.join(r.native_tools)}{mcp_part}\n"
-            f"   Guía: {r.instruction}"
+            f"   Guía: {extra_guide}"
         )
     return "\n".join(lines)
+
+
+async def see_image_with_flowsight(
+    workspace: Path,
+    *,
+    token: str = "",
+    path: str = "",
+    split: str = "quarters",
+) -> ExecutionResult:
+    """One-shot compacted FlowSight pipeline (map_blocks -> get_block x N -> stitch_blocks) in 1 tool call."""
+    root = Path(workspace).resolve()
+    resolved: Path | None = None
+    if token.strip():
+        resolved = resolve_attachment_token(root, token.strip())
+        if resolved is None:
+            return ExecutionResult(False, stderr=f"INVALID_ATTACHMENT_TOKEN: token '{token}' no encontrado.", returncode=1, error_code="INVALID_ATTACHMENT_TOKEN")
+    elif path.strip():
+        att_root = (project_state(root) / "attachments").resolve()
+        cand = Path(path.strip())
+        if not cand.is_absolute():
+            cand = root / cand
+        cand = cand.resolve(strict=False)
+        for base in (root, att_root):
+            try:
+                cand.relative_to(base)
+                resolved = cand
+                break
+            except ValueError:
+                continue
+        if resolved is None:
+            return ExecutionResult(False, stderr="PATH_OUTSIDE_ALLOWED: ruta fuera del workspace/adjuntos.", returncode=1, error_code="PATH_OUTSIDE_ALLOWED")
+    else:
+        return ExecutionResult(False, stderr="TOKEN_OR_PATH_REQUIRED: proporciona token o path de la imagen.", returncode=1, error_code="TOKEN_OR_PATH_REQUIRED")
+
+    if not resolved.is_file():
+        return ExecutionResult(False, stderr=f"FILE_NOT_FOUND: {resolved}", returncode=1, error_code="FILE_NOT_FOUND")
+
+    from core.isymcp_hub_client import load_local_mcp_servers, _extract_mcp_text
+    local_mcps = load_local_mcp_servers()
+    fs_spec = local_mcps.get("flowsight")
+    if fs_spec is None:
+        default_script = Path("/home/danny/Development/ISyCo Git/FlowSight/flowsight_mcp.py")
+        if default_script.is_file():
+            fs_spec = {"command": ["python3", str(default_script)], "env": {"FLOWSIGHT_VLM_ENABLED": "0"}}
+        else:
+            return ExecutionResult(False, stderr="FLOWSIGHT_UNAVAILABLE: flowsight_mcp.py no encontrado.", returncode=1, error_code="FLOWSIGHT_UNAVAILABLE")
+
+    env = os.environ.copy()
+    env.update(fs_spec.get("env") or {})
+    proc = await asyncio.create_subprocess_exec(
+        *fs_spec["command"],
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env=env,
+    )
+    assert proc.stdin is not None and proc.stdout is not None
+
+    next_id = 1
+
+    async def _rpc(method: str, params: dict[str, Any]) -> dict[str, Any]:
+        nonlocal next_id
+        req_id = next_id
+        next_id += 1
+        proc.stdin.write((json.dumps({"jsonrpc": "2.0", "id": req_id, "method": method, "params": params}, ensure_ascii=False) + "\n").encode("utf-8"))
+        await proc.stdin.drain()
+        while True:
+            line = await proc.stdout.readline()
+            if not line:
+                raise RuntimeError("FlowSight MCP cerró stdout inesperadamente.")
+            text = line.decode("utf-8", "replace").strip()
+            if not text:
+                continue
+            try:
+                msg = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(msg, dict) and msg.get("id") == req_id:
+                return msg
+
+    async def _run_pipeline() -> dict[str, Any]:
+        init = await _rpc("initialize", {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "isycode-ide-flowsight", "version": "0.4.0"},
+        })
+        if "error" in init:
+            raise RuntimeError(f"FlowSight init error: {init['error']}")
+        proc.stdin.write((json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}) + "\n").encode("utf-8"))
+        await proc.stdin.drain()
+
+        valid_split = split if split in {"quarters", "halves_h", "halves_v"} else "quarters"
+        mapped_resp = await _rpc("tools/call", {
+            "name": "flowsight_map_blocks",
+            "arguments": {"image_path": str(resolved), "split": valid_split, "palette_k": 12, "grid_w": 24, "grid_h": 14},
+        })
+        if "error" in mapped_resp:
+            raise RuntimeError(f"flowsight_map_blocks error: {mapped_resp['error']}")
+        mapped_text = _extract_mcp_text(mapped_resp.get("result") or {})
+
+        # Extract session_id from mapped_text (JSON or text line)
+        session_id = ""
+        m = re.search(r'"?session_id"?\s*[:=]\s*"?([A-Za-z0-9_-]{6,64})"?', mapped_text)
+        if m:
+            session_id = m.group(1)
+
+        blocks_out: dict[str, str] = {}
+        stitched_text = ""
+        if session_id:
+            block_ids = ["TL", "TR", "BL", "BR"] if valid_split == "quarters" else (["L", "R"] if valid_split == "halves_h" else ["T", "B"])
+            for bid in block_ids:
+                b_resp = await _rpc("tools/call", {
+                    "name": "flowsight_get_block",
+                    "arguments": {"session_id": session_id, "block_id": bid, "include_edge_map": True},
+                })
+                if "result" in b_resp:
+                    blocks_out[bid] = _extract_mcp_text(b_resp["result"])[:2500]
+            s_resp = await _rpc("tools/call", {
+                "name": "flowsight_stitch_blocks",
+                "arguments": {"session_id": session_id},
+            })
+            if "result" in s_resp:
+                stitched_text = _extract_mcp_text(s_resp["result"])[:4500]
+
+        dims = _image_dimensions(resolved)
+        return {
+            "engine": "FlowSight (1-step compacted pipeline)",
+            "image": str(resolved),
+            "token": token or issue_attachment_token(root, resolved),
+            "dimensions": {"width": dims[0], "height": dims[1]} if dims else None,
+            "session_id": session_id,
+            "map_overview": mapped_text[:3500],
+            "stitched_scene": stitched_text,
+            "blocks": blocks_out,
+        }
+
+    try:
+        report = await asyncio.wait_for(_run_pipeline(), timeout=45.0)
+        return ExecutionResult(
+            True,
+            stdout=json.dumps(report, indent=2, ensure_ascii=False),
+            evidence={"flowsight": {"image": str(resolved), "session_id": report.get("session_id", "")}},
+        )
+    except asyncio.TimeoutError:
+        return ExecutionResult(False, stderr="FLOWSIGHT_TIMEOUT: el análisis FlowSight excedió 45s.", returncode=1, error_code="FLOWSIGHT_TIMEOUT")
+    except Exception as exc:
+        return ExecutionResult(False, stderr=f"FLOWSIGHT_ERROR: {type(exc).__name__}: {exc}", returncode=1, error_code="FLOWSIGHT_ERROR")
+    finally:
+        try:
+            proc.terminate()
+            await asyncio.wait_for(proc.wait(), timeout=1.5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
 
 
 def _image_dimensions(path: Path) -> tuple[int, int] | None:

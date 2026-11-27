@@ -4,6 +4,69 @@ from __future__ import annotations
 import json
 from typing import AsyncIterator
 from .base import BaseProvider, ProviderConfig, CompletionResponse, ProviderEvent, ProviderError, ToolCall, convert_tool_calls_openai
+import re
+
+_STRAY_TAG_RE = re.compile(r"</?(?:think|thought|tool_call|function)(?:\s+[^>]*)?>", re.IGNORECASE)
+
+
+class _ThinkStreamSplitter:
+    """Routes inline <think>...</think> blocks from delta.content to reasoning events and strips stray XML tags."""
+
+    def __init__(self) -> None:
+        self._in_think = False
+        self._pending = ""
+
+    def feed(self, chunk: str) -> list[tuple[str, str]]:
+        buf = self._pending + chunk
+        self._pending = ""
+        out: list[tuple[str, str]] = []
+        while buf:
+            if self._in_think:
+                end = buf.lower().find("</think>")
+                if end >= 0:
+                    if end > 0:
+                        out.append(("reasoning", buf[:end]))
+                    buf = buf[end + len("</think>"):]
+                    self._in_think = False
+                else:
+                    if len(buf) > 8:
+                        out.append(("reasoning", buf[:-8]))
+                        self._pending = buf[-8:]
+                    else:
+                        self._pending = buf
+                    break
+            else:
+                start = buf.lower().find("<think>")
+                if start >= 0:
+                    if start > 0:
+                        cleaned = _STRAY_TAG_RE.sub("", buf[:start])
+                        if cleaned:
+                            out.append(("text", cleaned))
+                    buf = buf[start + len("<think>"):]
+                    self._in_think = True
+                else:
+                    lt = buf.rfind("<")
+                    if lt >= 0 and len(buf) - lt <= 16 and ">" not in buf[lt:]:
+                        head = _STRAY_TAG_RE.sub("", buf[:lt])
+                        if head:
+                            out.append(("text", head))
+                        self._pending = buf[lt:]
+                    else:
+                        cleaned = _STRAY_TAG_RE.sub("", buf)
+                        if cleaned:
+                            out.append(("text", cleaned))
+                    break
+        return out
+
+    def flush(self) -> list[tuple[str, str]]:
+        if not self._pending:
+            return []
+        rem = self._pending
+        self._pending = ""
+        if self._in_think:
+            return [("reasoning", rem)]
+        cleaned = _STRAY_TAG_RE.sub("", rem)
+        return [("text", cleaned)] if cleaned else []
 
 
 class OpenAIProvider(BaseProvider):
@@ -15,6 +78,7 @@ class OpenAIProvider(BaseProvider):
             payload.update({"tools": tools, "tool_choice": "auto"})
         text, calls, usage, finish = [], {}, None, "stop"
         total, terminal, saw_choice = 0, False, False
+        splitter = _ThinkStreamSplitter()
         async with self.client.stream("POST", self.config.url_for("/chat/completions"),
                                       headers=self._build_headers(), json=payload) as response:
             response.raise_for_status()
@@ -60,8 +124,12 @@ class OpenAIProvider(BaseProvider):
                     value = delta["content"]
                     if not isinstance(value, str):
                         raise ProviderError("PROVIDER_INVALID_CONTENT", "Contenido de streaming inválido.")
-                    text.append(value)
-                    yield ProviderEvent("text", value)
+                    for kind, piece in splitter.feed(value):
+                        if kind == "reasoning":
+                            yield ProviderEvent("reasoning", piece)
+                        else:
+                            text.append(piece)
+                            yield ProviderEvent("text", piece)
                 for fragment in delta.get("tool_calls", []):
                     yield ProviderEvent("activity", "tool_arguments")
                     index = fragment["index"]
@@ -76,6 +144,12 @@ class OpenAIProvider(BaseProvider):
                             if not isinstance(function[field], str):
                                 raise ProviderError("PROVIDER_TOOL_ARGUMENTS", "Fragmento de herramienta inválido.")
                             call["function"][field] += function[field]
+        for kind, piece in splitter.flush():
+            if kind == "reasoning":
+                yield ProviderEvent("reasoning", piece)
+            else:
+                text.append(piece)
+                yield ProviderEvent("text", piece)
         if not terminal or not saw_choice:
             raise ProviderError("PROVIDER_STREAM_INCOMPLETE", "El streaming terminó sin una respuesta completa. La salida recibida es parcial.")
         if finish == "length":

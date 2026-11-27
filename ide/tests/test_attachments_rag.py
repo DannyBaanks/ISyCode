@@ -87,3 +87,52 @@ def test_chat_panel_attachments_strip_preview_and_take(tmp_path):
     taken = chat.take_pending_attachments()
     assert len(taken) == 2
     assert chat.attachments_strip.isHidden() is True
+
+
+def test_think_stream_splitter_routes_reasoning_and_strips_stray_tags():
+    from core.agent.providers.openai import _ThinkStreamSplitter
+    sp = _ThinkStreamSplitter()
+    events = []
+    for chunk in ("<thi", "nk>razonamiento interno</th", "ink></function></tool_call>Respuesta limpia."):
+        events.extend(sp.feed(chunk))
+    events.extend(sp.flush())
+    reasoning = "".join(t for k, t in events if k == "reasoning")
+    visible = "".join(t for k, t in events if k == "text")
+    assert "razonamiento interno" in reasoning
+    assert visible == "Respuesta limpia."
+    assert "</function>" not in visible
+    assert "</tool_call>" not in visible
+
+
+def test_attachment_token_and_one_step_flowsight(tmp_path, monkeypatch):
+    import asyncio
+    from PySide6.QtGui import QImage, QColor
+    from core.attachment_router import (
+        build_hidden_attachment_prompt,
+        issue_attachment_token,
+        resolve_attachment_token,
+        see_image_with_flowsight,
+    )
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    ws = tmp_path / "repo"
+    ws.mkdir()
+    img_path = ws / "demo.png"
+    img = QImage(64, 48, QImage.Format.Format_RGB32)
+    img.fill(QColor(30, 120, 220))
+    assert img.save(str(img_path), "PNG")
+
+    tok = issue_attachment_token(ws, img_path)
+    assert tok.startswith("att_")
+    assert resolve_attachment_token(ws, tok) == img_path.resolve()
+
+    hidden = build_hidden_attachment_prompt([img_path], workspace=ws)
+    assert f"isycode_see_image(token='{tok}')" in hidden
+
+    if Path("/home/danny/Development/ISyCo Git/FlowSight/flowsight_mcp.py").is_file():
+        res = asyncio.run(see_image_with_flowsight(ws, token=tok))
+        assert res.success, res.stderr
+        data = json.loads(res.stdout)
+        assert data["engine"].startswith("FlowSight")
+        assert data["token"] == tok
+        assert data["map_overview"]

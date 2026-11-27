@@ -337,6 +337,22 @@ AVAILABLE_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "isycode_see_image",
+            "description": "ONE-STEP image vision via FlowSight for non-vision models: runs map_blocks + get_block (TL/TR/BL/BR) + stitch_blocks automatically in a single call using the attachment token (e.g. token='att_...') or image path. No discover or describe needed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "token": {"type": "string", "description": "Attachment token provided in the hidden attachment prompt (e.g. att_...)"},
+                    "path": {"type": "string", "description": "Optional image path if no token was provided"},
+                    "split": {"type": "string", "enum": ["quarters", "halves_h", "halves_v"], "default": "quarters"}
+                },
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "isycode_mkdir",
             "description": "Create a directory inside the project workspace (CODER mode, requires host approval).",
             "parameters": {

@@ -202,7 +202,7 @@ class AgentWorker(QThread):
             sys_prompt = DEFAULT_SYSTEM_PROMPT
             if self.attachments:
                 from core.attachment_router import build_hidden_attachment_prompt
-                sys_prompt += build_hidden_attachment_prompt(self.attachments)
+                sys_prompt += build_hidden_attachment_prompt(self.attachments, workspace=self._working_dir)
             context = AgentContext(
                 provider_name=self.provider,
                 model=self.model,

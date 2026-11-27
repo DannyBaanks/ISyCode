@@ -27,6 +27,7 @@ READONLY_ISYCODE_TOOLS = {
     "isycode_mcp_describe",
     "isycode_motor",
     "isycode_attachment_inspect",
+    "isycode_see_image",
 }
 
 MUTATING_ISYCODE_TOOLS = {
@@ -234,6 +235,18 @@ async def execute_isycode_readonly_tool(workspace: Path, name: str, arguments: d
         if name == "isycode_attachment_inspect":
             from core.attachment_router import inspect_attachment
             res = inspect_attachment(root, str(arguments.get("path", "")))
+            if res.stdout:
+                res.stdout = _bounded(res.stdout)
+            return res
+
+        if name == "isycode_see_image":
+            from core.attachment_router import see_image_with_flowsight
+            res = await see_image_with_flowsight(
+                root,
+                token=str(arguments.get("token", "")),
+                path=str(arguments.get("path", "")),
+                split=str(arguments.get("split", "quarters")),
+            )
             if res.stdout:
                 res.stdout = _bounded(res.stdout)
             return res
