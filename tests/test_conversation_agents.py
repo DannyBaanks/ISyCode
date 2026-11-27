@@ -57,7 +57,7 @@ def test_switching_leaves_the_other_conversation_running(tmp_path, monkeypatch):
             await app._show_chat_sessions()
             await pilot.pause()
             row = next(item for item in app._work_rows if item["id"] == first.session_id)
-            assert row["status"] == "generating"
+            assert row["status"] == "background"  # its lane is not on screen
             gate.set()
             for _ in range(50):
                 await pilot.pause(0.01)

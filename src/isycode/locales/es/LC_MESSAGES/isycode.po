@@ -1747,6 +1747,9 @@ msgstr "Espera respuesta"
 msgid "Idle"
 msgstr "Inactiva"
 
+msgid "Background"
+msgstr "En segundo plano"
+
 msgid "Select a conversation to inspect it."
 msgstr "Elige una conversación para inspeccionarla."
 
