@@ -15,29 +15,39 @@ import pytest
 
 from bridge.isyco_reader import (
     IsolationViolation,
+    _ISYCO_ROOT,
     list_contracts,
     read_contract,
     read_capability_contract,
 )
 
+_needs_isyco = pytest.mark.skipif(
+    not _ISYCO_ROOT.is_dir(),
+    reason="External ISyCo monorepo not present on this runner",
+)
+
 
 # === PASS positivos (4) ===
 
+@_needs_isyco
 def test_pass1_read_existing_bootstrap_contract():
     txt = read_contract("bootstrap/bootstrap.iesy")
     assert "Identity:" in txt
     assert "Version:" in txt
 
+@_needs_isyco
 def test_pass2_list_contracts_nonempty_and_all_iesy():
     names = list_contracts()
     assert len(names) > 0
     assert all(n.endswith(".iesy") for n in names)
 
+@_needs_isyco
 def test_pass3_read_capability_contract_runtime_exe():
     txt = read_capability_contract("cap.runtime.exe")
     assert "Identity:" in txt
     assert ".iesy" in txt or "iesy" in txt.lower()
 
+@_needs_isyco
 def test_pass4_list_contracts_atoms_subdir():
     names = list_contracts("bridge_core/contracts/bootstrap/atoms")
     # debe contener al menos compare.iesy y return.iesy si existen

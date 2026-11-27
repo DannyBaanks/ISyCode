@@ -96,6 +96,9 @@ def test_resident_scan_uses_real_scanner(tmp_path):
 
 
 def test_bridge_contracts_read_only(tmp_path):
+    from bridge.isyco_reader import _ISYCO_ROOT
+    if not _ISYCO_ROOT.is_dir():
+        pytest.skip("External ISyCo monorepo not present on this runner")
     controller = AppController(tmp_path)
     contracts = controller.bridge_contracts()
     assert isinstance(contracts, list)
