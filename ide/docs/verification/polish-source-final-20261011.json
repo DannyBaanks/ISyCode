@@ -1,0 +1,45 @@
+{
+  "scope": "Final accepted source; GUI captures unchanged; TUI leading-newline parser correction included",
+  "sources": [
+    {
+      "path": "core/file_icons.py",
+      "sha256": "ddf32bf1cca38eb6ff4575152094f652a77d707e8a4b8f1e8f95d8750ffc13f3"
+    },
+    {
+      "path": "core/agent/chat.py",
+      "sha256": "8870c26e36e1be3e87b6147c7131901ea3c1f20bda90582ef7f7145d2bb3d2af"
+    },
+    {
+      "path": "core/github_service.py",
+      "sha256": "365192d6fcd558fa722981a21e0a3eb58315f54db7422ed26979c48cdef736d2"
+    },
+    {
+      "path": "ui/icons.py",
+      "sha256": "381c4b5911bba861e3fc4b001f225c769ebaee60e032aabfe786b30235404e80"
+    },
+    {
+      "path": "ui/panels/workspace.py",
+      "sha256": "7c10364d66bb1b74afb0b4ec6d3734217d4a8133d606a64696c723f0932a6f7b"
+    },
+    {
+      "path": "ui/panels/chat.py",
+      "sha256": "26c4a0c65933d1d05171347e4485bcdb684e380dff5752bdc2648170034773fe"
+    },
+    {
+      "path": "ui/panels/github.py",
+      "sha256": "30c404afc44a71d5ddf4dc3db449e6cfeb7a3171fc24115ac63cc8a07b2aab7b"
+    },
+    {
+      "path": "ui/shell.py",
+      "sha256": "f3e96f9dafb57a5f3193785ad2e19b639683878132f6852f4b3a822fa7eb4b98"
+    },
+    {
+      "path": "ui/theme.py",
+      "sha256": "a6151a4f28bf253615d04e1b2c25268cd9f2338fa02d1cd9e50d4a7f3afc57ab"
+    },
+    {
+      "path": "ui/main_window.py",
+      "sha256": "465e4549549d4d37caa5bb42a590be403601901fe62785095f033cd21b994727"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T05:14:13.736736+00:00",
+  "command": "/home/danny/.local/bin/isycode-ide accounts --help",
+  "exit": 0,
+  "sha256": "14f856098a9709136217581ab291df29bb8c6622e950680e4de3729368ba6203",
+  "scope": "Private temporary projects and synthetic/local fixtures, or own additive launcher; no real account requests"
+}

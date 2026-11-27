@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-10-11T13:22:57.212545+00:00",
+  "baseline_commit": "e2a7a3e9d06ad958ba0ad6ee415033b2eb0a5303",
+  "files": {
+    "GUIA.md": "1d22077d90ed3c147294ef67abbe2bbc2c27e8ca4729f9e554fa8cc7ce37e14f",
+    "core/project_tree.py": "c4acaa4ffb28e5166f54188d7e3be57c476a2e4b194091e1124b5637e17113d3",
+    "core/runtime/base.py": "3e55ba21ed8d7b9be832831aadb7aebb0d4c0cb7d259d67cf94b9bcba24d2282",
+    "core/agent/run.py": "53b722065c6f43bec01a04fd266fe83e4d7523c3da058cc19b65a9354b0b0a7d",
+    "core/agent/providers/openai.py": "02d4513fd03ee2200c8fa9a2c92b5c653d7b937d11506a11b91bbf13feaf61d6",
+    "core/tool_settings.py": "e13ed4fa44eb4e835590ad9e7e173ac9b71c3b3e1889358b39e1411838c80c5a",
+    "ui/thread.py": "8ac363ce0f7ce98b78bf5633e05067887ae6b4836bf7fd776a594e56acada0e9",
+    "ui/bridge.py": "eeef916584dfb6f6ee2e3e12b6d713cbeb3791dc45f5ec02b48f5b9b19848df0",
+    "ui/main_window.py": "d23712c0cd83f962347ef8fcdc93d32886df1aff72fc5236b32d65e833b707fe",
+    "ui/panels/chat.py": "c7ed6d0de41e8f26f2ee2a031eaf770f85a741091268fe0378194119938f27bb",
+    "ui/panels/workspace.py": "536ad30e3b99a1f8d37781213f2eac41a4064efb236fb545f4915ac145eb09f1",
+    "docs/design/2026-10-11-project-view.md": "25cff4ec4339eada5f57bae75a65430441baef54134bea3722040807a271c5f1"
+  },
+  "syntax_log_sha256": "0367fa5b1033d9888e6bc68d513e6943f3cfb95867531bdf2db326916f983d15",
+  "automated_tests_run": false,
+  "runtime_e2e": "NOT_DEMONSTRATED"
+}

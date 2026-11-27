@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-10-11T21:09:21.796642+00:00",
+  "status": "packaged_and_launcher_updated",
+  "source_snapshot_unchanged": true,
+  "python_syntax": "AST parsed edited sources",
+  "svg_inspection": "XML parsed; passive tags and local attributes only",
+  "package_provider_assets": "byte-identical to source including license and provenance",
+  "guide": "byte-identical to source",
+  "preview": "Gallery rendered from shipped icons with native Qt widgets; example data, no accounts",
+  "tests_run": false,
+  "account_requests": 0,
+  "not_demonstrated": [
+    "Full installed application visual regression",
+    "Functional provider/model popup behaviour; intentionally pending",
+    "Conversation menu and scroll layout; intentionally pending"
+  ],
+  "launcher_sha256": "1589bf928655d06938755602a1287bf3bbb56caff5d9a37c5ea705b1ee4d3fa7",
+  "appimage": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T210630Z-faaf6d/ISyCode-IDE-x86_64.AppImage",
+  "build_log_sha256": "31c4aea8d7982306ea7e0a2e174b7551ed86f771f4d6ec916a5a3fcd8b0cb40e"
+}

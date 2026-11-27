@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "20aea2aec9cbfde2fdd559e95de4f64e37adfcf7",
+  "timestamp_utc": "20261011T191303Z",
+  "sha256": {
+    "ui/tool_presentation.py": "3563abc5061611c2059cbd900cf43e786c2eeea69845eca0da02f68ddc770470",
+    "ui/bridge.py": "50dcb903fd7a1a9a757caf6bd71bcb2d28f5a016d12225dcee6253a2d8d1b746",
+    "ui/panels/chat.py": "735c033c7a42d69b9b3734f6c78c4ada2c0615a414bd7211f07a55595e039887",
+    "ui/main_window.py": "63f33a2c4d040e98f04236c37c8077c1a695db250a6cb92cb10e2ba782ab2889",
+    "ui/panels/tools.py": "959efc36b1b621a006142ef8e1d70da9c31876a4496f869ba5f8854518f92182",
+    "core/project_tree.py": "912f747305d2f6543b287d1c1d09e4ff3098e111ddbbba6d953bc4df007a1347",
+    "GUIA.md": "0d553a0146f1c3aea0f3f2b1f78d8cc9c9c3ae74fab893a441072892e603099d",
+    "docs/design/2026-10-11-tool-presentation.md": "166a45abfd87d021525e40f4a059815a3efb916c9f5f0afd566e581c2b60a527"
+  },
+  "automated_tests_run": false,
+  "live_provider_calls": 0,
+  "visual_runtime_regression": "NOT_DEMONSTRATED"
+}

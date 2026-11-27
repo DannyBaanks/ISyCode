@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T05:09:24.599382+00:00",
+  "command": "QT_QPA_PLATFORM=offscreen /home/danny/.local/bin/isycode-ide --self-check",
+  "exit": 0,
+  "sha256": "49785a05eddba13c1fffc80bd5bc025181f301f50b936f903520f18e9f9f6a01",
+  "scope": "No real account requests; owned temporary self-check project or own additive launcher"
+}

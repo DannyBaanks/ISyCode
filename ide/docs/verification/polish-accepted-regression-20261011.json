@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-10-11T11:00:07.023822+00:00",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "log": "docs/verification/polish-accepted-regression-20261011.log",
+  "sha256": "e056b6cabaf1bc0f68006be04b74989e90d91192fb8c649d48cbcdf07bdd2ec3"
+}

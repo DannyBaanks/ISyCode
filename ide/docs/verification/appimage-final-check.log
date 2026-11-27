@@ -1,0 +1,3 @@
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+{"name": "ISyCode IDE", "qt": true, "linux_namespaces": true, "views": ["conversation", "code"], "account_requests": 0}

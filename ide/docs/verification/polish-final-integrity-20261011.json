@@ -1,0 +1,9 @@
+{
+  "source_receipts_verified": true,
+  "regression_log_verified": true,
+  "installed_files_verified": true,
+  "design_qa_sha256": "e606062c8df290974f697dcbab8e25b7480ba52a72111dc156bf834b50cc32f0",
+  "installation_receipt_sha256": "8da5165e3a31d23101a17b64991a33629e14baec9fbd554fe985ad65de2db8c1",
+  "source_deletions": [],
+  "source_renames": []
+}

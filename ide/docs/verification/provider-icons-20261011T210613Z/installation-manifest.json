@@ -1,0 +1,12 @@
+{
+  "action": "replace one launcher to select additive AppImage release",
+  "file_count": 1,
+  "path": "/home/danny/.local/bin/isycode-ide",
+  "tracked": false,
+  "why": "existing ISyCode IDE launcher selects the previous release",
+  "equivalent_preserved": "/home/danny/Development/ISyCode-IDE/docs/verification/provider-icons-20261011T210613Z/previous-launcher.sh",
+  "previous_sha256": "9afec978a051b69bb1aa1f42c9b746721fd675916b27f1cbe9d0907186a62686",
+  "new_appimage": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T210630Z-faaf6d/ISyCode-IDE-x86_64.AppImage",
+  "deleted_files": [],
+  "preserve_previous_builds": true
+}

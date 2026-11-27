@@ -1,0 +1,26 @@
+{
+  "build_exit": 0,
+  "image": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T191303Z-424216/ISyCode-IDE-x86_64.AppImage",
+  "image_sha256": "0f83f7ed615129ad923172e546baa13b91b948a95d1c29d157e3a525c505bde9",
+  "launcher_sha256": "9afec978a051b69bb1aa1f42c9b746721fd675916b27f1cbe9d0907186a62686",
+  "guide_matches_source": true,
+  "checks": [
+    "AST syntax parsing",
+    "git diff --check",
+    "additive PyInstaller/AppImage build",
+    "source/artifact SHA-256 comparison",
+    "bundled guide byte comparison",
+    "launcher byte comparison"
+  ],
+  "automated_tests_run": false,
+  "account_inference_requests": 0,
+  "new_visual_and_model_runtime": "NOT_DEMONSTRATED",
+  "evidence_sha256": {
+    "previous-launcher.sh": "25fe11fb09aa67fe43abaab0f7ad3b3246ad2c6557a33c081dcc7839ac7626d6",
+    "diff-check.log": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+    "source.json": "0cdc1521ac2e3a9568aa6da43ace730bd68cedcae2c1a02d2935f03f743702b9",
+    "installation-manifest.json": "df86743946992fa97bcf7f178aee6c545df0f4a899522404c01530d62223adc7",
+    "package-manifest.json": "4add3ae56d22a65bb24119e5b5a72e4f55b3a896a7d72b174cc5bcea6b103bf1",
+    "syntax.log": "a65974b5e91bbf41ada066a8cf3ff34059f940a91ec9af32159ae2a5c847c5bc"
+  }
+}

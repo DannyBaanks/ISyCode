@@ -8,7 +8,7 @@ Una TUI para leer código, proponer cambios, correr pruebas y revisar Git
 con el modelo que elijas: en la nube o local. Tú decides qué puede hacer
 en cada proyecto.
 
-[Instalar](#instalar) · [Guía de uso](docs/GUIA.md) ·
+[Instalar](#instalar) · [ISyCode IDE (escritorio)](#isycode-ide-escritorio) · [Guía de uso](docs/GUIA.md) ·
 [Documentación](docs/reference/README.md) · [Roadmap](docs/ROADMAP.md) ·
 [Reportar un problema](https://github.com/DannyBaanks/ISyCode/issues)
 
@@ -131,6 +131,40 @@ propio proveedor o un modelo local que mantiene y repara ISyCode. Ábrelo con
 ![Configuración de ISyCode por categorías](docs/screenshots/2026-10-24-readme/04-settings.png)
 
 [Flujos, proveedores y todos los atajos](docs/reference/workflows.md).
+
+## ISyCode IDE (escritorio)
+
+Además de la TUI en terminal, ISyCode incluye **ISyCode IDE**, una aplicación
+nativa de escritorio (Qt6) con chat en columna de lectura, editor de código con
+diffs aprobables, terminal PTY integrada, panel de **ISyMCP Hub**, integración
+con **GitHub**, adjuntos universales con visión en 1 paso (`FlowSight`),
+selector **PLAN / CODER** y recibos de evidencia estructurados.
+
+![ISyCode IDE: conversación con tarjetas de aprobación de diff y comando junto al editor de código](docs/screenshots/2026-11-27-ide/01-ide-chat.png)
+
+### Descargar binarios (Windows, Linux y macOS)
+
+Descarga el binario compilado desde [Releases](https://github.com/DannyBaanks/ISyCode/releases):
+
+| Plataforma | Archivo | Uso |
+| --- | --- | --- |
+| **Windows (x86_64)** | `ISyCode-IDE-windows-x86_64.exe` | Ejecutable portátil |
+| **Linux (x86_64)** | `ISyCode-IDE-linux-x86_64.AppImage` | `chmod +x ISyCode-IDE-linux-x86_64.AppImage && ./ISyCode-IDE-linux-x86_64.AppImage` |
+| **macOS (Apple Silicon)** | `ISyCode-IDE-macos-arm64.dmg` | Abrir el `.dmg` y arrastrar `ISyCode IDE.app` a Aplicaciones |
+
+<details>
+<summary><b>Ejecutar ISyCode IDE desde el código fuente</b></summary>
+
+```bash
+cd ide
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[ui]"
+isycode-app
+```
+
+Más detalle en [ide/GUIA.md](ide/GUIA.md) y [ide/README.md](ide/README.md).
+</details>
 
 ## Documentación y comunidad
 
