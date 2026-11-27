@@ -7,11 +7,13 @@ import re
 import hashlib
 from pathlib import Path
 
-from PySide6.QtCore import QRect, QRegularExpression, QSize, Qt, Signal
-from PySide6.QtGui import (QColor, QFont, QPainter, QSyntaxHighlighter,
-                            QTextCharFormat, QTextFormat)
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPlainTextEdit,
-                                QPushButton, QTabBar, QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtCore import QFileSystemWatcher, QRect, QRegularExpression, QSize, Qt, Signal
+from PySide6.QtGui import (QColor, QFont, QKeySequence, QPainter, QShortcut,
+                            QSyntaxHighlighter, QTextCharFormat, QTextCursor,
+                            QTextDocument, QTextFormat)
+from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit,
+                                QMessageBox, QPlainTextEdit, QPushButton,
+                                QTabBar, QTextEdit, QVBoxLayout, QWidget)
 from pygments.lexers import (PythonLexer, TextLexer, get_lexer_by_name,
                              get_lexer_for_filename)
 from pygments.token import Token
@@ -288,6 +290,10 @@ class EditorPanel(QWidget):
         self.snapshot: str = ""
         self._buffers: dict[str, dict] = {}
         self._switching_tab = False
+        self._ignored_disk_hashes: dict[str, str] = {}
+        self._pending_disk_hash: str = ""
+        self._fs_watcher = QFileSystemWatcher(self)
+        self._fs_watcher.fileChanged.connect(self._on_external_file_changed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -313,7 +319,7 @@ class EditorPanel(QWidget):
 
         self.save_button = QPushButton("Guardar")
         self.save_button.setProperty("variant", "primary")
-        self.save_button.setToolTip("Guardar cambios en disco")
+        self.save_button.setToolTip("Guardar cambios en disco (Ctrl+S)")
         self.save_button.clicked.connect(self.save)
         self.save_button.setEnabled(False)
         header.addWidget(self.save_button)
@@ -322,10 +328,81 @@ class EditorPanel(QWidget):
         self.help_button.setObjectName("helpButton")
         self.help_button.setToolTip(
             "Editor: Editor de código integrado con resaltado de sintaxis VS Code Dark+ y números de línea.\n"
-            "Permite editar y guardar archivos del workspace de manera segura."
+            "Atajos: Ctrl+S guardar · Ctrl+W cerrar pestaña · Ctrl+F buscar/reemplazar · Ctrl+Tab siguiente pestaña."
         )
         header.addWidget(self.help_button)
         layout.addLayout(header)
+
+        # Non-blocking inline external modification banner
+        self.reload_banner = QFrame(self)
+        self.reload_banner.setObjectName("editorReloadBanner")
+        self.reload_banner.setStyleSheet(
+            f"QFrame#editorReloadBanner {{ background: #2a2412; border: 1px solid #6b5517; "
+            f"border-radius: 6px; padding: 4px 8px; }}"
+        )
+        rb_lay = QHBoxLayout(self.reload_banner)
+        rb_lay.setContentsMargins(8, 4, 8, 4)
+        rb_lay.setSpacing(8)
+        self.reload_label = QLabel("El archivo cambió en disco")
+        self.reload_label.setStyleSheet(f"color: {theme.WARN}; font-size: 12px; font-weight: 600;")
+        rb_lay.addWidget(self.reload_label, stretch=1)
+        self.reload_button = QPushButton("Recargar")
+        self.reload_button.setProperty("variant", "primary")
+        self.reload_button.clicked.connect(self.reload_current_file)
+        rb_lay.addWidget(self.reload_button)
+        self.ignore_reload_button = QPushButton("Ignorar")
+        self.ignore_reload_button.setProperty("variant", "ghost")
+        self.ignore_reload_button.clicked.connect(self._ignore_external_change)
+        rb_lay.addWidget(self.ignore_reload_button)
+        self.reload_banner.hide()
+        layout.addWidget(self.reload_banner)
+
+        # Inline Find/Replace bar (Ctrl+F)
+        self.find_bar = QFrame(self)
+        self.find_bar.setObjectName("editorFindBar")
+        self.find_bar.setStyleSheet(
+            f"QFrame#editorFindBar {{ background: {theme.SURFACE_2}; border: 1px solid {theme.BORDER}; "
+            f"border-radius: 6px; }}"
+        )
+        fb_lay = QHBoxLayout(self.find_bar)
+        fb_lay.setContentsMargins(8, 5, 8, 5)
+        fb_lay.setSpacing(6)
+        self.find_input = QLineEdit()
+        self.find_input.setPlaceholderText("Buscar…")
+        self.find_input.returnPressed.connect(self.find_next)
+        fb_lay.addWidget(self.find_input, stretch=2)
+        self.replace_input = QLineEdit()
+        self.replace_input.setPlaceholderText("Reemplazar…")
+        self.replace_input.returnPressed.connect(self.replace_current)
+        fb_lay.addWidget(self.replace_input, stretch=2)
+        self.find_prev_button = QPushButton("Anterior")
+        self.find_prev_button.setProperty("variant", "ghost")
+        self.find_prev_button.clicked.connect(self.find_prev)
+        fb_lay.addWidget(self.find_prev_button)
+        self.find_next_button = QPushButton("Siguiente")
+        self.find_next_button.setProperty("variant", "ghost")
+        self.find_next_button.clicked.connect(self.find_next)
+        fb_lay.addWidget(self.find_next_button)
+        self.replace_button = QPushButton("Reemplazar")
+        self.replace_button.clicked.connect(self.replace_current)
+        fb_lay.addWidget(self.replace_button)
+        self.replace_all_button = QPushButton("Todo")
+        self.replace_all_button.setProperty("variant", "ghost")
+        self.replace_all_button.clicked.connect(self.replace_all)
+        fb_lay.addWidget(self.replace_all_button)
+        self.find_status_label = QLabel("")
+        self.find_status_label.setStyleSheet(f"color: {theme.TEXT_FAINT}; font-size: 11px;")
+        fb_lay.addWidget(self.find_status_label)
+        self.find_close_button = QPushButton("✕")
+        self.find_close_button.setProperty("variant", "ghost")
+        self.find_close_button.setToolTip("Cerrar búsqueda (Esc)")
+        self.find_close_button.clicked.connect(lambda: self.toggle_find_bar(False))
+        fb_lay.addWidget(self.find_close_button)
+        self._shortcut_find_esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self.find_bar)
+        self._shortcut_find_esc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._shortcut_find_esc.activated.connect(lambda: self.toggle_find_bar(False))
+        self.find_bar.hide()
+        layout.addWidget(self.find_bar)
 
         self.editor = CodeEditor()
         self.editor.setObjectName("monoView")
@@ -338,6 +415,24 @@ class EditorPanel(QWidget):
         self.message_label = QLabel("")
         self.message_label.setStyleSheet(f"color: {theme.TEXT_FAINT}; font-size: 11px;")
         layout.addWidget(self.message_label)
+
+        # Keyboard shortcuts scoped to EditorPanel
+        scope = Qt.ShortcutContext.WidgetWithChildrenShortcut
+        self._shortcut_save = QShortcut(QKeySequence("Ctrl+S"), self)
+        self._shortcut_save.setContext(scope)
+        self._shortcut_save.activated.connect(self.save)
+
+        self._shortcut_close = QShortcut(QKeySequence("Ctrl+W"), self)
+        self._shortcut_close.setContext(scope)
+        self._shortcut_close.activated.connect(self.close_current_tab)
+
+        self._shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self)
+        self._shortcut_find.setContext(scope)
+        self._shortcut_find.activated.connect(self.toggle_find_bar)
+
+        self._shortcut_next_tab = QShortcut(QKeySequence("Ctrl+Tab"), self)
+        self._shortcut_next_tab.setContext(scope)
+        self._shortcut_next_tab.activated.connect(self.next_tab)
 
     def _rel(self, path: Path) -> str:
         return str(path.resolve().relative_to(self.controller.working_dir)).replace("\\", "/")
@@ -360,6 +455,170 @@ class EditorPanel(QWidget):
                 self.file_tabs.setTabText(idx, label)
                 break
 
+    def _watch_current_file(self) -> None:
+        watched = self._fs_watcher.files()
+        if watched:
+            self._fs_watcher.removePaths(watched)
+        if self.current_path is not None:
+            resolved = self.current_path.resolve()
+            if resolved.is_file():
+                self._fs_watcher.addPath(str(resolved))
+
+    def _check_external_change(self) -> None:
+        if self.current_path is None:
+            self.reload_banner.hide()
+            return
+        resolved = self.current_path.resolve()
+        if not resolved.is_file():
+            return
+        try:
+            disk_text = resolved.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return
+        if disk_text == self.snapshot:
+            self.reload_banner.hide()
+            return
+        disk_hash = hashlib.sha256(disk_text.encode("utf-8")).hexdigest()
+        key = str(resolved)
+        if self._ignored_disk_hashes.get(key) == disk_hash:
+            self.reload_banner.hide()
+            return
+        self._pending_disk_hash = disk_hash
+        self.reload_label.setText("El archivo cambió en disco")
+        self.reload_banner.show()
+
+    def _on_external_file_changed(self, changed_path: str) -> None:
+        if self.current_path is None:
+            return
+        current_resolved = self.current_path.resolve()
+        try:
+            if Path(changed_path).resolve() != current_resolved:
+                return
+        except OSError:
+            return
+        # Re-add path in case the editor/tool used atomic rename-over-file
+        resolved_str = str(current_resolved)
+        if current_resolved.is_file() and resolved_str not in self._fs_watcher.files():
+            self._fs_watcher.addPath(resolved_str)
+        self._check_external_change()
+
+    def reload_current_file(self) -> bool:
+        if self.current_path is None:
+            return False
+        key = str(self.current_path.resolve())
+        self._ignored_disk_hashes.pop(key, None)
+        self.reload_banner.hide()
+        return self.open_file(self.current_path)
+
+    def _ignore_external_change(self) -> None:
+        if self.current_path is not None:
+            key = str(self.current_path.resolve())
+            self._ignored_disk_hashes[key] = self._pending_disk_hash
+        self.reload_banner.hide()
+
+    # --- Find / Replace & Tab shortcuts ------------------------------------
+
+    def toggle_find_bar(self, show: bool | None = None) -> None:
+        target = (not self.find_bar.isVisible()) if show is None else bool(show)
+        self.find_bar.setVisible(target)
+        if target:
+            selected = self.editor.textCursor().selectedText()
+            if selected and "\u2029" not in selected:
+                self.find_input.setText(selected)
+            self.find_input.setFocus()
+            self.find_input.selectAll()
+            self.find_status_label.setText("")
+        else:
+            self.editor.setFocus()
+
+    def find_next(self) -> bool:
+        query = self.find_input.text()
+        if not query:
+            self.find_status_label.setText("")
+            return False
+        found = self.editor.find(query)
+        if not found:
+            cursor = self.editor.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.Start)
+            self.editor.setTextCursor(cursor)
+            found = self.editor.find(query)
+        self.find_status_label.setText("" if found else "Sin coincidencias")
+        return found
+
+    def find_prev(self) -> bool:
+        query = self.find_input.text()
+        if not query:
+            self.find_status_label.setText("")
+            return False
+        flags = QTextDocument.FindFlag.FindBackward
+        found = self.editor.find(query, flags)
+        if not found:
+            cursor = self.editor.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self.editor.setTextCursor(cursor)
+            found = self.editor.find(query, flags)
+        self.find_status_label.setText("" if found else "Sin coincidencias")
+        return found
+
+    def replace_current(self) -> bool:
+        query = self.find_input.text()
+        if not query:
+            return False
+        replacement = self.replace_input.text()
+        cursor = self.editor.textCursor()
+        if cursor.hasSelection() and cursor.selectedText() == query:
+            cursor.insertText(replacement)
+            self.editor.setTextCursor(cursor)
+            self.find_next()
+            return True
+        if self.find_next():
+            cursor = self.editor.textCursor()
+            cursor.insertText(replacement)
+            self.editor.setTextCursor(cursor)
+            return True
+        return False
+
+    def replace_all(self) -> int:
+        query = self.find_input.text()
+        if not query:
+            return 0
+        replacement = self.replace_input.text()
+        doc_cursor = QTextCursor(self.editor.document())
+        doc_cursor.beginEditBlock()
+        count = 0
+        pos = 0
+        while True:
+            found = self.editor.document().find(query, pos)
+            if found.isNull():
+                break
+            found.insertText(replacement)
+            pos = found.selectionEnd()
+            count += 1
+        doc_cursor.endEditBlock()
+        self.find_status_label.setText(f"Reemplazados: {count}" if count else "Sin coincidencias")
+        return count
+
+    def next_tab(self) -> None:
+        count = self.file_tabs.count()
+        if count > 1:
+            self.file_tabs.setCurrentIndex((self.file_tabs.currentIndex() + 1) % count)
+
+    def close_current_tab(self, force: bool = False) -> bool:
+        idx = self.file_tabs.currentIndex()
+        if idx < 0:
+            return False
+        return self._close_tab(idx, force=force)
+
+    def _confirm_discard(self, title: str, message: str) -> bool:
+        reply = QMessageBox.question(
+            self,
+            title,
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply in (QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Discard)
+
     def _on_tab_selected(self, index: int) -> None:
         if self._switching_tab or index < 0:
             return
@@ -378,14 +637,28 @@ class EditorPanel(QWidget):
             self.file_badge.setPixmap(file_icon(buf["path"]).pixmap(22, 22))
             self.title_label.setText(buf["path"].name)
             self.title_label.setToolTip(buf["rel"])
-            self.save_button.setEnabled(True)
+            self.save_button.setEnabled(buf["text"] != buf["snapshot"])
             self.message_label.setText("")
         finally:
             self._switching_tab = False
+        self._watch_current_file()
+        self._check_external_change()
 
-    def _close_tab(self, index: int) -> None:
+    def _close_tab(self, index: int, force: bool = False) -> bool:
+        if index < 0 or index >= self.file_tabs.count():
+            return False
+        self._sync_current_buffer()
         key = self.file_tabs.tabData(index)
+        buf = self._buffers.get(key)
+        if buf is not None and buf["text"] != buf["snapshot"] and not force:
+            ok = self._confirm_discard(
+                "Cambios sin guardar",
+                f"«{buf['path'].name}» tiene cambios sin guardar. ¿Descartarlos y cerrar la pestaña?",
+            )
+            if not ok:
+                return False
         self._buffers.pop(key, None)
+        self._ignored_disk_hashes.pop(key, None)
         self.file_tabs.removeTab(index)
         if self.file_tabs.count() == 0:
             self.file_tabs.hide()
@@ -395,14 +668,33 @@ class EditorPanel(QWidget):
             self.file_badge.clear()
             self.editor.clear()
             self.save_button.setEnabled(False)
+            self.reload_banner.hide()
             self.message_label.setText("")
+            self._watch_current_file()
         else:
             self._on_tab_selected(self.file_tabs.currentIndex())
+        return True
 
-    def reset_workspace(self) -> None:
+    def reset_workspace(self, force: bool = False) -> bool:
+        self._sync_current_buffer()
+        dirty_names = [
+            buf["path"].name for buf in self._buffers.values()
+            if buf["text"] != buf["snapshot"]
+        ]
+        if dirty_names and not force:
+            joined = ", ".join(dirty_names[:5])
+            if len(dirty_names) > 5:
+                joined += f" (+{len(dirty_names) - 5})"
+            ok = self._confirm_discard(
+                "Cambios sin guardar",
+                f"Hay cambios sin guardar en: {joined}. ¿Descartarlos y cambiar de workspace?",
+            )
+            if not ok:
+                return False
         self._switching_tab = True
         try:
             self._buffers.clear()
+            self._ignored_disk_hashes.clear()
             while self.file_tabs.count():
                 self.file_tabs.removeTab(0)
             self.file_tabs.hide()
@@ -412,9 +704,12 @@ class EditorPanel(QWidget):
             self.file_badge.clear()
             self.editor.clear()
             self.save_button.setEnabled(False)
+            self.reload_banner.hide()
             self.message_label.setText("")
+            self._watch_current_file()
         finally:
             self._switching_tab = False
+        return True
 
     def open_file(self, path: str | Path) -> bool:
         path = Path(path)
@@ -430,6 +725,7 @@ class EditorPanel(QWidget):
         self._sync_current_buffer()
         key = str(path.resolve())
         self._buffers[key] = {"path": path, "rel": rel, "snapshot": result.stdout, "text": result.stdout}
+        self._ignored_disk_hashes.pop(key, None)
         self._switching_tab = True
         try:
             existing_idx = next((i for i in range(self.file_tabs.count()) if self.file_tabs.tabData(i) == key), -1)
@@ -449,10 +745,12 @@ class EditorPanel(QWidget):
             self.file_badge.setPixmap(file_icon(path).pixmap(22, 22))
             self.title_label.setText(path.name)
             self.title_label.setToolTip(rel)
-            self.save_button.setEnabled(True)
+            self.save_button.setEnabled(False)
+            self.reload_banner.hide()
             self.message_label.setText("")
         finally:
             self._switching_tab = False
+        self._watch_current_file()
         return True
 
     def save(self) -> bool:
@@ -472,6 +770,10 @@ class EditorPanel(QWidget):
                 self._buffers[key]["snapshot"] = self.snapshot
                 self._buffers[key]["text"] = self.snapshot
                 self._update_tab_label(key)
+            self._ignored_disk_hashes.pop(key, None)
+            self.save_button.setEnabled(False)
+            self.reload_banner.hide()
+            self._watch_current_file()
             self.message_label.setText(f"guardado: {rel}")
             return True
         self.message_label.setText(result.stderr)
@@ -482,12 +784,13 @@ class EditorPanel(QWidget):
             return
         if self.current_path is not None:
             key = str(self.current_path.resolve())
+            text = self.editor.toPlainText()
             if key in self._buffers:
-                self._buffers[key]["text"] = self.editor.toPlainText()
+                self._buffers[key]["text"] = text
                 self._update_tab_label(key)
-            if self.editor.toPlainText() != self.snapshot:
-                self.save_button.setEnabled(True)
-                self.content_changed.emit()
+            is_dirty = text != self.snapshot
+            self.save_button.setEnabled(is_dirty)
+            self.content_changed.emit()
 
     def dirty(self) -> bool:
         return (self.current_path is not None

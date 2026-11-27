@@ -135,67 +135,137 @@ def load_isymem_graph(memory_dir: Path | None) -> dict:
                 nodes_by_id[a]["degree"] += 1
                 nodes_by_id[b]["degree"] += 1
 
-    # Deterministic Fruchterman-Reingold force-directed layout
+    # Deterministic Fruchterman-Reingold force-directed layout (adaptive + spatial cutoff)
     nodes = list(nodes_by_id.values())
     n = len(nodes)
-    pos: dict[str, list[float]] = {}
     if n > 0:
         hubs = [nd for nd in nodes if nd["kind"] in {"hub", "index"}]
         others = [nd for nd in nodes if nd["kind"] not in {"hub", "index"}]
+        pos_map: dict[str, tuple[float, float]] = {}
+        n_hubs = max(1, len(hubs))
         for idx, nd in enumerate(hubs):
-            angle = (2 * math.pi * idx) / max(1, len(hubs))
+            angle = (2.0 * math.pi * idx) / n_hubs
             r = 0.0 if nd["kind"] == "index" else 180.0
-            pos[nd["id"]] = [r * math.cos(angle), r * math.sin(angle)]
+            pos_map[nd["id"]] = (r * math.cos(angle), r * math.sin(angle))
+        n_others = max(1, len(others))
         for idx, nd in enumerate(others):
-            angle = (2 * math.pi * idx) / max(1, len(others))
+            angle = (2.0 * math.pi * idx) / n_others
             r = 320.0 + (idx % 3) * 55.0
-            pos[nd["id"]] = [r * math.cos(angle), r * math.sin(angle)]
+            pos_map[nd["id"]] = (r * math.cos(angle), r * math.sin(angle))
+
+        ids = [nd["id"] for nd in nodes]
+        idx_of = {nid: i for i, nid in enumerate(ids)}
+        px = [pos_map[nid][0] for nid in ids]
+        py = [pos_map[nid][1] for nid in ids]
+        edge_pairs = [(idx_of[u], idx_of[v]) for u, v in edges]
 
         area = 900.0 * 900.0
         k = math.sqrt(area / max(1, n)) * 0.75
+        k_sq = k * k
+        inv_k_attr = 1.0 / (k * 1.4)
+        cutoff = min(500.0, max(160.0, k * 3.5))
+        cutoff_sq = cutoff * cutoff
+        inv_cell = 1.0 / cutoff
+        iterations = max(12, min(40, 2500 // max(1, n)))
+        use_grid = n >= 40
         temp = 120.0
-        ids = [nd["id"] for nd in nodes]
-        for _ in range(45):
-            disp = {nid: [0.0, 0.0] for nid in ids}
+        floor = math.floor
+        hypot = math.hypot
+
+        for _ in range(iterations):
+            disp_x = [0.0] * n
+            disp_y = [0.0] * n
+
+            if use_grid:
+                grid: dict[tuple[int, int], list[int]] = {}
+                cells: list[tuple[int, int]] = []
+                for i in range(n):
+                    cell = (floor(px[i] * inv_cell), floor(py[i] * inv_cell))
+                    cells.append(cell)
+                    bucket = grid.get(cell)
+                    if bucket is None:
+                        grid[cell] = [i]
+                    else:
+                        bucket.append(i)
+                for i in range(n):
+                    ux = px[i]
+                    uy = py[i]
+                    cx, cy = cells[i]
+                    for ox in (-1, 0, 1):
+                        nx_c = cx + ox
+                        for oy in (-1, 0, 1):
+                            bucket = grid.get((nx_c, cy + oy))
+                            if bucket is None:
+                                continue
+                            for j in bucket:
+                                if j <= i:
+                                    continue
+                                dx = ux - px[j]
+                                if dx >= cutoff or dx <= -cutoff:
+                                    continue
+                                dy = uy - py[j]
+                                if dy >= cutoff or dy <= -cutoff:
+                                    continue
+                                dist_sq = dx * dx + dy * dy
+                                if dist_sq < cutoff_sq:
+                                    if dist_sq < 0.0001:
+                                        dist_sq = 0.0001
+                                    factor = k_sq / dist_sq
+                                    fx = dx * factor
+                                    fy = dy * factor
+                                    disp_x[i] += fx
+                                    disp_y[i] += fy
+                                    disp_x[j] -= fx
+                                    disp_y[j] -= fy
+            else:
+                for i in range(n):
+                    ux = px[i]
+                    uy = py[i]
+                    for j in range(i + 1, n):
+                        dx = ux - px[j]
+                        if dx >= cutoff or dx <= -cutoff:
+                            continue
+                        dy = uy - py[j]
+                        if dy >= cutoff or dy <= -cutoff:
+                            continue
+                        dist_sq = dx * dx + dy * dy
+                        if dist_sq < cutoff_sq:
+                            if dist_sq < 0.0001:
+                                dist_sq = 0.0001
+                            factor = k_sq / dist_sq
+                            fx = dx * factor
+                            fy = dy * factor
+                            disp_x[i] += fx
+                            disp_y[i] += fy
+                            disp_x[j] -= fx
+                            disp_y[j] -= fy
+
+            for ui, vi in edge_pairs:
+                dx = px[ui] - px[vi]
+                dy = py[ui] - py[vi]
+                dist = hypot(dx, dy) or 0.01
+                factor = dist * inv_k_attr
+                fx = dx * factor
+                fy = dy * factor
+                disp_x[ui] -= fx
+                disp_y[ui] -= fy
+                disp_x[vi] += fx
+                disp_y[vi] += fy
+
             for i in range(n):
-                u = ids[i]
-                ux, uy = pos[u]
-                for j in range(i + 1, n):
-                    v = ids[j]
-                    dx = ux - pos[v][0]
-                    dy = uy - pos[v][1]
-                    dist = math.hypot(dx, dy) or 0.01
-                    if dist < 500.0:
-                        force = (k * k) / dist
-                        fx = (dx / dist) * force
-                        fy = (dy / dist) * force
-                        disp[u][0] += fx
-                        disp[u][1] += fy
-                        disp[v][0] -= fx
-                        disp[v][1] -= fy
-            for u, v in edges:
-                dx = pos[u][0] - pos[v][0]
-                dy = pos[u][1] - pos[v][1]
-                dist = math.hypot(dx, dy) or 0.01
-                force = (dist * dist) / (k * 1.4)
-                fx = (dx / dist) * force
-                fy = (dy / dist) * force
-                disp[u][0] -= fx
-                disp[u][1] -= fy
-                disp[v][0] += fx
-                disp[v][1] += fy
-            for nid in ids:
                 # Gentle gravity toward center so disconnected nodes stay in view
-                disp[nid][0] -= pos[nid][0] * 0.04
-                disp[nid][1] -= pos[nid][1] * 0.04
-                mag = math.hypot(disp[nid][0], disp[nid][1]) or 0.01
-                step = min(mag, temp)
-                pos[nid][0] += (disp[nid][0] / mag) * step
-                pos[nid][1] += (disp[nid][1] / mag) * step
+                dx = disp_x[i] - px[i] * 0.04
+                dy = disp_y[i] - py[i] * 0.04
+                mag = hypot(dx, dy) or 0.01
+                step = temp if mag > temp else mag
+                scale = step / mag
+                px[i] += dx * scale
+                py[i] += dy * scale
             temp *= 0.90
 
-        for nd in nodes:
-            nd["x"], nd["y"] = pos[nd["id"]]
+        for i, nd in enumerate(nodes):
+            nd["x"] = px[i]
+            nd["y"] = py[i]
 
     projects = sorted({nd["project"] for nd in nodes if nd["project"]})
     return {"dir": str(memory_dir), "nodes": nodes, "edges": edges, "projects": projects}

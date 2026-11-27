@@ -1082,6 +1082,7 @@ class IsycoAgentApp(App):
         self.conversation_id = None
         self._provider_replacement_required = False
         self.agent._session_started = False
+        self.context.history = []
         self.chat_log.clear()
         self.chat_log.add_system(WELCOME_MSG)
         self.agent.messages = [{"role": "system", "content": DEFAULT_SYSTEM_PROMPT}]
@@ -1098,7 +1099,7 @@ class IsycoAgentApp(App):
         self.conversation_id = session
         self.agent._session_started = False
         self.agent.messages = [{"role": "system", "content": DEFAULT_SYSTEM_PROMPT}]
-        self.context.history = None
+        self.context.history = []
         self.chat_log.clear()
         self.chat_log.add_system(WELCOME_MSG)
         selected = next(entry for entry in self.conversation_store.list() if entry["id"] == session)

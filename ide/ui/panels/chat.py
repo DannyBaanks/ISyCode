@@ -23,6 +23,7 @@ import markdown
 from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QGuiApplication, QKeySequence, QShortcut, QTextCursor, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QFrame,
     QBoxLayout,
     QHBoxLayout,
@@ -31,6 +32,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QScrollBar,
     QSizePolicy,
     QStackedWidget,
     QTextBrowser,
@@ -284,11 +286,22 @@ class ApprovalCard(QFrame):
         row.addWidget(self.reject_button, 1)
         layout.addLayout(row)
 
-        scope = Qt.ShortcutContext.WidgetWithChildrenShortcut
-        for key, approved in ((Qt.Key.Key_Y, True), (Qt.Key.Key_N, False), (Qt.Key.Key_Escape, False)):
-            shortcut = QShortcut(QKeySequence(key), self)
-            shortcut.setContext(scope)
-            shortcut.activated.connect(lambda a=approved: self._choose(a))
+    def keyPressEvent(self, event) -> None:
+        focus = QApplication.focusWidget()
+        if isinstance(focus, (QPlainTextEdit, QLineEdit)):
+            super().keyPressEvent(event)
+            return
+        if event.modifiers() == Qt.KeyboardModifier.NoModifier and not self._decided:
+            key = event.key()
+            if key == Qt.Key.Key_Y:
+                self._choose(True)
+                event.accept()
+                return
+            if key in (Qt.Key.Key_N, Qt.Key.Key_Escape):
+                self._choose(False)
+                event.accept()
+                return
+        super().keyPressEvent(event)
 
     def _review_diff(self):
         from PySide6.QtWidgets import QDialog
@@ -311,6 +324,11 @@ class ApprovalCard(QFrame):
     def set_compact(self, compact):
         self._compact_mode = compact
         narrow = compact or self.width() < 560
+        direction = QBoxLayout.Direction.TopToBottom if self.width() < 310 else QBoxLayout.Direction.LeftToRight
+        state = (narrow, direction)
+        if getattr(self, "_applied_compact_state", None) == state:
+            return
+        self._applied_compact_state = state
         command = self.arguments.get("approval_kind") == "command"
         self._base_details.setText("Base" if narrow else "Identidad y base")
         self.detail_view.setVisible(command or not narrow)
@@ -319,7 +337,6 @@ class ApprovalCard(QFrame):
         self.reject_button.setText("Rechazar" if narrow else "Rechazar (N)")
         if self.review_button is not None:
             self.review_button.setText("Ver diff" if narrow else "Revisar diff")
-        direction = QBoxLayout.Direction.TopToBottom if self.width() < 310 else QBoxLayout.Direction.LeftToRight
         self._action_row.setDirection(direction)
         self._header_row.setDirection(direction)
 
@@ -609,6 +626,18 @@ class EmptyState(QWidget):
         layout.addStretch(3)
 
 
+class _ChatScrollBar(QScrollBar):
+    """Vertical scrollbar that notifies ChatPanel even if setValue(0) lands before layout settles."""
+
+    def __init__(self, on_external_set, parent=None):
+        super().__init__(Qt.Orientation.Vertical, parent)
+        self._on_external_set = on_external_set
+
+    def setValue(self, value: int) -> None:
+        self._on_external_set(value)
+        super().setValue(value)
+
+
 class ChatPanel(QWidget):
     """Chat with empty state, smart auto-scroll, approvals and composer."""
 
@@ -619,7 +648,9 @@ class ChatPanel(QWidget):
         super().__init__(parent)
         self._streaming_bubble: StreamingAssistantBubble | None = None
         self._active_approval_card: ApprovalCard | None = None
+        self._composer_notices: dict[str, QFrame] = {}
         self._user_scrolled_up = False
+        self._auto_scrolling = False
         self._compact = False
         self._build()
         self._progress_phase = ""
@@ -645,6 +676,7 @@ class ChatPanel(QWidget):
         self.scroll.setObjectName("chatScroll")
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setVerticalScrollBar(_ChatScrollBar(self._on_external_scroll_set, self.scroll))
         self.messages_container = QWidget()
         self.messages_container.setObjectName("chatScrollBody")
         self.messages_layout = QVBoxLayout(self.messages_container)
@@ -673,6 +705,14 @@ class ChatPanel(QWidget):
         c_layout = QVBoxLayout(composer)
         c_layout.setContentsMargins(28, 10, 28, 12)
         c_layout.setSpacing(6)
+
+        self.composer_notices_container = QWidget(composer)
+        self.composer_notices_container.setObjectName("composerNotices")
+        self._composer_notices_layout = QVBoxLayout(self.composer_notices_container)
+        self._composer_notices_layout.setContentsMargins(0, 0, 0, 0)
+        self._composer_notices_layout.setSpacing(4)
+        self.composer_notices_container.hide()
+        c_layout.addWidget(self.composer_notices_container)
 
         input_row = QHBoxLayout()
         input_row.setSpacing(8)
@@ -731,6 +771,20 @@ class ChatPanel(QWidget):
 
     # --- scrolling ----------------------------------------------------------
 
+    def _set_scroll_value(self, value: int) -> None:
+        self._auto_scrolling = True
+        try:
+            self.scroll.verticalScrollBar().setValue(value)
+        finally:
+            self._auto_scrolling = False
+
+    def _on_external_scroll_set(self, value: int) -> None:
+        if self._auto_scrolling:
+            return
+        vbar = self.scroll.verticalScrollBar()
+        if vbar.maximum() == 0 and value == 0 and self.messages_layout.count() > 1:
+            self._user_scrolled_up = True
+
     def _on_scroll_changed(self, value: int) -> None:
         away = self.scroll.verticalScrollBar().maximum() - value > 40
         self._user_scrolled_up = away
@@ -739,18 +793,21 @@ class ChatPanel(QWidget):
     def _on_range_changed(self, _min: int, maximum: int) -> None:
         # Content grew: keep following unless the user scrolled away.
         if not self._user_scrolled_up:
-            self.scroll.verticalScrollBar().setValue(maximum)
+            self._set_scroll_value(maximum)
+        else:
+            away = maximum - self.scroll.verticalScrollBar().value() > 40
+            self.scroll_bottom_btn.setVisible(away)
 
     def _scroll_to_bottom(self) -> None:
         if not self._user_scrolled_up:
             vbar = self.scroll.verticalScrollBar()
-            vbar.setValue(vbar.maximum())
+            self._set_scroll_value(vbar.maximum())
 
     def _scroll_to_bottom_forced(self) -> None:
         self._user_scrolled_up = False
         self.scroll_bottom_btn.hide()
         vbar = self.scroll.verticalScrollBar()
-        vbar.setValue(vbar.maximum())
+        self._set_scroll_value(vbar.maximum())
 
     # --- composer -----------------------------------------------------------
 
@@ -770,6 +827,59 @@ class ChatPanel(QWidget):
         self.status_label.setProperty("state", state)
         theme.repolish(self.status_label)
 
+    # --- composer notices ---------------------------------------------------
+
+    def set_composer_notice(
+        self,
+        key: str,
+        text: str,
+        action_label: str | None = None,
+        callback=None,
+    ) -> QFrame:
+        """Show or update a persistent notice anchored right above the prompt composer."""
+        if key in self._composer_notices:
+            self.clear_composer_notice(key)
+        notice = QFrame(self.composer_notices_container)
+        notice.setObjectName("composerNotice")
+        notice.setStyleSheet(
+            f"QFrame#composerNotice {{ background: {theme.SURFACE_2}; "
+            f"border: 1px solid {theme.WARN}; border-radius: 8px; }}"
+        )
+        row = QHBoxLayout(notice)
+        row.setContentsMargins(10, 6, 10, 6)
+        row.setSpacing(8)
+        label = QLabel(text, notice)
+        label.setObjectName("composerNoticeText")
+        label.setTextFormat(Qt.TextFormat.PlainText)
+        label.setWordWrap(True)
+        label.setStyleSheet(f"color: {theme.TEXT}; font-size: 12px;")
+        row.addWidget(label, stretch=1)
+        notice.notice_label = label
+        notice.action_button = None
+        if action_label:
+            btn = QPushButton(action_label, notice)
+            btn.setProperty("variant", "primary")
+            if callable(callback):
+                btn.clicked.connect(callback)
+            row.addWidget(btn)
+            notice.action_button = btn
+        self._composer_notices[key] = notice
+        self._composer_notices_layout.addWidget(notice)
+        self.composer_notices_container.show()
+        return notice
+
+    def clear_composer_notice(self, key: str) -> bool:
+        """Remove a persistent composer notice by key."""
+        notice = self._composer_notices.pop(key, None)
+        if notice is None:
+            return False
+        self._composer_notices_layout.removeWidget(notice)
+        notice.hide()
+        notice.deleteLater()
+        if not self._composer_notices:
+            self.composer_notices_container.hide()
+        return True
+
     # --- approvals ----------------------------------------------------------
 
     def add_approval_card(self, approval_id: str, tool_name: str, arguments: dict, diff: str) -> ApprovalCard:
@@ -779,7 +889,14 @@ class ChatPanel(QWidget):
         self._insert(card)
         self.set_agent_progress({"phase": "approval", "tool": tool_name})
         self._scroll_to_bottom_forced()
-        card.reject_button.setFocus()
+        focus = QApplication.focusWidget()
+        typing_in_input = (
+            isinstance(focus, (QPlainTextEdit, QLineEdit))
+            or self.input.hasFocus()
+            or bool(self.input.toPlainText().strip())
+        )
+        if not typing_in_input:
+            card.reject_button.setFocus()
         return card
 
     def active_approval_card(self) -> ApprovalCard | None:

@@ -746,7 +746,6 @@ class GitHubPanel(QWidget):
     def auto_discover_folders(self):
         """Scan local Development folders and auto-link every git checkout matching a catalog repo."""
         import re
-        import subprocess
         if not self._account_verified or not self._repos:
             self.notice.setText("Primero carga el catálogo de repositorios para autodetectar carpetas.")
             return
@@ -755,6 +754,39 @@ class GitHubPanel(QWidget):
         def _parse_remote(url: str) -> str:
             m = re.search(r"github\.com[:/]([^/\s]+/[^/\s]+?)(?:\.git)?$", url.strip(), re.IGNORECASE)
             return m.group(1) if m else ""
+
+        async def _origin_remote(folder: Path) -> str:
+            """Non-blocking ``git remote get-url origin``; empty string when absent.
+
+            P1-6: the previous ``subprocess.run`` blocked the worker's event loop for up
+            to 2 s per candidate (and cancelled nothing), stalling every other GitHub
+            job; the async child process is awaited and cancellable.
+            """
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "git", "-C", str(folder), "remote", "get-url", "origin",
+                    stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
+                )
+            except (OSError, ValueError):
+                return ""
+            try:
+                stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=2)
+            except asyncio.CancelledError:
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except (OSError, ProcessLookupError):
+                    pass
+                raise
+            except (asyncio.TimeoutError, OSError):
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except (OSError, ProcessLookupError):
+                    pass
+                return ""
+            return stdout.decode(errors="replace").strip() if proc.returncode == 0 else ""
 
         async def scan():
             roots = []
@@ -780,13 +812,7 @@ class GitHubPanel(QWidget):
                         for l in self.service.links.list() if l.get("folder")}
             for folder in candidates:
                 try:
-                    proc = subprocess.run(
-                        ["git", "-C", str(folder), "remote", "get-url", "origin"],
-                        capture_output=True, text=True, timeout=2,
-                    )
-                    if proc.returncode != 0:
-                        continue
-                    remote_repo = _parse_remote(proc.stdout)
+                    remote_repo = _parse_remote(await _origin_remote(folder))
                     if not remote_repo:
                         continue
                     canonical = owned_map.get(remote_repo.casefold())

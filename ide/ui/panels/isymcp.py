@@ -147,6 +147,8 @@ class ISyMCPControlPanel(QWidget):
     def __init__(self, controller, parent=None):
         super().__init__(parent)
         self.controller = controller
+        self._mcp_parse_error: str | None = None
+        self._last_mcp_backup: Path | None = None
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(12)
@@ -195,6 +197,16 @@ class ISyMCPControlPanel(QWidget):
         del_mcp_btn.clicked.connect(self._remove_mcp_server)
         m_top.addWidget(del_mcp_btn)
         m_lay.addLayout(m_top)
+
+        self.mcp_warning_banner = QLabel("")
+        self.mcp_warning_banner.setObjectName("mcpWarningBanner")
+        self.mcp_warning_banner.setWordWrap(True)
+        self.mcp_warning_banner.setStyleSheet(
+            "padding: 8px 10px; border-radius: 6px; background: #3b2412; "
+            "border: 1px solid #d97706; color: #fde68a; font-size: 12px; font-weight: 600;"
+        )
+        self.mcp_warning_banner.hide()
+        m_lay.addWidget(self.mcp_warning_banner)
 
         self.mcp_table = QTableWidget(0, 4)
         self.mcp_table.setHorizontalHeaderLabels(["Servidor", "Transporte", "Comando / URL", "Estado"])
@@ -304,20 +316,60 @@ class ISyMCPControlPanel(QWidget):
         self._refresh_skills()
         self._refresh_connectors(hub_up, mon_up)
 
-    def _load_mcp_json(self) -> tuple[Path, dict]:
+    @staticmethod
+    def _is_corrupted_json_file(cfg: Path) -> bool:
+        if not cfg.is_file():
+            return False
+        try:
+            parsed = json.loads(cfg.read_text(encoding="utf-8"))
+            return not isinstance(parsed, dict)
+        except Exception:
+            return True
+
+    def _backup_corrupted_mcp(self, cfg: Path) -> Path:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        backup = cfg.with_name(f"{cfg.name}.{stamp}.bak")
+        shutil.copy2(cfg, backup)
+        self._last_mcp_backup = backup
+        return backup
+
+    def _load_mcp_json(self) -> tuple[Path, dict | None]:
         cfg = _mcp_config_path()
         if not cfg.is_file():
+            self._mcp_parse_error = None
             return cfg, {"mcpServers": {}}
         try:
             data = json.loads(cfg.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
-                return cfg, {"mcpServers": {}}
+                self._mcp_parse_error = f"JSON inválido en {cfg}: se esperaba un objeto raíz."
+                return cfg, None
+            self._mcp_parse_error = None
             return cfg, data
-        except Exception:
-            return cfg, {"mcpServers": {}}
+        except Exception as exc:
+            self._mcp_parse_error = f"JSON corrupto en {cfg}: {exc}"
+            return cfg, None
+
+    def _write_mcp_json(self, cfg: Path, data: dict) -> Path | None:
+        backup: Path | None = None
+        if cfg.is_file() and (self._mcp_parse_error is not None or self._is_corrupted_json_file(cfg)):
+            backup = self._backup_corrupted_mcp(cfg)
+        cfg.parent.mkdir(parents=True, exist_ok=True)
+        cfg.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        self._mcp_parse_error = None
+        return backup
 
     def _refresh_mcp_servers(self) -> None:
         cfg, data = self._load_mcp_json()
+        if self._mcp_parse_error or data is None:
+            self.mcp_warning_banner.setText(
+                f"⚠ {self._mcp_parse_error}\n"
+                "No se sobrescribirá automáticamente. Antes de escribir se creará una copia de respaldo (.bak)."
+            )
+            self.mcp_warning_banner.show()
+            self.mcp_path_label.setText(f"Configuración MCP: {cfg} · error de formato JSON")
+            self.mcp_table.setRowCount(0)
+            return
+        self.mcp_warning_banner.hide()
         servers = data.get("mcpServers") or data.get("servers") or {}
         if not isinstance(servers, dict):
             servers = {}
@@ -340,10 +392,14 @@ class ISyMCPControlPanel(QWidget):
             return
         name, spec = dlg.entry
         cfg, data = self._load_mcp_json()
+        if data is None:
+            data = {"mcpServers": {}}
         servers = data.setdefault("mcpServers", {})
+        if not isinstance(servers, dict):
+            servers = {}
+            data["mcpServers"] = servers
         servers[name] = spec
-        cfg.parent.mkdir(parents=True, exist_ok=True)
-        cfg.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        self._write_mcp_json(cfg, data)
         self._refresh_mcp_servers()
 
     def _remove_mcp_server(self) -> None:
@@ -352,10 +408,12 @@ class ISyMCPControlPanel(QWidget):
             return
         name = self.mcp_table.item(row, 0).text()
         cfg, data = self._load_mcp_json()
+        if data is None:
+            return
         servers = data.get("mcpServers") or data.get("servers")
         if isinstance(servers, dict) and name in servers:
             del servers[name]
-            cfg.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            self._write_mcp_json(cfg, data)
             self._refresh_mcp_servers()
 
     def _refresh_skills(self) -> None:

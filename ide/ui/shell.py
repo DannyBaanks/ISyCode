@@ -45,6 +45,9 @@ class DesktopShell(QWidget):
         nav.setContentsMargins(8, 18, 8, 14)
         nav.setSpacing(8)
         self.nav_buttons = {}
+        self._nav_labels = {title: label for title, label, _ in NAVIGATION}
+        self._nav_badges: dict[str, int] = {}
+        self._nav_compact = False
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
         for title, label, symbol in NAVIGATION:
@@ -306,11 +309,33 @@ class DesktopShell(QWidget):
         if button:
             button.setEnabled(True)
 
+    def _format_nav_text(self, title: str, *, compact: bool) -> str:
+        count = self._nav_badges.get(title, 0)
+        label = self._nav_labels.get(title, title)
+        if compact:
+            return str(count) if count > 0 else ""
+        return f"{label} ({count})" if count > 0 else label
+
+    def set_nav_badge(self, title: str, count: int) -> None:
+        button = self.nav_buttons.get(title)
+        if button is None:
+            return
+        normalized = max(0, int(count))
+        if normalized > 0:
+            self._nav_badges[title] = normalized
+        else:
+            self._nav_badges.pop(title, None)
+        button.setText(self._format_nav_text(title, compact=self._nav_compact))
+        button.setProperty("hasBadge", normalized > 0)
+        label = self._nav_labels.get(title, title)
+        button.setToolTip(f"{label} ({normalized})" if normalized > 0 else label)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         compact = self.width() < 1100
+        self._nav_compact = compact
         width = 58 if compact else 166
         if self.navigation.width() != width:
             self.navigation.setFixedWidth(width)
-            for title, label, symbol in NAVIGATION:
-                self.nav_buttons[title].setText("" if compact else label)
+            for title, _label, _symbol in NAVIGATION:
+                self.nav_buttons[title].setText(self._format_nav_text(title, compact=compact))

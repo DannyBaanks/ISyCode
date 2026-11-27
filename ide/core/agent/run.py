@@ -266,7 +266,7 @@ class Agent:
         system = self.ctx.system_prompt + "\n\nISYCODE CONTEXT:\n" + json.dumps(mode_context, ensure_ascii=False)
         return [
             {"role": "system", "content": system},
-            *self.ctx.history,
+            *(self.ctx.history or []),
             {"role": "user", "content": user_input}
         ]
 
@@ -310,7 +310,11 @@ class Agent:
         
         repeated_discovery = {}
         final_only = False
+        max_turns_reached = False
         for self.turn in range(self.ctx.max_turns):
+            if self.turn >= self.ctx.max_turns:
+                max_turns_reached = True
+                break
             # 1. Get model response
             response = None
             self._report_progress("finalizing" if final_only else "provider_wait")
@@ -333,6 +337,9 @@ class Agent:
             if response.tool_calls:
                 if final_only:
                     raise ProviderError("AGENT_REPEATED_DISCOVERY", "El modelo siguió solicitando herramientas después de repetir la misma vista. Turno detenido sin ejecutar nuevas llamadas.")
+                if self.turn + 1 >= self.ctx.max_turns:
+                    max_turns_reached = True
+                    break
                 tool_results = []
                 for tool_call in response.tool_calls:
                     self._report_progress("tool")
@@ -376,6 +383,7 @@ class Agent:
                     }, ensure_ascii=False)
                     tool_results.append({
                         "tool_call_id": tool_call.id,
+                        "name": tool_call.name,
                         "content": result_content,
                     })
                     if self.emit_tool_text:
@@ -384,8 +392,16 @@ class Agent:
                         else:
                             yield f"\n❌ {tool_call.name}: {result.stderr[:200]}"
 
-                # Preserve the provider-specific assistant/tool protocol.
-                self.messages.extend(self._get_provider().build_tool_messages(response, tool_results))
+                # Preserve the provider-specific assistant/tool protocol, ensuring tool
+                # result messages retain the tool name for Gemini/Anthropic pairing.
+                built_messages = self._get_provider().build_tool_messages(response, tool_results)
+                tool_names = {tc.id: tc.name for tc in response.tool_calls}
+                for msg in built_messages:
+                    if isinstance(msg, dict) and msg.get("role") == "tool" and not msg.get("name"):
+                        call_name = tool_names.get(msg.get("tool_call_id")) or msg.get("tool_name")
+                        if call_name:
+                            msg["name"] = call_name
+                self.messages.extend(built_messages)
                 if final_only:
                     # Some providers accept only the first system message.
                     self.messages[0]["content"] += "\n\nThe host observed three identical discovery pages in this turn. No new information was obtained. Tools are unavailable for the next response. Give the user a concise answer/plan from the evidence already received, disclose empty or partial views, and do not invent file contents or actions."
@@ -398,7 +414,7 @@ class Agent:
             self.messages.append({"role": "assistant", "content": response.content or ""})
             break
         
-        if self.turn >= self.ctx.max_turns - 1 and response.tool_calls:
+        if max_turns_reached:
             yield "\n⚠️ Max turns reached"
         if self.resident_recorder:
             self.resident_recorder.session_event(

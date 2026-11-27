@@ -6,7 +6,8 @@ import os
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QDir, QModelIndex, QSortFilterProxyModel, QSize, Qt, Signal, QTimer
+from PySide6.QtCore import (QDir, QFileSystemWatcher, QModelIndex, QSortFilterProxyModel, QSize, Qt, Signal,
+                               QTimer)
 from PySide6.QtWidgets import QFileSystemModel, QHeaderView
 from ui.icons import file_icon, icon
 from core.project_tree import visible_name
@@ -46,6 +47,11 @@ class _EllipsisDelegate(QStyledItemDelegate):
 class WorkspacePanel(QWidget):
     file_open = Signal(str)
     hide_requested = Signal()
+    #: Emitted (debounced) when the active workspace's ``.git/HEAD`` or ``.git/index``
+    #: changes, so callers can refresh branch/dirty indicators without polling.
+    git_state_changed = Signal()
+
+    GIT_WATCH_DEBOUNCE_MS = 250
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -133,6 +139,14 @@ class WorkspacePanel(QWidget):
         self._search_timer = QTimer(self)
         self._search_timer.setInterval(10)
         self._search_timer.timeout.connect(self._search_batch)
+        # Non-blocking Git state watcher (QFileSystemWatcher is event-driven; no subprocess,
+        # no polling thread). Only active while the workspace is inside a Git repository.
+        self._git_watcher: QFileSystemWatcher | None = None
+        self._git_watch_paths: list[str] = []
+        self._git_debounce = QTimer(self)
+        self._git_debounce.setSingleShot(True)
+        self._git_debounce.setInterval(self.GIT_WATCH_DEBOUNCE_MS)
+        self._git_debounce.timeout.connect(self.git_state_changed.emit)
 
     def set_root(self, root: str | Path) -> None:
         self._stop_search()
@@ -146,8 +160,87 @@ class WorkspacePanel(QWidget):
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         for column in (1, 2, 3):
             self.tree.hideColumn(column)
+        self.watch_git_state()
         self.refresh_git_status()
         self._search(self.search.text())
+
+    # --- git state watcher -------------------------------------------
+
+    def _git_dir(self) -> Path | None:
+        """The ``.git`` directory for the workspace, following a linked-worktree ``gitdir:`` file."""
+        if self._root is None:
+            return None
+        dot = self._root / ".git"
+        try:
+            if dot.is_dir():
+                return dot
+            if dot.is_file():
+                # Linked worktree: ".git" is a file like "gitdir: /repo/.git/worktrees/name".
+                text = dot.read_text(encoding="utf-8", errors="replace").strip()
+                if text.startswith("gitdir:"):
+                    target = Path(text[len("gitdir:"):].strip())
+                    return target if target.is_absolute() else (self._root / target)
+        except OSError:
+            return None
+        return None
+
+    def watch_git_state(self) -> None:
+        """Arm ``.git/HEAD`` and ``.git/index`` watchers; no-op when the workspace is not a repo."""
+        self.stop_watching_git()
+        git_dir = self._git_dir()
+        if git_dir is None:
+            return
+        paths = [str(git_dir / name) for name in ("HEAD", "index") if (git_dir / name).exists()]
+        if not paths:
+            return
+        watcher = QFileSystemWatcher(self)
+        # NOTE: ``addPaths`` returns the paths that *failed* to be added (empty on success),
+        # so consult ``files()`` afterwards instead of treating an empty return as failure.
+        failed = watcher.addPaths(paths)
+        watched_files = [p for p in paths if p not in failed and p in watcher.files()]
+        if not watched_files:
+            watcher.deleteLater()
+            return
+        # Git replaces HEAD/index atomically (rename), which drops the inode watch;
+        # watching the containing directory too keeps the signal reliable and lets us re-arm.
+        for directory in {str(git_dir), *(str(Path(p).parent) for p in watched_files)}:
+            watcher.addPath(directory)
+        watcher.directoryChanged.connect(self._on_git_dir_changed)
+        watcher.fileChanged.connect(self._schedule_git_state_changed)
+        self._git_watcher = watcher
+        self._git_watch_paths = watched_files
+
+    def stop_watching_git(self) -> None:
+        if self._git_watcher is not None:
+            try:
+                self._git_watcher.fileChanged.disconnect(self._schedule_git_state_changed)
+            except RuntimeError:
+                pass
+            try:
+                self._git_watcher.directoryChanged.disconnect(self._on_git_dir_changed)
+            except RuntimeError:
+                pass
+            paths = self._git_watcher.files() + self._git_watcher.directories()
+            if paths:
+                self._git_watcher.removePaths(paths)
+            self._git_watcher.deleteLater()
+            self._git_watcher = None
+        self._git_watch_paths = []
+        self._git_debounce.stop()
+
+    def git_watched_paths(self) -> list[str]:
+        """Files currently watched (for diagnostics/tests)."""
+        return list(self._git_watch_paths)
+
+    def _on_git_dir_changed(self, _path: str) -> None:
+        # A directory change means HEAD/index may have been replaced; re-arm and notify.
+        self.watch_git_state()
+        self._schedule_git_state_changed()
+
+    def _schedule_git_state_changed(self, _path: str = "") -> None:
+        self._git_debounce.start()  # restarts the 250 ms window on every burst of events
+
+    # --- filesystem model ---------------------------------------------
 
     def _fs_model(self, root: Path):
         source = _IconFileSystemModel(self)

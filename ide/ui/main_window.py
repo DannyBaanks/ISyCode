@@ -128,6 +128,8 @@ class MainWindow(QMainWindow):
         self._session_id: str | None = None
         self._provider_replacement_required = False
         self._pending_new_session = False
+        self._close_retries = 0
+        self._quick_open_dialog = None
         self.ui_preferences = UiPreferences()
 
         self.setWindowTitle(f"ISyCode IDE — {self.controller.working_dir}")
@@ -200,7 +202,7 @@ class MainWindow(QMainWindow):
         self.provider_combo.setMinimumWidth(130)
         self.provider_combo.setMaximumWidth(220)
         self.provider_combo.setIconSize(QSize(22, 22))
-        self.provider_combo.setToolTip("Provider · Ctrl+P configura")
+        self.provider_combo.setToolTip("Provider · Ctrl+Shift+P configura")
         self.provider_combo.currentTextChanged.connect(self._on_provider_changed)
         toolbar.addWidget(self.provider_combo)
         self.model_combo = QComboBox()
@@ -238,7 +240,8 @@ class MainWindow(QMainWindow):
 
         new_sess_act = menu.addAction("New session", self._new_session)
         new_sess_act.setShortcut(QKeySequence("Ctrl+N"))
-        menu.addAction("Providers…", self.open_providers)
+        providers_action = menu.addAction("Providers…", self.open_providers)
+        providers_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
         menu.addAction("GitHub y carpetas", lambda: self.panel_bar.show_title("GitHub"))
         menu.addAction("Vista Conversación", lambda: self.panel_bar.set_view("conversation"))
         menu.addAction("Vista Código + chat", lambda: self.panel_bar.set_view("code"))
@@ -329,6 +332,36 @@ class MainWindow(QMainWindow):
         """Providers in their own window: it is the first thing anyone needs."""
         self.panel_bar.show_title("Config")
 
+    def open_quick_open(self):
+        """Ctrl+P: fuzzy file opener & `>` command palette."""
+        try:
+            from .palette import Command, QuickOpenDialog
+        except ImportError:
+            self.open_providers()
+            return None
+        commands = [
+            Command("new_session", "Nueva sesión", self._new_session, "Ctrl+N"),
+            Command("open_workspace", "Abrir workspace…", self._open_workspace, "Ctrl+O"),
+            Command("toggle_mode", "Alternar modo PLAN / CODER", self._toggle_mode, "Shift+Tab"),
+            Command("providers", "Configurar providers…", self.open_providers, "Ctrl+Shift+P"),
+            Command("toggle_workspace", "Mostrar/Ocultar Workspace (árbol)", self._toggle_workspace, "Ctrl+B"),
+            Command("toggle_drawer", "Mostrar/Ocultar navegación", self._toggle_drawer, "Ctrl+`"),
+            Command("clear_chat", "Limpiar historial de chat", lambda: self.chat.clear_log()),
+            Command("stop_agent", "Detener agente en ejecución", self._stop_agent, "Esc"),
+        ]
+        for panel in self.panel_bar.panels():
+            t = panel.title()
+            commands.append(Command(f"panel:{t}", f"Panel: {t}", lambda title=t: self.panel_bar.show_title(title)))
+        dialog = QuickOpenDialog(
+            self.controller.working_dir,
+            on_open_file=self._open_file,
+            actions=commands,
+            parent=self,
+        )
+        self._quick_open_dialog = dialog
+        dialog.show()
+        return dialog
+
     def _build_central(self) -> None:
         self.panel_bar = DesktopShell()
         self._setup_panels()
@@ -343,8 +376,28 @@ class MainWindow(QMainWindow):
         self.workspace.hide_requested.connect(self._toggle_workspace)
         self.panel_bar.build_workspace(self.chat, self.workspace, self.conversations_panel,
                                        self.editor_panel, self.changes_panel, self.diff_view)
-        self.panel_bar.group_pages([("Status", "Estado"), ("Policy", "Políticas"), ("Resident", "Memoria local")])
+        # Worktrees panel is optional until ui/panels/worktrees.py lands; wire it defensively
+        # so the Status group shows it the moment the module exists.
+        group = [("Status", "Estado"), ("Policy", "Políticas"), ("Resident", "Memoria local")]
+        self.worktrees_panel = None
+        try:
+            from .panels.worktrees import WorktreesPanel  # type: ignore[attr-defined]
+        except ImportError:
+            WorktreesPanel = None  # type: ignore[assignment,misc]
+        if WorktreesPanel is not None:
+            try:
+                self.worktrees_panel = WorktreesPanel(self.controller)
+                if hasattr(self.worktrees_panel, "worktree_open_requested"):
+                    self.worktrees_panel.worktree_open_requested.connect(self._switch_workspace)
+                self.worktrees_panel.set_repo(self.controller.working_dir)
+                self.panel_bar.add_panel("Worktrees", self.worktrees_panel, status="")
+                group.append(("Worktrees", "Worktrees"))
+            except Exception:  # pragma: no cover - a broken optional panel must not kill the UI
+                self.worktrees_panel = None
+        self.panel_bar.group_pages(group)
         self.panel_bar.finish_pages()
+        if hasattr(self.workspace, "git_state_changed"):
+            self.workspace.git_state_changed.connect(self._refresh_local_git_indicator)
         self.panel_bar.view_changed.connect(self._remember_view)
         self.main_split = self.panel_bar.columns
         self.setCentralWidget(self.panel_bar)
@@ -812,6 +865,8 @@ class MainWindow(QMainWindow):
         self.chat.clear_log()
         self.conversations_panel.refresh()
         self.workspace.set_root(chosen)
+        if getattr(self, "worktrees_panel", None) is not None:
+            self.worktrees_panel.set_repo(chosen)
         self._refresh_project_selector()
         self._refresh_local_git_indicator()
         self.setWindowTitle(f"ISyCode IDE — {self.controller.working_dir}")
@@ -842,7 +897,8 @@ class MainWindow(QMainWindow):
 
         add_sc("Ctrl+K", self.open_command_palette)
         add_sc("Ctrl+B", self._toggle_workspace)
-        add_sc("Ctrl+P", self.open_providers)
+        add_sc("Ctrl+P", self.open_quick_open)
+        add_sc("Ctrl+Shift+P", self.open_providers)
         add_sc("Ctrl+`", self._toggle_drawer)
         add_sc("Ctrl+O", self._open_workspace)
         add_sc("Ctrl+M", self._toggle_mode)
@@ -866,7 +922,8 @@ class MainWindow(QMainWindow):
             ("Nueva sesión", "Ctrl+N", self._new_session),
             ("Abrir workspace…", "Ctrl+O", self._open_workspace),
             ("Alternar modo PLAN / CODER", "Shift+Tab", self._toggle_mode),
-            ("Configurar providers…", "Ctrl+P", self.open_providers),
+            ("Abrir archivo rápido…", "Ctrl+P", self.open_quick_open),
+            ("Configurar providers…", "Ctrl+Shift+P", self.open_providers),
             ("Mostrar/Ocultar Workspace (árbol)", "Ctrl+B", self._toggle_workspace),
             ("Mostrar/Ocultar navegación", "Ctrl+`", self._toggle_drawer),
             ("Limpiar historial de chat", "", lambda: self.chat.clear_log()),
@@ -1115,15 +1172,89 @@ class MainWindow(QMainWindow):
             self._worker.cancel()
             self.chat.add_system_message("Detención solicitada · se conservará la respuesta parcial recibida.")
 
-    def closeEvent(self, event) -> None:
-        workers = [self._worker, self.config_panel._worker, self.config_panel.subscriptions._worker, self.github_panel._worker, self.tests_panel._worker]
-        running = [worker for worker in workers if worker is not None and worker.isRunning()]
-        if running:
-            for worker in running:
+    #: Bounded close: never wait longer than this per worker, never retry more than this.
+    CLOSE_WAIT_MS = 1500
+    CLOSE_MAX_RETRIES = 4
+
+    def _running_workers(self) -> list:
+        """Every QThread worker the window owns that is currently running."""
+        candidates = []
+        for owner, attr in ((self, "_worker"), (self.config_panel, "_worker"),
+                            (self.config_panel.subscriptions, "_worker"),
+                            (self.github_panel, "_worker"), (self.tests_panel, "_worker"),
+                            (getattr(self, "worktrees_panel", None), "_worker")):
+            if owner is None:
+                continue
+            worker = getattr(owner, attr, None)
+            if worker is not None and worker not in candidates:
+                candidates.append(worker)
+        running = []
+        for worker in candidates:
+            try:
+                if worker.isRunning() or not worker.isFinished():
+                    running.append(worker)
+            except RuntimeError:  # pragma: no cover - C++ object already destroyed
+                continue
+        return running
+
+    def _shutdown_workers_and_terminal(self) -> list:
+        """Stop host terminal and cancel+wait all running QThread workers (bounded)."""
+        terminal = getattr(self, "terminal_panel", None)
+        if terminal is not None and hasattr(terminal, "shutdown"):
+            try:
+                terminal.shutdown()
+            except Exception:  # pragma: no cover - never let close raise
+                pass
+        running = self._running_workers()
+        if not running:
+            return []
+        for worker in running:
+            try:
                 worker.cancel()
-            event.ignore()
-            QTimer.singleShot(100, self.close)
-            return
+            except Exception:  # pragma: no cover
+                pass
+        still_running = []
+        for worker in running:
+            try:
+                if not worker.wait(self.CLOSE_WAIT_MS):
+                    still_running.append(worker)
+            except Exception:  # pragma: no cover
+                still_running.append(worker)
+        return still_running
+
+    def close(self) -> bool:
+        if not self.isVisible():
+            still_running = self._shutdown_workers_and_terminal()
+            for worker in still_running:
+                try:
+                    worker.finished.connect(worker.deleteLater)
+                    worker.setParent(None)
+                except Exception:  # pragma: no cover
+                    pass
+            self.close_all_panel_windows()
+        return super().close()
+
+    def closeEvent(self, event) -> None:
+        # P0-1: a running QThread destroyed with its parent aborts the process (SIGABRT).
+        retries = int(getattr(self, "_close_retries", 0))
+        still_running = self._shutdown_workers_and_terminal()
+        if still_running:
+            if retries < self.CLOSE_MAX_RETRIES:
+                # Workers refused to stop in time: retry a bounded number of times so the
+                # user never sees a hang, but we never destroy a running QThread either.
+                self._close_retries = retries + 1
+                event.ignore()
+                QTimer.singleShot(100, self.close)
+                return
+            # Exhausted retries: keep the workers alive (orphan them from the window so
+            # Qt does not delete a running thread) and let the window close.
+            for worker in still_running:
+                try:
+                    worker.finished.connect(worker.deleteLater)
+                    worker.setParent(None)
+                except Exception:  # pragma: no cover
+                    pass
+        self._close_retries = 0
         self.close_all_panel_windows()
         super().closeEvent(event)
 

@@ -9,6 +9,7 @@ builds it: same components, same order, same defaults.
 from __future__ import annotations
 
 import asyncio
+import threading
 import uuid
 import time
 
@@ -50,6 +51,7 @@ class AgentWorker(QThread):
         self._provider_config = controller.provider_registry.get_config(provider, model)
         self._conversations = controller.conversations
         self._session_id = session_id
+        self._approval_lock = threading.Lock()
         self._pending_approvals: dict[str, asyncio.Future] = {}
         self._last_progress = None
         self._progress_at = 0.0
@@ -87,26 +89,44 @@ class AgentWorker(QThread):
             self._reasoning_handle = self._loop.call_later(0.1, self._flush_reasoning)
 
     def cancel(self) -> None:
-        if self._cancelled:
-            return
-        self._cancelled = True
-        if self._loop is not None and self._task is not None:
-            try:
-                self._loop.call_soon_threadsafe(self._task.cancel)
-            except RuntimeError:
-                pass
+        with self._approval_lock:
+            if self._cancelled:
+                return
+            self._cancelled = True
+            loop = self._loop
+            task = self._task
+            pending = list(self._pending_approvals.values())
+            if loop is not None and not loop.is_closed():
+                def _cancel_all():
+                    for fut in pending:
+                        if not fut.done():
+                            fut.cancel()
+                    if task is not None and not task.done():
+                        task.cancel()
+                try:
+                    loop.call_soon_threadsafe(_cancel_all)
+                except RuntimeError:
+                    pass
 
-    def resolve_approval(self, approval_id: str, approved: bool | str) -> None:
+    def resolve_approval(self, approval_id: str, approved: bool | str) -> bool:
         """Called from Qt GUI thread to answer an approval request."""
-        fut = self._pending_approvals.get(approval_id)
-        if fut is not None and not fut.done() and self._loop is not None:
+        with self._approval_lock:
+            if self._cancelled:
+                return False
+            loop = self._loop
+            fut = self._pending_approvals.get(approval_id)
+            if fut is None or loop is None or loop.is_closed() or fut.done():
+                return False
+
             def answer():
                 if not fut.done():
                     fut.set_result(approved)
+
             try:
-                self._loop.call_soon_threadsafe(answer)
+                loop.call_soon_threadsafe(answer)
+                return True
             except RuntimeError:
-                pass
+                return False
 
     def _on_agent_event(self, event: dict) -> None:
         if event["type"] == "tool_call":
@@ -116,12 +136,13 @@ class AgentWorker(QThread):
 
     async def _handle_approval(self, tool_call) -> bool | str:
         """Invoked by ObservableAgent when a modifying tool is proposed."""
-        if self._cancelled:
-            return False
-        # Approval identity is host-owned; provider tool ids can repeat.
-        call_id = uuid.uuid4().hex
-        fut = self._loop.create_future()
-        self._pending_approvals[call_id] = fut
+        with self._approval_lock:
+            if self._cancelled or self._loop is None or self._loop.is_closed():
+                return False
+            # Approval identity is host-owned; provider tool ids can repeat.
+            call_id = uuid.uuid4().hex
+            fut = self._loop.create_future()
+            self._pending_approvals[call_id] = fut
 
         tool_name = tool_call.name
         args = dict(tool_call.arguments or {})
@@ -141,18 +162,33 @@ class AgentWorker(QThread):
             self.progress.emit({"phase": "tool", "tool": tool_name})
             return answer
         finally:
-            self._pending_approvals.pop(call_id, None)
+            with self._approval_lock:
+                self._pending_approvals.pop(call_id, None)
 
     def run(self) -> None:
         loop = asyncio.new_event_loop()
-        self._loop = loop
+        with self._approval_lock:
+            self._loop = loop
         asyncio.set_event_loop(loop)
         try:
-            self._task = loop.create_task(self._amain())
-            loop.run_until_complete(self._task)
+            task = loop.create_task(self._amain())
+            with self._approval_lock:
+                self._task = task
+                cancelled = self._cancelled
+            if cancelled:
+                task.cancel()
+            loop.run_until_complete(task)
+        except asyncio.CancelledError:
+            pass
         finally:
-            self._loop = None
-            self._task = None
+            with self._approval_lock:
+                self._loop = None
+                self._task = None
+                pending = list(self._pending_approvals.values())
+                self._pending_approvals.clear()
+            for fut in pending:
+                if not fut.done():
+                    fut.cancel()
             loop.close()
 
     async def _amain(self) -> None:
@@ -220,16 +256,20 @@ class HostToolWorker(QThread):
         self.operation = operation
         self._cancelled = False
         self._loop = self._task = None
+        self._approval_lock = threading.Lock()
         self._pending_approvals = {}
 
     def run(self):
         loop = asyncio.new_event_loop()
-        self._loop = loop
+        with self._approval_lock:
+            self._loop = loop
         try:
-            if self._cancelled:
-                return
-            self._task = loop.create_task(self.operation(self._handle_approval))
-            result = loop.run_until_complete(self._task)
+            with self._approval_lock:
+                if self._cancelled:
+                    return
+                task = loop.create_task(self.operation(self._handle_approval))
+                self._task = task
+            result = loop.run_until_complete(task)
             if not self._cancelled:
                 self.ready.emit(result)
         except asyncio.CancelledError:
@@ -237,5 +277,12 @@ class HostToolWorker(QThread):
         except Exception:
             self.failed.emit("No se pudo completar la acción. Revisa el perfil aislado y el estado del proyecto.")
         finally:
-            self._loop = self._task = None
+            with self._approval_lock:
+                self._loop = None
+                self._task = None
+                pending = list(self._pending_approvals.values())
+                self._pending_approvals.clear()
+            for fut in pending:
+                if not fut.done():
+                    fut.cancel()
             loop.close()

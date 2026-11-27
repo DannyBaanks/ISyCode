@@ -27,6 +27,8 @@ class ConversationStore:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
             db.row_factory = sqlite3.Row
+            db.execute("PRAGMA busy_timeout=5000;")
+            db.execute("PRAGMA journal_mode=WAL;")
             db.execute("PRAGMA foreign_keys=ON")
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS sessions (
