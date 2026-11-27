@@ -26,7 +26,9 @@ def test_summaries_match_full_listing_cold_and_warm(tmp_path):
     store, first, second = _store(tmp_path)
     assert store.list_summaries() == _expected(store)
     index = store.root / ".summary-index"
-    assert index.is_file() and index.stat().st_mode & 0o777 == 0o600
+    assert index.is_file()
+    if os.name == "posix":
+        assert index.stat().st_mode & 0o777 == 0o600
     assert store.list_summaries() == _expected(store)
     row = next(item for item in store.list_summaries() if item.session_id == first.session_id)
     assert (row.message_count, row.last_role, row.context_chars) == (2, "assistant", 4 + 100)
