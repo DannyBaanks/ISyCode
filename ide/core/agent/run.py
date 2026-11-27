@@ -335,6 +335,19 @@ AVAILABLE_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "isycode_rmdir",
+            "description": "Remove an EMPTY directory inside the project workspace (CODER mode, requires host approval; fails if non-empty).",
+            "parameters": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "isycode_move_file",
             "description": "Move or rename a file within the project workspace (CODER mode, requires host approval).",
             "parameters": {

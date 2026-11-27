@@ -148,3 +148,33 @@ def test_unlimited_turns_default_and_configurable_pref(tmp_path, monkeypatch):
     broker = SecretBroker()
     agent = Agent(ctx, ProviderRegistry(broker), PolicyEngine(), RuntimeRegistry(tmp_path), broker)
     assert agent._turn_limit is None
+
+
+def test_isycode_rmdir_empty_only_and_gated(tmp_path):
+    async def _run():
+        svc = ToolExecutionService(tmp_path, PolicyEngine(), RuntimeRegistry(tmp_path))
+        empty_dir = tmp_path / "tooltest_dir"
+        empty_dir.mkdir()
+        non_empty = tmp_path / "full_dir"
+        non_empty.mkdir()
+        (non_empty / "a.txt").write_text("hi", encoding="utf-8")
+
+        async def _approve(_preview):
+            return True
+
+        res_non_empty = await svc.execute(
+            ToolCall("isycode_rmdir", {"path": "full_dir"}, "r1"),
+            mode="coder", actor="AGENT", approve=_approve,
+        )
+        assert not res_non_empty.success
+        assert res_non_empty.error_code == "DIR_NOT_EMPTY"
+        assert non_empty.exists()
+
+        res_ok = await svc.execute(
+            ToolCall("isycode_rmdir", {"path": "tooltest_dir"}, "r2"),
+            mode="coder", actor="AGENT", approve=_approve,
+        )
+        assert res_ok.success
+        assert not empty_dir.exists()
+
+    asyncio.run(_run())

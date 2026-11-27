@@ -30,6 +30,7 @@ READONLY_ISYCODE_TOOLS = {
 
 MUTATING_ISYCODE_TOOLS = {
     "isycode_mkdir",
+    "isycode_rmdir",
     "isycode_move_file",
     "isycode_delete_file",
     "isycode_mcp_execute",
@@ -255,6 +256,15 @@ def preview_isycode_mutating_tool(workspace: Path, name: str, arguments: dict) -
     if name == "isycode_mkdir":
         target = _safe_workspace_path(root, arguments.get("path", ""))
         return f"Crear carpeta:\n  + {target.relative_to(root)}/"
+    if name == "isycode_rmdir":
+        target = _safe_workspace_path(root, arguments.get("path", ""))
+        if not target.exists():
+            raise ProposalError(f"DIR_NOT_FOUND: no existe '{arguments.get('path')}'")
+        if not target.is_dir() or target.is_symlink():
+            raise ProposalError("NOT_A_DIR: isycode_rmdir solo elimina carpetas vacías (no archivos ni symlinks).")
+        if any(target.iterdir()):
+            raise ProposalError("DIR_NOT_EMPTY: la carpeta no está vacía; elimina sus archivos primero.")
+        return f"Eliminar carpeta vacía:\n  - {target.relative_to(root)}/"
     if name == "isycode_move_file":
         src = _safe_workspace_path(root, arguments.get("src", ""))
         dst = _safe_workspace_path(root, arguments.get("dst", ""))
@@ -277,6 +287,16 @@ def execute_isycode_mutating_tool(workspace: Path, name: str, arguments: dict) -
         target = _safe_workspace_path(root, arguments.get("path", ""))
         target.mkdir(parents=True, exist_ok=True)
         return ExecutionResult(True, stdout=f"Carpeta creada: {target.relative_to(root)}")
+    if name == "isycode_rmdir":
+        target = _safe_workspace_path(root, arguments.get("path", ""))
+        if not target.exists():
+            return ExecutionResult(False, stderr=f"DIR_NOT_FOUND: {target}", returncode=1, error_code="DIR_NOT_FOUND")
+        if not target.is_dir() or target.is_symlink():
+            return ExecutionResult(False, stderr="NOT_A_DIR: solo carpetas vacías.", returncode=1, error_code="NOT_A_DIR")
+        if any(target.iterdir()):
+            return ExecutionResult(False, stderr="DIR_NOT_EMPTY: la carpeta no está vacía.", returncode=1, error_code="DIR_NOT_EMPTY")
+        target.rmdir()
+        return ExecutionResult(True, stdout=f"Carpeta vacía eliminada: {target.relative_to(root)}")
     if name == "isycode_move_file":
         src = _safe_workspace_path(root, arguments.get("src", ""))
         dst = _safe_workspace_path(root, arguments.get("dst", ""))

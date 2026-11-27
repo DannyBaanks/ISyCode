@@ -74,7 +74,7 @@ class ToolExecutionService:
                 if not (approved and targeted):
                     return self._deny("PROTECTED_ZONE_REQUIRES_APPROVAL", "Esta ruta requiere un plan aprobado que la incluya.")
         action = {"write": "write", "edit": "write", "verify": "verify", "run_command": "execute",
-                  "isycode_mkdir": "write", "isycode_move_file": "write", "isycode_delete_file": "write",
+                  "isycode_mkdir": "write", "isycode_rmdir": "write", "isycode_move_file": "write", "isycode_delete_file": "write",
                   "isycode_mcp_execute": "write"}.get(name, "read")
         decision = self.policy.evaluate(action, name, {"tool": name, "args": arguments,
                                                       "trusted": name != "run_command", "isolated_linux": name == "run_command",
