@@ -31,6 +31,7 @@ _ANSI_SEQUENCE_RE = re.compile(
     r"|[PX^_][^\x1b]*(?:\x1b\\|$)"          # DCS / SOS / PM / APC
     r"|[@-Z\\-_]"                           # 2-byte ESC sequence
     r")"
+    r"|\x9b[^\x07\x1b\x9c]*(?:\x07|\x1b\\|\x9c|$)"  # C1 OSC (8-bit form of ESC ])
 )
 
 

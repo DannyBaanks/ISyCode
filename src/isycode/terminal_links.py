@@ -16,6 +16,7 @@ from rich.markdown import Markdown as RichMarkdown
 from rich.text import Text
 
 from isycode.sidebar_files import FileLink, parse_local_file_link
+from isycode.terminal_safety import strip_terminal_controls
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, YELLOW
 
 _PR_RE = re.compile(r"\bPR\s+#?(\d{1,7})\b", re.IGNORECASE)
@@ -246,9 +247,16 @@ def literal_html(text: str) -> str:
 
 
 def rich_markdown(text: str, *, root: Path | str | None = None) -> RichMarkdown:
-    """Markdown with autolinks and the repository's PR anchors; raw HTML shown literally."""
+    """Markdown with autolinks and the repository's PR anchors; raw HTML shown literally.
+
+    Terminal sequences are removed first (Textual's final strip filter only drops
+    control bytes): otherwise an OSC 8 hyperlink survives as ``URL\x07label`` and
+    the autolinker glues the hidden target to the visible label. Only the label
+    stays. ``selection_text`` keeps the original reply for copy.
+    """
     repo_url = repository_web_url(root) if root is not None else None
-    linked = _encode_markdown_file_links(linkify_markdown(literal_html(text), repo_url))
+    shown = strip_terminal_controls(text)
+    linked = _encode_markdown_file_links(linkify_markdown(literal_html(shown), repo_url))
     return RichMarkdown(linked, code_theme="monokai")
 
 
@@ -282,9 +290,14 @@ def _append_linked(result: Text, text: str, repo_url: str | None, style: str) ->
 
 
 def semantic_plain(text: str, *, root: Path | str | None = None) -> Text:
-    """Plain output with links and conservative status colors, not a new parser."""
+    """Plain output with links and conservative status colors, not a new parser.
+
+    Terminal sequences are removed first so a hidden OSC 8 target cannot be
+    autolinked into the visible label (same rule as ``rich_markdown``).
+    """
     repo_url = repository_web_url(root) if root is not None else None
     result = Text()
+    text = strip_terminal_controls(text)
     for line in text.splitlines(keepends=True):
         lowered = line.lstrip().casefold()
         if lowered.startswith(("error", "failed", "failure", "exception", "traceback")):
