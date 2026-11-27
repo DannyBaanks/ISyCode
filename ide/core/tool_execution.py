@@ -17,6 +17,7 @@ from core.runtime.linux import CommandError
 from core.isycode_tools import (
     MUTATING_ISYCODE_TOOLS,
     READONLY_ISYCODE_TOOLS,
+    execute_isycode_mcp_tool,
     execute_isycode_mutating_tool,
     execute_isycode_readonly_tool,
     preview_isycode_mutating_tool,
@@ -73,7 +74,8 @@ class ToolExecutionService:
                 if not (approved and targeted):
                     return self._deny("PROTECTED_ZONE_REQUIRES_APPROVAL", "Esta ruta requiere un plan aprobado que la incluya.")
         action = {"write": "write", "edit": "write", "verify": "verify", "run_command": "execute",
-                  "isycode_mkdir": "write", "isycode_move_file": "write", "isycode_delete_file": "write"}.get(name, "read")
+                  "isycode_mkdir": "write", "isycode_move_file": "write", "isycode_delete_file": "write",
+                  "isycode_mcp_execute": "write"}.get(name, "read")
         decision = self.policy.evaluate(action, name, {"tool": name, "args": arguments,
                                                       "trusted": name != "run_command", "isolated_linux": name == "run_command",
                                                       "mode": mode, "actor": actor})
@@ -254,7 +256,10 @@ class ToolExecutionService:
                 decision = self._gate(name, arguments, mode, actor, plan)
                 if isinstance(decision, ExecutionResult):
                     return decision
-                result = execute_isycode_mutating_tool(self.workspace, name, arguments)
+                if name == "isycode_mcp_execute":
+                    result = await execute_isycode_mcp_tool(self.workspace, arguments)
+                else:
+                    result = execute_isycode_mutating_tool(self.workspace, name, arguments)
             else:
                 result = await self.runtimes.get(decision.runtime).execute(ToolCall(name, arguments, call_id))
             result.evidence = {**(result.evidence or {}), "actor": actor,

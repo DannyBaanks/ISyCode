@@ -23,12 +23,16 @@ READONLY_ISYCODE_TOOLS = {
     "isycode_worktrees",
     "isycode_isymem_recall",
     "isycode_mcp_servers",
+    "isycode_mcp_discover",
+    "isycode_mcp_describe",
+    "isycode_motor",
 }
 
 MUTATING_ISYCODE_TOOLS = {
     "isycode_mkdir",
     "isycode_move_file",
     "isycode_delete_file",
+    "isycode_mcp_execute",
 }
 
 ALL_ISYCODE_TOOLS = READONLY_ISYCODE_TOOLS | MUTATING_ISYCODE_TOOLS
@@ -193,6 +197,38 @@ async def execute_isycode_readonly_tool(workspace: Path, name: str, arguments: d
             }
             return ExecutionResult(True, stdout=json.dumps(payload, indent=2, ensure_ascii=False))
 
+        if name == "isycode_mcp_discover":
+            from core.isymcp_hub_client import ISyMCPHubClient
+            client = ISyMCPHubClient()
+            resp = await client.discover(
+                server=arguments.get("server") or None,
+                query=arguments.get("query") or None,
+                include_idle=bool(arguments.get("include_idle", False)),
+                limit=int(arguments.get("limit", 25) or 25),
+            )
+            if not resp.get("ok"):
+                return ExecutionResult(False, stderr=resp.get("error", "Error consultando ISyMCP Hub."), returncode=1, error_code="ISYMCP_HUB_ERROR")
+            return ExecutionResult(True, stdout=_bounded(resp.get("text", "")))
+
+        if name == "isycode_mcp_describe":
+            from core.isymcp_hub_client import ISyMCPHubClient
+            server = str(arguments.get("server", "")).strip()
+            tool = str(arguments.get("tool", "")).strip()
+            if not server or not tool:
+                raise ProposalError("INVALID_ARGUMENTS: se requieren server y tool.")
+            client = ISyMCPHubClient()
+            resp = await client.describe(server, tool)
+            if not resp.get("ok"):
+                return ExecutionResult(False, stderr=resp.get("error", "Error obteniendo schema en ISyMCP Hub."), returncode=1, error_code="ISYMCP_HUB_ERROR")
+            return ExecutionResult(True, stdout=_bounded(resp.get("text", "")))
+
+        if name == "isycode_motor":
+            from core.isycode_motors import run_isycode_motor
+            res = await run_isycode_motor(root, arguments)
+            if res.stdout:
+                res.stdout = _bounded(res.stdout)
+            return res
+
         return ExecutionResult(False, stderr=f"Tool desconocida: {name}", returncode=1, error_code="INVALID_TOOL")
     except ValueError as exc:
         return ExecutionResult(False, stderr=str(exc), returncode=1, error_code=str(exc).split(":", 1)[0])
@@ -202,6 +238,20 @@ async def execute_isycode_readonly_tool(workspace: Path, name: str, arguments: d
 
 def preview_isycode_mutating_tool(workspace: Path, name: str, arguments: dict) -> str:
     root = workspace.resolve()
+    if name == "isycode_mcp_execute":
+        server = str(arguments.get("server", "")).strip()
+        tool = str(arguments.get("tool", "")).strip()
+        if not server or not tool:
+            raise ProposalError("INVALID_ARGUMENTS: se requieren server y tool para isycode_mcp_execute.")
+        tool_args = arguments.get("arguments") or {}
+        if not isinstance(tool_args, dict):
+            raise ProposalError("INVALID_ARGUMENTS: arguments debe ser un objeto JSON.")
+        return (
+            f"Delegar ejecución a ISyMCP Hub:\n"
+            f"  server: {server}\n"
+            f"  tool:   {tool}\n"
+            f"  args:   {json.dumps(tool_args, indent=2, ensure_ascii=False)[:1500]}"
+        )
     if name == "isycode_mkdir":
         target = _safe_workspace_path(root, arguments.get("path", ""))
         return f"Crear carpeta:\n  + {target.relative_to(root)}/"
@@ -244,3 +294,27 @@ def execute_isycode_mutating_tool(workspace: Path, name: str, arguments: dict) -
         target.unlink()
         return ExecutionResult(True, stdout=f"Archivo eliminado: {target.relative_to(root)}")
     return ExecutionResult(False, stderr=f"INVALID_TOOL: {name}", returncode=1, error_code="INVALID_TOOL")
+
+
+async def execute_isycode_mcp_tool(workspace: Path, arguments: dict) -> ExecutionResult:
+    from core.isymcp_hub_client import ISyMCPHubClient
+    server = str(arguments.get("server", "")).strip()
+    tool = str(arguments.get("tool", "")).strip()
+    tool_args = arguments.get("arguments") or {}
+    if not server or not tool or not isinstance(tool_args, dict):
+        return ExecutionResult(False, stderr="INVALID_ARGUMENTS: server, tool y arguments dict son obligatorios.", returncode=1, error_code="INVALID_ARGUMENTS")
+    client = ISyMCPHubClient()
+    resp = await client.execute(server, tool, tool_args, timeout=60.0)
+    if not resp.get("ok"):
+        return ExecutionResult(
+            False,
+            stderr=_bounded(resp.get("error") or resp.get("text") or "Error ejecutando tool en ISyMCP Hub."),
+            returncode=1,
+            error_code="ISYMCP_HUB_ERROR",
+            evidence={"mcp": {"server": server, "tool": tool}},
+        )
+    return ExecutionResult(
+        True,
+        stdout=_bounded(resp.get("text", "")),
+        evidence={"mcp": {"server": server, "tool": tool}},
+    )

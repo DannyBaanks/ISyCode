@@ -65,7 +65,7 @@ def sha_file(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(fd, "rb") as stream:
         info = os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_size > 64_000_000:
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 512_000_000:
             raise CommandError("EXECUTABLE_UNSUPPORTED: no se puede identificar este binario")
         for chunk in iter(lambda: stream.read(65536), b""):
             digest.update(chunk)
@@ -111,14 +111,18 @@ class LinuxCommandRuntime(BaseRuntime):
         if normalized != Path(os.path.abspath(candidate)) or not normalized.is_dir() or any(part.startswith(".") or part in EXCLUDE for part in relative.parts):
             raise CommandError("CWD_UNSUPPORTED: carpeta no disponible en la copia aislada")
         requested = Path(argv[0])
+        user_local = self._user_local_dir()
+        search_path = "/usr/bin:/bin:/usr/local/bin"
+        if user_local is not None:
+            search_path = f"{search_path}:{user_local / 'bin'}"
         if requested.is_absolute():
             executable = requested.resolve()
         elif "/" in argv[0]:
             executable = (normalized / requested).resolve()
         else:
-            found = shutil.which(argv[0], path="/usr/bin:/bin")
+            found = shutil.which(argv[0], path=search_path)
             if not found:
-                raise CommandError("EXECUTABLE_MISSING: el ejecutable no está en el perfil del sistema")
+                raise CommandError("EXECUTABLE_MISSING: el ejecutable no está en el perfil del sistema ni en ~/.local/bin")
             executable = Path(found).resolve()
         if not executable.is_file() or not os.access(executable, os.X_OK):
             raise CommandError("EXECUTABLE_MISSING: el ejecutable no está disponible")
@@ -132,11 +136,20 @@ class LinuxCommandRuntime(BaseRuntime):
             sandbox_executable = "/work/" + str(project_executable)
         elif executable.is_relative_to("/usr") and executable.stat().st_uid == 0 and not executable.stat().st_mode & 0o022:
             sandbox_executable = str(executable)
+        elif (
+            user_local is not None
+            and executable.is_relative_to(user_local)
+            and executable.stat().st_uid == os.getuid()
+            and not executable.stat().st_mode & 0o022
+        ):
+            sandbox_executable = str(executable)
         else:
-            raise CommandError("EXECUTABLE_UNSUPPORTED: usa un ejecutable del sistema o del proyecto copiado")
+            raise CommandError("EXECUTABLE_UNSUPPORTED: usa un ejecutable del sistema, ~/.local/bin o del proyecto copiado")
         timeout = arguments.get("timeout", 60)
-        if type(timeout) is not int or not 1 <= timeout <= 120:
-            raise CommandError("TIMEOUT_LIMIT: el tiempo máximo es 120 segundos")
+        if type(timeout) is not int or timeout < 1:
+            raise CommandError("TIMEOUT_LIMIT: el tiempo debe ser un entero positivo (máximo 120 segundos)")
+        if timeout > 120:
+            timeout = 120
         status = installation_status()
         if not status["installed"]:
             raise CommandError("LINUX_RUNTIME_MISSING: el perfil Linux no está instalado; no hay fallback al host")
@@ -146,6 +159,17 @@ class LinuxCommandRuntime(BaseRuntime):
                                              "launcher": [(p, sha_file(p)) for p in launcher]}, sort_keys=True).encode()).hexdigest()
         identity = CommandIdentity(str(self.working_dir), str(executable), sha_file(executable), tuple(argv), str(relative), profile)
         return CommandRequest(uuid.uuid4().hex, identity, sandbox_executable, timeout, launcher, broker_hash)
+
+    @staticmethod
+    def _user_local_dir() -> Path | None:
+        for candidate in (Path("/home/danny/.local"), Path.home() / ".local"):
+            try:
+                resolved = candidate.resolve()
+                if resolved.is_dir() and resolved.stat().st_uid == os.getuid():
+                    return resolved
+            except OSError:
+                continue
+        return None
 
     def _options(self, request, input_dir, config):
         bwrap, prlimit, python = request.launcher
@@ -158,6 +182,11 @@ class LinuxCommandRuntime(BaseRuntime):
         for path in ("/usr", "/bin", "/lib", "/lib64", "/sbin"):
             if Path(path).exists():
                 args += ["--ro-bind", path, path]
+        user_local = self._user_local_dir()
+        sandbox_path = "/usr/bin:/bin:/usr/local/bin"
+        if user_local is not None:
+            args += ["--ro-bind", str(user_local), str(user_local)]
+            sandbox_path = f"{sandbox_path}:{user_local / 'bin'}"
         args += ["--proc", "/proc", "--dev", "/dev", "--dir", "/etc", "--dir", "/home",
                  "--size", "16777216", "--tmpfs", "/home/agent", "--size", "33554432", "--tmpfs", "/tmp",
                  "--size", "201326592", "--tmpfs", "/work", "--ro-bind", str(input_dir), "/input",
@@ -166,7 +195,7 @@ class LinuxCommandRuntime(BaseRuntime):
         if cache.is_file():
             args += ["--ro-bind", str(cache), str(cache)]
         args += ["--remount-ro", "/dev", "--remount-ro", "/proc", "--remount-ro", "/",
-                 "--clearenv", "--setenv", "PATH", "/usr/bin:/bin", "--setenv", "HOME", "/home/agent",
+                 "--clearenv", "--setenv", "PATH", sandbox_path, "--setenv", "HOME", "/home/agent",
                  "--setenv", "LANG", "C.UTF-8", "--setenv", "PYTHONNOUSERSITE", "1",
                  "--setenv", "PYTHONDONTWRITEBYTECODE", "1", "--chdir", "/work", "--", python, "/broker.py"]
         return args
