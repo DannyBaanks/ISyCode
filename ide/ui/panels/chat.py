@@ -331,7 +331,7 @@ class ApprovalCard(QFrame):
         self._applied_compact_state = state
         command = self.arguments.get("approval_kind") == "command"
         self._base_details.setText("Base" if narrow else "Identidad y base")
-        self.detail_view.setVisible(command or not narrow)
+        self.detail_view.setVisible(not self._decided and (command or not narrow))
         self.approve_button.setText(("Una vez" if command else "Aprobar") if narrow else
                                    ("Permitir una vez (Y)" if command else "Aprobar una vez (Y)"))
         self.reject_button.setText("Rechazar" if narrow else "Rechazar (N)")
@@ -354,10 +354,32 @@ class ApprovalCard(QFrame):
             self.always_button.setEnabled(False)
         self.status_badge.setText("AUTORIZADO · comando exacto" if approved == "always" else "APROBADO ✓" if approved else "RECHAZADO ✗")
         self.setProperty("decision", "approved" if approved else "rejected")
+        self._collapse_decided()
         theme.repolish(self)
         for child in self.findChildren(QLabel):
             theme.repolish(child)
         self.decision_made.emit(approved)
+
+    def _collapse_decided(self) -> None:
+        """Minimize decided approval cards to a compact 1-line bar with an expandable details toggle."""
+        self._decided_expanded = False
+        self.detail_view.hide()
+        self.approve_button.hide()
+        self.reject_button.hide()
+        if self.always_button is not None:
+            self.always_button.hide()
+        if self.review_button is not None:
+            self.review_button.hide()
+        if not hasattr(self, "_toggle_details_btn"):
+            btn = QPushButton("detalles ▸", self)
+            btn.setProperty("variant", "ghost")
+            def _toggle():
+                self._decided_expanded = not self._decided_expanded
+                self.detail_view.setVisible(self._decided_expanded)
+                btn.setText("ocultar ▾" if self._decided_expanded else "detalles ▸")
+            btn.clicked.connect(_toggle)
+            self._header_row.addWidget(btn)
+            self._toggle_details_btn = btn
 
     def expire(self) -> None:
         if self._decided:
@@ -368,6 +390,7 @@ class ApprovalCard(QFrame):
         if self.always_button is not None:
             self.always_button.setEnabled(False)
         self.status_badge.setText("TURNO TERMINADO · propuesta sin aplicar")
+        self._collapse_decided()
 
 
 class ToolCard(QFrame):
@@ -915,9 +938,13 @@ class ChatPanel(QWidget):
         self._scroll_to_bottom()
 
     def append_chunk(self, chunk: str) -> None:
-        if self._streaming_bubble:
-            self._streaming_bubble.append_chunk(chunk)
-            self._scroll_to_bottom()
+        if self._streaming_bubble is None or self._streaming_bubble._tool_cards:
+            if self._streaming_bubble is not None:
+                self._streaming_bubble.flush_text()
+                self._streaming_bubble.finish_reasoning("paso previo")
+            self.start_assistant_stream()
+        self._streaming_bubble.append_chunk(chunk)
+        self._scroll_to_bottom()
 
     def append_reasoning(self, text: str) -> None:
         if self._streaming_bubble is None:

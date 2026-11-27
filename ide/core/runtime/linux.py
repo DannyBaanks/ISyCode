@@ -25,7 +25,11 @@ from .base import BaseRuntime, ExecutionResult
 
 PROFILE = "linux-offline-tmpfs-v1"
 EXCLUDE = {".git", ".isyvm", ".isycode-ide", ".venv", "venv", ".venv_linux", "node_modules",
-           "__pycache__", ".pytest_cache", ".mypy_cache", "dist", "build", "target", ".ssh", ".aws", ".gnupg"}
+           "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", "dist", "build",
+           "target", "zig-out", ".zig-cache", "zig-cache", ".ssh", ".aws", ".gnupg"}
+MAX_SINGLE_FILE_BYTES = 10_000_000   # Skip individual >10 MB artifacts/blobs instead of aborting snapshot
+MAX_SNAPSHOT_BYTES = 128_000_000     # 128 MB total snapshot ceiling
+MAX_SNAPSHOT_FILES = 15_000          # 15,000 files ceiling
 SECRET_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".keystore"}
 SECRET_NAMES = {"auth.json", "credentials.json", "credentials", "secrets.json", "secrets.yaml", "secrets.yml", "token.json", "tokens.json"}
 
@@ -156,7 +160,7 @@ class LinuxCommandRuntime(BaseRuntime):
                 args += ["--ro-bind", path, path]
         args += ["--proc", "/proc", "--dev", "/dev", "--dir", "/etc", "--dir", "/home",
                  "--size", "16777216", "--tmpfs", "/home/agent", "--size", "33554432", "--tmpfs", "/tmp",
-                 "--size", "134217728", "--tmpfs", "/work", "--ro-bind", str(input_dir), "/input",
+                 "--size", "201326592", "--tmpfs", "/work", "--ro-bind", str(input_dir), "/input",
                  "--ro-bind", str(self.broker), "/broker.py", "--ro-bind", str(config), "/launch.json"]
         cache = Path("/etc/ld.so.cache")
         if cache.is_file():
@@ -181,16 +185,22 @@ class LinuxCommandRuntime(BaseRuntime):
                 info = os.stat(name, dir_fd=fd, follow_symlinks=False)
                 if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                     continue
+                if info.st_size > MAX_SINGLE_FILE_BYTES:
+                    continue
                 handle = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
                 with os.fdopen(handle, "rb") as stream:
                     actual = os.fstat(stream.fileno())
                     if not stat.S_ISREG(actual.st_mode) or actual.st_nlink != 1:
                         raise CommandError("SNAPSHOT_CHANGED: cambió un archivo durante la copia")
-                    raw = stream.read(50_000_001)
+                    if actual.st_size > MAX_SINGLE_FILE_BYTES:
+                        continue
+                    raw = stream.read(MAX_SINGLE_FILE_BYTES + 1)
+                if len(raw) > MAX_SINGLE_FILE_BYTES:
+                    continue
                 total += len(raw)
                 count += 1
-                if total > 50_000_000 or count > 5000:
-                    raise CommandError("SNAPSHOT_LIMIT: la copia admite 50 MB y 5000 archivos")
+                if total > MAX_SNAPSHOT_BYTES or count > MAX_SNAPSHOT_FILES:
+                    raise CommandError(f"SNAPSHOT_LIMIT: la copia admite {MAX_SNAPSHOT_BYTES // 1_000_000} MB y {MAX_SNAPSHOT_FILES} archivos")
                 mode = stat.S_IMODE(actual.st_mode) & 0o777
                 target = target_dir / name
                 target.write_bytes(raw)
