@@ -6881,3 +6881,9 @@ msgstr "{root}\nClassic（推荐）：在工作区范围内审查编辑和沙盒
 
 msgid "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
 msgstr "Flow 提供广泛的主机访问权限：读取、编辑、移动、删除、带网络的主机 Shell 命令以及已配置的本地 MCP 无需询问即可运行。直接文件工具仍会阻止 .env 等敏感文件，但主机 Shell 命令使用你的普通用户权限运行（并非沙盒）。/undo 仅恢复 ISyCode 捕获并验证的工作区前像，不涵盖任意外部或超限影响。人工编辑文件的提交、推送和权限变更仍会询问。如需工作区沙盒请使用 Classic，如需逐项显式授权请使用 Security。"
+
+msgid "Switch account · {provider} [{slot}] ({count})…"
+msgstr "切换账号 · {provider} [{slot}]（{count}）…"
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
+msgstr "订阅账号 · Antigravity / ChatGPT / Grok…"
