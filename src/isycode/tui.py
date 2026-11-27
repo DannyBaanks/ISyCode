@@ -1094,14 +1094,53 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         super().action_toggle_shell_box()
         self.query_one("#idea-box-row").set_class(bool(self._shell_mode), "shell-mode")
 
+    def _focus_in_side_panel(self) -> bool:
+        """Whether the focused widget lives inside the workspace rail."""
+        node = self.focused
+        while node is not None:
+            if isinstance(node, SidePanel):
+                return True
+            node = node.parent
+        return False
+
+    def _close_rail_to_composer(self) -> None:
+        """Hide the rail and hand focus back to the composer (the rail's "esc back").
+
+        The rail is an on-demand surface: once it is closed the user must be
+        able to keep typing, and the rail's footer hint must not be painted
+        over the main column any more.
+        """
+        self._rail_visible = False
+        self._rail_visibility_override = False
+        self._rail_auto_hidden = False
+        rail = self.query_one(SidePanel)
+        rail.display = False
+        try:
+            self.query_one("#main").display = True
+        except NoMatches:
+            pass
+        self._apply_rail_width(self.size.width)
+        self.query_one("#prompt-input", PromptArea).focus()
+        self._update_model_button_visibility()
+        self.call_after_refresh(self._paint_workspace_chrome)
+
     def action_focus_next(self) -> None:
-        """Keep Tab inside the command menu while its overlay is open."""
+        """Keep Tab inside the command menu while its overlay is open.
+
+        The workspace rail only takes keyboard focus when the user asks for it
+        (F6 / Shift+F6 / a click / its buttons): Tab from the chat or the
+        composer cycles the command bar and comes back to the composer instead
+        of walking the dozens of rail controls (finding 6).
+        """
         if isinstance(self.screen, ModalScreen):
             super().action_focus_next()
             return
         menu = self.query_one("#action-menu", Vertical)
         if menu.display:
             self.screen.focus_next("#action-menu *")
+            return
+        if self._rail_visible and not self._focus_in_side_panel():
+            self.screen.focus_next("#main *")
             return
         super().action_focus_next()
 
@@ -1118,6 +1157,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         menu = self.query_one("#action-menu", Vertical)
         if menu.display:
             self.screen.focus_previous("#action-menu *")
+            return
+        if self._rail_visible and not self._focus_in_side_panel():
+            self.screen.focus_previous("#main *")
             return
         focus = self.focused
         node = focus
@@ -1162,17 +1204,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             return
         if getattr(self, "_rail_visible", False) and getattr(self, "size", None) and self.size.width < 100:
             self.action_toggle_sidebar()
+            self.query_one("#prompt-input", PromptArea).focus()
             return
         if getattr(self, "_rail_visible", False) and getattr(self, "_rail_view", "overview") == "doc":
-            focused = self.focused
-            in_side_panel = False
-            node = focused
-            while node is not None:
-                if isinstance(node, SidePanel):
-                    in_side_panel = True
-                    break
-                node = node.parent
-            if in_side_panel:
+            if self._focus_in_side_panel():
                 self._set_rail_view("files")
                 try:
                     files_list = self.query_one("#conversation-files-list", OptionList)
@@ -1183,6 +1218,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 except (NoMatches, NoScreen):
                     pass
                 return
+        # The rail footer promises "esc back": with focus in the rail, Escape
+        # closes it and returns to the composer at any terminal width, leaving
+        # no rail hint painted over the chat column.
+        if getattr(self, "_rail_visible", False) and self._focus_in_side_panel():
+            self._close_rail_to_composer()
+            return
         if self._review_request_task and not self._review_request_task.done():
             self._review_request_task.cancel()
             self._set_activity(tr("Stopping external review…"), YELLOW)
