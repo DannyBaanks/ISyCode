@@ -6,9 +6,9 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QSize
 from PySide6.QtGui import QKeySequence, QShortcut, QPixmap
-from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
                                 QListWidget, QListWidgetItem, QMainWindow, QMenu,
-                                QPushButton, QSizePolicy, QSplitter, QToolBar,
+                                QPushButton, QSizePolicy, QToolBar,
                                 QToolButton, QVBoxLayout, QWidget)
 
 from . import theme
@@ -38,6 +38,16 @@ from core.ui_preferences import UiPreferences
 from .diff import render_diff
 
 MAX_TURNS = 20
+
+
+
+_STATUS_ES = {"completed": "completo", "complete": "completo", "applied": "aplicado", "approved": "aprobado",
+              "rejected": "rechazado", "denied": "denegado", "pending": "pendiente", "cancelled": "cancelado",
+              "interrupted": "interrumpido", "failed": "fallido", "partial": "parcial", "allowed": "permitido"}
+
+
+def _status_es(status: str) -> str:
+    return _STATUS_ES.get(str(status).lower(), str(status))
 
 
 class CommandPaletteDialog(QDialog):
@@ -248,14 +258,21 @@ class MainWindow(QMainWindow):
         self.command_search.clicked.connect(self.open_command_palette)
         self.command_search_action = toolbar.addWidget(self.command_search)
         self.mode_buttons = {}
+        mode_segment = QWidget()
+        mode_segment.setObjectName("modeSegment")
+        mode_segment.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        segment_layout = QHBoxLayout(mode_segment)
+        segment_layout.setContentsMargins(3, 3, 3, 3)
+        segment_layout.setSpacing(2)
         for mode in ("plan", "coder"):
             button = QPushButton(mode.upper())
             button.setObjectName("modeSwitch")
             button.setCheckable(True)
             button.setToolTip("PLAN inspecciona y propone" if mode == "plan" else "CODER pide permiso para aplicar")
             button.clicked.connect(lambda checked=False, m=mode: self._set_mode(m))
-            toolbar.addWidget(button)
+            segment_layout.addWidget(button)
             self.mode_buttons[mode] = button
+        toolbar.addWidget(mode_segment)
         self.mode_badge = QLabel()
         self.mode_badge.hide()
         self.mode_button = QPushButton()
@@ -264,21 +281,21 @@ class MainWindow(QMainWindow):
     def _build_menu(self) -> QMenu:
         menu = QMenu(self)
 
-        new_sess_act = menu.addAction("New session", self._new_session)
+        new_sess_act = menu.addAction("Nueva conversación", self._new_session)
         new_sess_act.setShortcut(QKeySequence("Ctrl+N"))
         providers_action = menu.addAction("Providers…", self.open_providers)
         providers_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
         menu.addAction("GitHub y carpetas", lambda: self.panel_bar.show_title("GitHub"))
         menu.addAction("Vista Conversación", lambda: self.panel_bar.set_view("conversation"))
         menu.addAction("Vista Código + chat", lambda: self.panel_bar.set_view("code"))
-        menu.addAction("Open workspace…", self._open_workspace)
-        self.mode_action = menu.addAction("Toggle mode", self._toggle_mode)
-        menu.addAction("Clear chat", lambda: self.chat.clear_log())
+        menu.addAction("Abrir proyecto…", self._open_workspace)
+        self.mode_action = menu.addAction("Alternar PLAN / CODER", self._toggle_mode)
+        menu.addAction("Limpiar chat", lambda: self.chat.clear_log())
         menu.addSeparator()
 
-        self.panels_menu = menu.addMenu("Panels")
+        self.panels_menu = menu.addMenu("Paneles")
         menu.addSeparator()
-        menu.addAction("Close all panel windows", self.close_all_panel_windows)
+        menu.addAction("Cerrar ventanas de panel", self.close_all_panel_windows)
         return menu
 
     def _populate_panels_menu(self) -> None:
@@ -605,6 +622,7 @@ class MainWindow(QMainWindow):
             self._stop_agent()
             return
         self._session_id = None
+        self.conversations_panel.set_current(self._session_id)
         self._provider_replacement_required = False
         self.panel_bar.conversation_title.setText("Nueva conversación")
         self.chat.clear_log()
@@ -620,6 +638,7 @@ class MainWindow(QMainWindow):
         if session_id not in {item["id"] for item in self.controller.conversations.list()}:
             return
         self._session_id = session_id
+        self.conversations_panel.set_current(self._session_id)
         selected = next(item for item in self.controller.conversations.list() if item["id"] == session_id)
         self.panel_bar.conversation_title.setText(selected["title"])
         self.chat.clear_log()
@@ -661,15 +680,15 @@ class MainWindow(QMainWindow):
         for event in self.controller.conversations.events(session_id):
             item = event["payload"]
             if item["type"] == "proposal_decided":
-                self.chat.add_system_message("Cambio " + item.get("proposal_id", "")[:12] + " · " + item.get("status", "desconocido") + " · consultar Cambios")
+                self.chat.add_system_message("Cambio " + item.get("proposal_id", "")[:12] + " · " + _status_es(item.get("status", "desconocido")) + " · consultar Cambios")
             elif item["type"] == "provider_reasoning":
                 self.chat.start_assistant_stream()
                 self.chat.append_reasoning(item.get("text", ""))
-                self.chat.end_assistant_stream("guardado · " + item.get("status", "parcial") + (" · vista limitada" if item.get("truncated") else ""))
+                self.chat.end_assistant_stream("guardado · " + _status_es(item.get("status", "parcial")) + (" · vista limitada" if item.get("truncated") else ""))
             elif item["type"] == "agent_failed":
                 self.chat.add_system_message(item.get("code", "AGENT_INTERNAL_ERROR") + " · " + item.get("message", "") + " · paso " + str(item.get("step", "?")))
             elif item["type"] == "command_decided":
-                self.chat.add_system_message("Comando · " + item.get("status", "desconocido") + " · permiso " + item.get("scope", "sin permiso"))
+                self.chat.add_system_message("Comando · " + _status_es(item.get("status", "desconocido")) + " · permiso " + item.get("scope", "sin permiso"))
         if status in {"interrupted", "cancelled", "failed"}:
             actions = []
             if last_user_prompt:
@@ -1087,6 +1106,7 @@ class MainWindow(QMainWindow):
             self.terminal_panel.on_workspace_changed()
         self.status_panel.refresh()
         self._session_id = None
+        self.conversations_panel.set_current(self._session_id)
         self._provider_replacement_required = False
         self._total_tokens_estimated = 0
         self._update_context_meter(0)
@@ -1237,6 +1257,7 @@ class MainWindow(QMainWindow):
             return
         if self._session_id is None:
             self._session_id = self.controller.conversations.create()
+            self.conversations_panel.set_current(self._session_id)
         self.chat.set_status_working()
         self._stream_active = False
         self._tool_cards.clear()
@@ -1352,7 +1373,8 @@ class MainWindow(QMainWindow):
         self.chat.end_assistant_stream()
         self._stream_active = False
         cancelled = self._worker is not None and self._worker._cancelled
-        self.chat.add_system_message(f"Conversación {session_id} · " + ("turno detenido; respuesta parcial conservada" if cancelled else "turno finalizado"))
+        if cancelled:  # a normal finish is already shown by the status line; only flag the exception
+            self.chat.add_system_message("Turno detenido · respuesta parcial conservada")
         self._update_statusbar()
         self.resident_panel._refresh_lists()
         self.conversations_panel.refresh()

@@ -81,6 +81,7 @@ QPushButton#ideNavigationItem:checked {{
 }}
 QWidget#ideWorkPage, QStackedWidget#idePages {{ background: {BG}; }}
 QLabel#conversationTitle {{ font-size: 17px; font-weight: 600; }}
+QWidget#modeSegment {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 15px; }}
 QPushButton#viewSwitch, QPushButton#modeSwitch {{ background: transparent; border-radius: 12px; color: {TEXT_DIM}; min-height: 24px; padding: 6px 16px; }}
 QPushButton#viewSwitch:checked, QPushButton#modeSwitch:checked {{ background: {ACCENT}; color: #05202b; font-weight: 700; border-color: {ACCENT}; }}
 QTabWidget#ideInspector {{ border-left: 1px solid {BORDER_SOFT}; }}
@@ -307,6 +308,8 @@ QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
 /* command palette */
 QDialog#commandPalette {{ background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: 10px; }}
 QDialog#commandPalette QLineEdit {{ font-size: 14px; padding: 8px 10px; }}
+QListWidget#conversationList::item {{ padding: 6px 8px; border-radius: 6px; color: {TEXT_DIM}; }}
+QListWidget#conversationList::item:selected {{ background: {ACCENT_DIM}; color: {TEXT}; border-left: 3px solid {ACCENT}; }}
 QDialog#commandPalette QListWidget {{ background: {SURFACE_2}; }}
 
 /* ChatGPT-style sidebar & vertical navigation */

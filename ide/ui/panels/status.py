@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel,
                                 QTabWidget, QVBoxLayout, QWidget)
 
 from .. import theme
+from ..widgets import button_row
 
 
 class StatusPanel(QWidget):
@@ -27,12 +28,9 @@ class StatusPanel(QWidget):
 
         # Header with help
         top_row = QHBoxLayout()
-        top_lbl = QLabel("ESTADO DEL SISTEMA (HOST STATUS)")
-        top_lbl.setStyleSheet("font-size: 11px; font-weight: 700; color: #6b7385; letter-spacing: 1px;")
-        top_row.addWidget(top_lbl)
         top_row.addStretch(1)
 
-        self.refresh_btn = QPushButton("Refresh")
+        self.refresh_btn = QPushButton("Actualizar")
         self.refresh_btn.setToolTip("Actualizar estado del host")
         self.refresh_btn.clicked.connect(self.refresh)
         top_row.addWidget(self.refresh_btn)
@@ -65,7 +63,7 @@ class StatusPanel(QWidget):
         self.dash_layout.addStretch(1)
 
         dash_scroll.setWidget(dash_content)
-        self.tabs.addTab(dash_scroll, "📊 Panel visual")
+        self.tabs.addTab(dash_scroll, "Resumen")
 
         # Tab 2: Raw JSON View (maintains full compatibility for tests/scripts)
         raw_widget = QWidget()
@@ -75,12 +73,12 @@ class StatusPanel(QWidget):
         self.view.setReadOnly(True)
         self.view.setStyleSheet("font-family: Consolas, monospace; font-size: 12px;")
         raw_layout.addWidget(self.view, stretch=1)
-        self.tabs.addTab(raw_widget, "🔍 Inspección JSON")
+        self.tabs.addTab(raw_widget, "JSON")
 
         layout.addWidget(self.tabs, stretch=1)
         self.refresh()
 
-    def _create_card(self, title: str, value: str, subtitle: str = "", status_color: str = "") -> QFrame:
+    def _create_card(self, title: str, value: str, subtitle: str = "", status_color: str = "", *, rich: bool = False) -> QFrame:
         card = QFrame()
         card.setObjectName("statusCard")
         l = QVBoxLayout(card)
@@ -92,7 +90,7 @@ class StatusPanel(QWidget):
         l.addWidget(t_lbl)
 
         v_lbl = QLabel(value)
-        v_lbl.setTextFormat(Qt.TextFormat.PlainText)
+        v_lbl.setTextFormat(Qt.TextFormat.RichText if rich else Qt.TextFormat.PlainText)
         v_lbl.setWordWrap(True)
         v_lbl.setObjectName("statusCardValue")
         if status_color:
@@ -103,7 +101,7 @@ class StatusPanel(QWidget):
             s_lbl = QLabel(subtitle)
             s_lbl.setTextFormat(Qt.TextFormat.PlainText)
             s_lbl.setWordWrap(True)
-            s_lbl.setStyleSheet("color: #9aa3b2; font-size: 11px;")
+            s_lbl.setStyleSheet("color: #9aa3b2; font-size: 12px;")
             l.addWidget(s_lbl)
 
         return card
@@ -132,7 +130,10 @@ class StatusPanel(QWidget):
 
         # Runtime layers
         runtimes = snap.get("runtime", {})
-        layers_str = " · ".join(f"{k.upper()}: {'ON' if v else 'OFF'}" for k, v in runtimes.items())
+        layers_str = " &nbsp; ".join(
+            f"<span style='color:{theme.OK if v else theme.TEXT_FAINT}'>{'●' if v else '○'} {k.upper()} {'ON' if v else 'OFF'}</span>"
+            for k, v in runtimes.items()
+        )
         layer_notes = (
             "Disponibilidad del adaptador; no demuestra aislamiento del sistema operativo.\n"
             "LAYER_B (WASM) y LAYER_C (VM) están OFF por diseño en esta build (sin adaptador WASM/VM instalado); "
@@ -142,7 +143,8 @@ class StatusPanel(QWidget):
             "CAPAS DE RUNTIME",
             layers_str or "layer_a=ON",
             layer_notes,
-            theme.OK,
+            theme.TEXT,
+            rich=True,
         )
         self.cards_grid.addWidget(card_layers, 0, 1)
 
@@ -161,7 +163,7 @@ class StatusPanel(QWidget):
         allow_count = sum(1 for p in policies if p.get("allowed"))
         card_pol = self._create_card(
             "POLÍTICAS DEL IDE",
-            f"{len(policies)} Reglas activas",
+            f"{len(policies)} reglas activas",
             f"{allow_count} permitidas · {len(policies) - allow_count} restringidas",
             theme.TEXT,
         )
@@ -172,8 +174,8 @@ class StatusPanel(QWidget):
         prov_count = len(providers) if isinstance(providers, dict) else 0
         card_prov = self._create_card(
             "PROVEEDORES CONFIGURADOS",
-            f"{prov_count} Configurado(s)",
-            "Configura en el panel Config o ventana flotante",
+            ("1 conexión" if prov_count == 1 else f"{prov_count} conexiones"),
+            "Añade o edita conexiones en Providers",
             theme.TEXT,
         )
         self.cards_grid.addWidget(card_prov, 2, 0)
@@ -195,7 +197,7 @@ class StatusPanel(QWidget):
         scan_btn = QPushButton("Escanear proyecto ahora")
         scan_btn.setToolTip("Indexa los componentes del proyecto activo en la memoria local residente")
         scan_btn.clicked.connect(self._scan_resident)
-        card_res.layout().addWidget(scan_btn)
+        card_res.layout().addLayout(button_row(scan_btn, align="left"))
         self.cards_grid.addWidget(card_res, 2, 1)
 
     def _scan_resident(self) -> None:

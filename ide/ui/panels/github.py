@@ -10,9 +10,9 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Qt, Signal, QTimer, QSize
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
-from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox,
+from PySide6.QtWidgets import (QDialog, QDialogButtonBox,
                                QFileDialog, QHBoxLayout, QLabel, QLineEdit,
-                               QMessageBox, QPlainTextEdit, QPushButton,
+                               QPlainTextEdit, QPushButton,
                                QSplitter, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout, QWidget, QFrame, QScrollArea,
                                QTabWidget, QTextBrowser, QComboBox)
@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox,
 from core.github_service import GitHubError, GitHubService, GitSyncService
 from ui.icons import icon
 from ui import theme
+from ui.widgets import button_row
 
 
 class GitHubJob(QThread):
@@ -158,14 +159,15 @@ class GitHubPanel(QWidget):
         self.link_button = QPushButton("Vincular carpeta local…")
         self.link_button.setIcon(icon("folder"))
         self.link_button.clicked.connect(self.link_folder)
-        left_box.addWidget(self.link_button)
-        self.auto_link_button = QPushButton("Autodetectar carpetas locales")
+        self.auto_link_button = QPushButton("Autodetectar")
         self.auto_link_button.setToolTip("Escanea ~/Development y vincula automáticamente cada carpeta con su repositorio remoto de GitHub")
         self.auto_link_button.clicked.connect(self.auto_discover_folders)
-        left_box.addWidget(self.auto_link_button)
-        self.check_all_button = QPushButton("Comprobar carpetas vinculadas")
+        self.auto_link_button.setProperty("variant", "ghost")
+        self.check_all_button = QPushButton("Comprobar vinculadas")
+        self.check_all_button.setToolTip("Consulta el estado remoto de todas las carpetas vinculadas")
         self.check_all_button.clicked.connect(self.refresh_all)
-        left_box.addWidget(self.check_all_button)
+        self.check_all_button.setProperty("variant", "ghost")
+        left_box.addLayout(button_row(self.link_button, self.auto_link_button, self.check_all_button, align="left"))
         split.addWidget(left)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)

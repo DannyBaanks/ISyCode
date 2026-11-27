@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QHBoxLayout, QHeaderView,
                                 QLabel, QPushButton, QTableWidget,
                                 QTableWidgetItem, QVBoxLayout, QWidget)
@@ -23,7 +22,7 @@ class PolicyPanel(QWidget):
         hdr_row.addWidget(title_lbl)
         hdr_row.addStretch(1)
 
-        refresh = QPushButton("Refresh")
+        refresh = QPushButton("Actualizar")
         refresh.setToolTip("Recargar reglas de política")
         refresh.clicked.connect(self.refresh)
         hdr_row.addWidget(refresh)

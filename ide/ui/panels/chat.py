@@ -21,7 +21,7 @@ from pathlib import Path
 
 import markdown
 from PySide6.QtCore import QBuffer, QIODevice, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QGuiApplication, QImage, QKeySequence, QShortcut, QTextCursor, QPixmap
+from PySide6.QtGui import QGuiApplication, QImage, QTextCursor, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -915,13 +915,26 @@ class ChatPanel(QWidget):
         self._compact = compact
         for card in self.findChildren(ApprovalCard):
             card.set_compact(compact)
-        inset = 12 if compact else 24
-        self.messages_layout.setContentsMargins(inset, 16, inset, 16)
-        self.composer.layout().setContentsMargins(inset, 10, inset, 12)
+        self._apply_reading_width()
         self.stats_label.setVisible(not compact)
         self.empty_state.keys.setText("Enter enviar · Shift+Enter nueva línea\nEsc detener" if compact else
                                       "Enter enviar · Shift+Enter nueva línea · Esc detener\nCtrl+K comandos · Ctrl+N conversación · Ctrl+B archivos")
         self.input.setPlaceholderText("Pide un cambio o haz una pregunta…")
+
+    READING_WIDTH = 880
+
+    def _apply_reading_width(self) -> None:
+        """Keep transcript and composer in one centered reading column."""
+        base = 12 if self._compact else 24
+        width = self.width()
+        inset = max(base, (width - self.READING_WIDTH) // 2)
+        self.messages_layout.setContentsMargins(inset, 16, inset, 16)
+        if hasattr(self, "composer"):
+            self.composer.layout().setContentsMargins(inset, 10, inset, 12)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_reading_width()
 
     def _show_conversation(self) -> None:
         if self.stack.currentWidget() is not self.scroll:

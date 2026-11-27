@@ -50,7 +50,7 @@ def test_the_toolbar_keeps_only_what_is_used_constantly(window):
 
 def test_the_menu_holds_the_actions_that_left_the_toolbar(window):
     labels = [a.text() for a in window.menu.actions() if a.text()]
-    for expected in ("Providers…", "Open workspace…", "Clear chat"):
+    for expected in ("Providers…", "Abrir proyecto…", "Limpiar chat"):
         assert expected in labels, f"{expected} missing from the menu; have {labels}"
 
 

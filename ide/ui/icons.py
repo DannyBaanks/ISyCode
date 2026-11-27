@@ -10,7 +10,8 @@ NAMES = {"chat": "message-circle", "code": "code", "folder": "folder",
          "changes": "git-branch", "tools": "tool", "tests": "flask",
          "evidence": "file-text", "system": "database", "github": "brand-github",
          "settings": "settings", "terminal": "terminal-2", "provider": "cpu",
-         "menu": "menu-2", "search": "search", "plus": "plus"}
+         "menu": "menu-2", "search": "search", "plus": "plus",
+         "mcp": "plug-connected"}
 
 @lru_cache(maxsize=128)
 def icon(name, color="#adbed1", size=24):

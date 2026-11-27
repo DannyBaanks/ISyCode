@@ -13,7 +13,7 @@ from .panels.collapsible import CollapsiblePanel
 
 NAVIGATION = [
     ("Conversaciones", "Conversación", "chat"), ("Editor", "Archivos", "code"),
-    ("ISyMCP", "ISyMCP Hub", "tools"),
+    ("ISyMCP", "ISyMCP Hub", "mcp"),
     ("Tool calls", "Herramientas", "tools"),
     ("Tests", "Pruebas", "tests"), ("Evidence", "Evidencia", "evidence"),
     ("Status", "Sistema", "system"), ("GitHub", "GitHub", "github"),

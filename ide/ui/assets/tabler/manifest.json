@@ -77,6 +77,11 @@
       "file": "plus.svg",
       "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/plus.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
       "sha256": "9cc497d4cc1eb38cf9daae18f41ffdc1a5e2a8431d70247b0854978f303f28d6"
+    },
+    {
+      "file": "plug-connected.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/plug-connected.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "0894139c4c7995ddc73e69fe204d0fbebaed02fe27770e142cf2c5b20434d00b"
     }
   ]
 }

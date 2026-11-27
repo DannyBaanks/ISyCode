@@ -12,12 +12,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog,
                                 QFormLayout, QHBoxLayout, QHeaderView,
                                 QLabel, QLineEdit, QMessageBox,
-                                QPlainTextEdit, QPushButton, QSplitter,
-                                QTabWidget, QTableWidget, QTableWidgetItem,
+                                QPlainTextEdit, QPushButton, QTabWidget, QTableWidget, QTableWidgetItem,
                                 QTreeWidget, QTreeWidgetItem, QVBoxLayout,
                                 QWidget)
 
-from .. import theme
 from ..tool_presentation import present_tool
 from core.agent.run import AVAILABLE_TOOLS
 
@@ -109,9 +107,6 @@ class ToolsPanel(QWidget):
 
         # Header with help
         top_row = QHBoxLayout()
-        top_lbl = QLabel("HERRAMIENTAS & EJECUCIÓN (TOOLS)")
-        top_lbl.setStyleSheet("font-size: 11px; font-weight: 700; color: #6b7385; letter-spacing: 1px;")
-        top_row.addWidget(top_lbl)
         top_row.addStretch(1)
 
         self.help_button = QPushButton("?")
@@ -150,7 +145,7 @@ class ToolsPanel(QWidget):
         btn_row.addStretch(1)
         log_layout.addLayout(btn_row)
 
-        self.tabs.addTab(log_widget, "📋 Historial de ejecución")
+        self.tabs.addTab(log_widget, "Historial")
 
         # Tab 2: Catalog & Configuration
         mgmt_widget = QWidget()
@@ -183,7 +178,7 @@ class ToolsPanel(QWidget):
         self.table.itemDoubleClicked.connect(self._show_schema)
         mgmt_layout.addWidget(self.table, stretch=1)
 
-        self.tabs.addTab(mgmt_widget, "⚙️ Gestión de Tools (Activar / Desactivar)")
+        self.tabs.addTab(mgmt_widget, "Activar o desactivar")
 
         # Tab 3: ISyCo & ISyMCP Ecosystem Integration
         eco_widget = QWidget()
@@ -216,7 +211,7 @@ class ToolsPanel(QWidget):
         self.mcp_preview.setMaximumHeight(130)
         self.mcp_preview.setStyleSheet("font-family: Consolas, monospace; font-size: 11px;")
         eco_layout.addWidget(self.mcp_preview)
-        self.tabs.addTab(eco_widget, "🔌 ISyCo && ISyMCP")
+        self.tabs.addTab(eco_widget, "ISyCo y ISyMCP")
 
         layout.addWidget(self.tabs, stretch=1)
         self._populate_tools_table()
