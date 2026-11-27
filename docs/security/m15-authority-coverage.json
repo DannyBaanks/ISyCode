@@ -2544,7 +2544,7 @@
     },
     {
       "file": "isycode/tui_app_tools.py",
-      "line": 296,
+      "line": 338,
       "callable": "isycode.tui_app_tools.ToolMixin._call_gateway_chat_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"

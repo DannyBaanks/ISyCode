@@ -116,9 +116,42 @@ class PromptArea(TextArea):
         # Home/End keep their TextArea meaning (line start / line end).
         Binding("pageup", "chat_page_up", "Chat page up", show=False, priority=True),
         Binding("pagedown", "chat_page_down", "Chat page down", show=False, priority=True),
+        # TextArea's own ctrl+u only deletes to the start of the current line and
+        # deletes nothing when the cursor is already at column 0, so a pasted
+        # block survived it. Ours clears the whole draft from column 0.
+        Binding("ctrl+u", "clear_to_line_start_or_all", "Clear line / draft", show=False, priority=True),
         Binding("escape", "escape_to_app", "Cancel / back", show=False,
                 priority=True),
     ]
+
+    def load_text(self, text: str) -> None:
+        """Load a draft and leave the cursor at its end when it is not empty.
+
+        Textual's ``load_text`` keeps the cursor at ``(0, 0)``. A restored or
+        restored-and-merged draft (failed turn, lane switch, ``/retry``) then
+        receives everything typed next *in front of* the old text, which is
+        how queued prompts ended up glued together. An empty load keeps the
+        default location, which is the only valid one.
+        """
+        super().load_text(text)
+        if text:
+            lines = self.document.lines
+            self.move_cursor((len(lines) - 1, len(lines[-1])))
+
+    def action_clear_to_line_start_or_all(self) -> None:
+        """ctrl+u: clear the draft from column 0, else cut to the line start.
+
+        From column 0 the whole draft goes, whatever its length or line count,
+        so one keystroke is always enough to discard a pasted block. Anywhere
+        else the text between the cursor and the start of the current line is
+        removed, like TextArea's own binding.
+        """
+        if self.read_only:
+            return
+        if self.cursor_at_start_of_line:
+            self.load_text("")
+            return
+        self.action_delete_to_start_of_line()
 
     class Submitted(Message):
         def __init__(self, prompt: "PromptArea", value: str) -> None:
