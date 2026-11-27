@@ -1557,12 +1557,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             return False
         return super()._request_is_quiet(request)
 
+    def _context_meter_messages(self) -> list[dict]:
+        if getattr(self, "_generating", False):
+            active = getattr(self, "_active_context_messages", None)
+            if active:
+                return active
+        return self._history
+
     def _usage_status_text(self) -> str:
         from isycode.context_meter import compact_context_label
         limit, _source = self._context_window()
         reported = getattr(self, "_last_context_input_tokens", None)
         total = self._usage.input_tokens + self._usage.output_tokens
-        context = compact_context_label(self._history, provider_limit_tokens=limit,
+        context = compact_context_label(self._context_meter_messages(), provider_limit_tokens=limit,
                                         reported_tokens=reported)
         # #usage-status is 20% of the composer row and three cells tall: one row
         # for the rate, one for the tokens, one for the context window. Flattening
@@ -1608,7 +1615,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             widget.update("")
             return
         widget.update(usage_panel(
-            self._history, widget.content_size.width or 18,
+            self._context_meter_messages(), widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
             provider_limit_tokens=limit, limit_source=source,
             reported_tokens=getattr(self, "_last_context_input_tokens", None),
@@ -1657,9 +1664,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         from isycode.continuity_capsule import request_chars, update_tokens_per_char
         from isycode.providers import heal_observed_context_limit
 
+        sent_chars = request_chars(messages, tools)
+        self._active_context_messages = list(messages)
+        if getattr(self, "_last_request_chars", None) != sent_chars:
+            self._last_context_input_tokens = None
         self._throughput.measuring = True
         self._refresh_usage()
-        sent_chars = request_chars(messages, tools)
         started = _time.monotonic()
         try:
             response = await provider_complete(provider, messages, max_tokens=max_tokens,

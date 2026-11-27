@@ -1267,6 +1267,12 @@ class AntigravityConnector:
                         if type(window_size) is int and 1024 <= window_size <= 10_000_000:
                             from isycode.providers import record_model_metadata
                             record_model_metadata("antigravity", selected_model, {"context_length": window_size})
+                        used_tokens = update.get("used")
+                        if type(used_tokens) is int and 0 <= used_tokens <= 10**12:
+                            if usage is None:
+                                usage = {"input_tokens": used_tokens}
+                            else:
+                                usage["input_tokens"] = used_tokens
                     elif kind == "tool_call":
                         raw_name = update.get("name")
                         if not isinstance(raw_name, str) or not raw_name.startswith(ANTIGRAVITY_MCP_PREFIX):
@@ -1350,7 +1356,7 @@ async def fetch_antigravity_quota(executable: str, home: Path, *,
     env = connector._environment()
     proc = await asyncio.create_subprocess_exec(
         executable, "-p", "/usage", "--output-format", "json",
-        "--disable-slash-commands", "--log-file", os.devnull,
+        "--settings", '{"disableSlashCommands":false}', "--log-file", os.devnull,
         stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
