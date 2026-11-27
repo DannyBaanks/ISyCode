@@ -370,13 +370,30 @@ def test_tui_accounts_command_and_slot_screen_at_80x24(tmp_path, monkeypatch, ca
             chosen = await asyncio.wait_for(result_task, 5)
             assert chosen == "pro3"
 
-            # 4. All three auth menus expose the multi-account manager.
+            # 4. All three auth menus and the provider selector expose the multi-account manager.
+            app._open_provider_menu()
+            assert any(e["kind"] == "account_slots_open" and e["value"] == "antigravity" for e in app._menu_entries[:4])
+            assert any(e["kind"] == "account_slots_open" and e["value"] == "" for e in app._menu_entries[:4])
             app._open_antigravity_auth_methods()
             assert any(e["kind"] == "account_slots_open" and e["value"] == "antigravity" for e in app._menu_entries)
             app._open_auth_methods()
             assert any(e["kind"] == "account_slots_open" and e["value"] == "chatgpt" for e in app._menu_entries)
             app._open_xai_auth_methods()
             assert any(e["kind"] == "account_slots_open" and e["value"] == "grok" for e in app._menu_entries)
+
+            # 5. Scoped ModelsScreen for Antigravity exposes the Accounts button.
+            from isycode.tui_screens_harness import ModelsScreen
+            ms = ModelsScreen(
+                [{"kind": "model", "value": "antigravity|gemini-4-neon-medium", "label": "Gemini 4 Neon Medium"}],
+                provider_scope="antigravity",
+            )
+            ms_task = asyncio.create_task(app._await_screen(ms))
+            await pilot.pause()
+            acct_btn = ms.query_one("#models-accounts")
+            assert "[pro2]" in str(acct_btn.label)
+            acct_btn.press()
+            res = await asyncio.wait_for(ms_task, 5)
+            assert res == {"kind": "account_slots_open", "value": "antigravity"}
 
     with capsys.disabled():
         asyncio.run(run())
