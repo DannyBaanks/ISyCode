@@ -1,5 +1,7 @@
 """Right rail: integrations read as green/red switches, sections fold, the command bar keeps its labels."""
 import asyncio
+import pytest
+from textual.widgets import Button, Collapsible
 
 from isycode.contracts import CatalogSnapshot
 from isycode.tui import GREEN, RED, TUIApp, plain_text, switch_row
@@ -116,7 +118,10 @@ def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatc
             assert app.query_one("#rail-card")
             connections = app.query_one("#rail-connections")
             assert connections.collapsed and connections.title.startswith("Connections")
+            # Flat section: Gateway, Gateway MCP, Mobile Host and Bridge are rows, not nested boxes.
             assert app.query_one("#rail-gateway").parent.parent.id == "rail-connections"
+            assert not list(connections.query(Collapsible))
+            assert app.query_one("#rail-connections-open", Button)
             section.collapsed = False
             await pilot.pause()
             assert not section.collapsed
@@ -252,6 +257,54 @@ def test_install_commands_are_shown_and_nothing_is_launched(tmp_path, monkeypatc
             assert all(len(note.render_line(i).text) <= note.content_size.width
                        for i in range(note.content_size.height))
             assert "ON" not in plain_text(app.query_one("#lsp-status"))
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_connections_summary_comes_from_semantic_state_not_text():
+    from isycode.tui_app_rail import connections_summary
+
+    assert connections_summary({}) == "Connections · not checked"
+    assert connections_summary({"gateway": "ready", "bridge": "off"}) == "Connections · 1/4 ready"
+    assert (connections_summary({"gateway": "ready", "gateway_mcp": "error", "mobile": "off", "bridge": "off"})
+            == "Connections · 1 failed · 1/4 ready")
+    # Off is a choice, not a failure: nothing turned on reads as 0 ready, not as broken.
+    assert connections_summary(dict.fromkeys(("gateway", "gateway_mcp", "mobile", "bridge"), "off")) == "Connections · 0/4 ready"
+
+
+def test_connections_title_follows_probe_results_and_button_opens_integrations(tmp_path, monkeypatch, capsys):
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(140, 40)) as pilot:
+            await app.wait_for_ready()
+            await pilot.pause()
+            connections = app.query_one("#rail-connections")
+            app._set_connection_state("gateway", "ready")
+            app._set_connection_state("gateway_mcp", "error")
+            app._set_connection_state("mobile", "off")
+            app._set_connection_state("bridge", "off")
+            await pilot.pause()
+            assert connections.title == "Connections · 1 failed · 1/4 ready"
+            with pytest.raises(ValueError):
+                app._set_connection_state("gateway", "green")
+            opened = []
+            monkeypatch.setattr(app, "_open_integrations_menu", lambda: opened.append(True))
+            app.action_toggle_sidebar()
+            await pilot.pause()
+            connections.collapsed = False
+            await pilot.pause()
+            await pilot.click("#rail-connections-open")
+            await pilot.pause()
+            assert opened == [True]
 
     with capsys.disabled():
         asyncio.run(scenario())

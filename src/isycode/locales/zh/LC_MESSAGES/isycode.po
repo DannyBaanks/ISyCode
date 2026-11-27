@@ -7000,6 +7000,18 @@ msgstr "工具已拦截 · {name} · {reason} · 未执行任何操作"
 msgid "unknown tool · not registered by ISyCode"
 msgstr "未知工具 · 未在 ISyCode 注册"
 
+msgid "Connections · not checked"
+msgstr "连接 · 未检查"
+
+msgid "Connections · {ready}/{total} ready"
+msgstr "连接 · {ready}/{total} 就绪"
+
+msgid "Connections · {failed} failed · {ready}/{total} ready"
+msgstr "连接 · {failed} 失败 · {ready}/{total} 就绪"
+
+msgid "Manage integrations…"
+msgstr "管理集成…"
+
 msgid "ISyCode does not download language servers. Nothing was installed."
 msgstr "ISyCode 不会下载语言服务器。未安装任何内容。"
 

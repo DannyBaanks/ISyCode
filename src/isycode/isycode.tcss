@@ -36,7 +36,7 @@
     /* Flat rail sections: the collapsed title is its own separator. */
     #rail-card > Collapsible { border-bottom: none; }
     #overview-view Collapsible:focus-within { border-bottom: solid #bb8cff; }
-    #overview-view #rail-connections > Contents { padding: 0 1 0 2; }
+    #overview-view .rail-subhead { color: #9aa3ad; height: 1; text-wrap: nowrap; text-overflow: ellipsis; }
     #overview-view CollapsibleTitle {
         color: #c5cad3; text-style: bold; padding: 0; background: transparent;
         text-wrap: nowrap; text-overflow: ellipsis;

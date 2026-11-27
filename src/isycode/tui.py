@@ -621,11 +621,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             "#rail-mcp": "MCPs",
             "#rail-lsp": "LSPs",
             "#rail-skills": "Skills",
-            "#rail-connections": "Connections · 4",
-            "#rail-gateway": "ISyCo Gateway",
-            "#rail-gateway-mcp": "Gateway MCP",
-            "#rail-mobile": "Mobile Host",
-            "#rail-bridge": "Bridge Coordination",
             "#rail-workspace": "Workspace",
         }
         for widget_id, msgid in collapsibles.items():
@@ -633,6 +628,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 self.query_one(widget_id).title = tr(msgid)
             except (NoMatches, NoScreen, ScreenStackError):
                 continue
+        for widget_id, msgid in {"#rail-gateway": "ISyCo Gateway", "#rail-gateway-mcp": "Gateway MCP",
+                                 "#rail-mobile": "Mobile Host", "#rail-bridge": "Bridge Coordination",
+                                 "#rail-connections-open": "Manage integrations…"}.items():
+            try:
+                widget = self.query_one(widget_id)
+            except (NoMatches, NoScreen, ScreenStackError):
+                continue
+            if isinstance(widget, Button):
+                widget.label = tr(msgid)
+            else:
+                widget.update(tr(msgid))
+        self._paint_connections_summary()
         self._refresh_model_button()
         self._paint_idea_box()
         if self.query("#idle-board"):
@@ -1002,6 +1009,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self.action_run_plan()
         elif button_id == "lsp-install-hint":
             self._show_lsp_install_hints()
+        elif button_id == "rail-connections-open":
+            self._open_integrations_menu()
         elif button_id == "refresh-openisy":
             self.run_worker(self._check_gateway_mcp_async(), exclusive=False, group="gateway-mcp")
             await self._refresh_openisy()

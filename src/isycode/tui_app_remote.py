@@ -122,6 +122,8 @@ class RemoteMixin:
                 lines.append(tr("…and {count} more", count=len(clients) - 4))
             client_text = "\n".join(lines)
         self.query_one("#mobile-client-status", Static).update(Text(client_text))
+        self._set_connection_state(
+            "mobile", "ready" if status.alive else "error" if status.state == "error" else "off")
 
     def _open_private_access_menu(self) -> None:
         if self._menu_mode != "private_access":
@@ -504,6 +506,7 @@ class RemoteMixin:
             return
         text = status_chip("Blocked in Secure · no Bridge owner")
         self.query_one("#bridge-status", Static).update(text)
+        self._set_connection_state("bridge", "off")
 
     async def _issue_pairing_pin(self) -> None:
         """Replace the pairing PIN only through the Mobile Host owner's gate."""
