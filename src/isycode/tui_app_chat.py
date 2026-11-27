@@ -115,7 +115,7 @@ from isycode.providers import (
 )
 from isycode.streaming import StreamError, detect_unexecuted_tool_request
 import time as _time
-from isycode.tui_theme import MUTED, YELLOW, RED, CYAN, GREEN
+from isycode.tui_theme import MUTED, YELLOW, RED, CYAN, GREEN, SECURITY
 from isycode.tui_widgets import ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_widgets import ThoughtBlock
@@ -471,7 +471,20 @@ class ChatMixin:
                 else:
                     self._append("  " + tr("/{name} found in {workspace_commands_dir} but it could not be read · {value}", name=name, workspace_commands_dir=WORKSPACE_COMMANDS_DIR, value=outcome.reason[:160]), YELLOW)
         if command is None:
-            await self._run_chat(text)
+            # Not a built-in, not a user or workspace prompt file. Sending the
+            # raw text to the model turned a typo into a chat turn that looked
+            # like a command; say what happened instead and keep the draft.
+            self._append("  " + tr("Unknown command /{name} · type /help for available commands", name=name), YELLOW)
+            self.notify_semantic(tr("Unknown command /{name}", name=name), kind="warning")
+            if self._lane_on_screen():
+                prompt = self.query_one("#prompt-input", PromptArea)
+                if not prompt.text:
+                    prompt.load_text(text)
+                    prompt.focus()
+            else:
+                parked = self._active_lane()
+                if not parked.draft_text:
+                    parked.draft_text = text
             return
         self._append("  " + tr("/{name} · {source} prompt · {description}", name=name, source=command.source, description=command.description), MUTED)
         await self._run_chat(render_command(command, arguments))
@@ -646,6 +659,9 @@ class ChatMixin:
         chat_tools = command_active = messages = notes = context_plan = None
         provider = provider_supports_tools = thought_started = tools_active = None
         session_excerpt = ""
+        # (tool name, reason) for every call Sentinel or the registry blocked in
+        # this turn; the closing note says why the turn ended when no answer came.
+        blocked_calls: list[tuple[str, str]] = []
 
         async def _prepare_chat_tools() -> None:
             nonlocal chat_tools, command_active, context_plan, messages, notes, provider_supports_tools, session_excerpt, text, tools_active
@@ -1539,6 +1555,12 @@ class ChatMixin:
                                 hive_emit("PreToolUse", self, tool_name=_tool_name, tool_input=call_function)
                                 call_id, tool_result = await self._dispatch_chat_tool(call)
                                 hive_emit("PostToolUse", self, tool_name=_tool_name)
+                                try:
+                                    blocked = json.loads(tool_result)
+                                except (ValueError, TypeError):
+                                    blocked = {}
+                                if isinstance(blocked, dict) and blocked.get("error"):
+                                    blocked_calls.append((_tool_name, self._tool_denial_reason(_tool_name, blocked)))
                             if not is_idea_box:
                                 try:
                                     previous = self._tool_history[:-1] if noted else self._tool_history
@@ -1738,6 +1760,9 @@ class ChatMixin:
                     if not interrupted_turn:
                         self._append("  " + tr("Prompt kept · /retry prepares it for review. Any completed tool effects "
                                                "remain; inspect them before sending again."), YELLOW)
+                if blocked_calls and not completed:
+                    names = ", ".join(dict.fromkeys(name for name, _ in blocked_calls))
+                    self._append("  " + tr("The turn ended without an answer because a tool call was blocked · {names} · nothing was executed; the prompt is kept in the composer.", names=names), SECURITY)
             self._steering_try_active = False
             if self._pending_steering:
                 pending = "\n".join(self._pending_steering)

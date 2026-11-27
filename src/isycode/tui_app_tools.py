@@ -142,6 +142,7 @@ class ToolMixin:
             chat.follow_tail()
         token = _tool_display_context.set((self, body, notes, event))
         state = "Failed"
+        blocked_reason: str | None = None
         try:
             result = await self._dispatch_chat_tool_impl(call)
             try:
@@ -154,6 +155,12 @@ class ToolMixin:
                     state = "Rejected"
                 elif material.get("error"):
                     state = str(material.get("decision") or "Error")
+                    # Sentinel and the owner checks report a denial as an error
+                    # payload. Everything they said went into the collapsed tool
+                    # card only, so the transcript never showed why the turn
+                    # ended; remember it for one visible line after the context
+                    # is released below.
+                    blocked_reason = self._tool_denial_reason(name, material)
                 elif material.get("timed_out"):
                     state = "Timed out"
                 elif material.get("exit_code") is not None:
@@ -169,12 +176,27 @@ class ToolMixin:
             self._begin_lane_operation(tr("Processing tool result"), kind="tool_result")
             self._append(tr("Tool duration · {label} · {elapsed}", label=label, elapsed=elapsed), MUTED)
             _tool_display_context.reset(token)
+            if blocked_reason is not None:
+                # Outside the tool display context: a line in the transcript, not
+                # a note hidden inside the collapsed card.
+                self._append("  " + tr("Tool blocked · {name} · {reason} · nothing was executed", name=name, reason=blocked_reason), SECURITY)
             current_group = event.get("group")
             current_card = event.get("card")
             if (current_group is not None and current_card is not None
                     and current_card.is_mounted and self._lane_on_screen()):
                 current_group.finish_leaf(current_card, event["label"])
                 self.query_one(ChatArea).follow_tail()
+
+    def _tool_denial_reason(self, name, material: dict) -> str:
+        """One short reason for a denied or unknown tool, from its error payload."""
+        del name  # the caller already names the tool in its own line
+        if material.get("error") == "tool is not registered by ISyCode":
+            return tr("unknown tool · not registered by ISyCode")
+        for key in ("reason", "error", "decision"):
+            value = material.get(key)
+            if isinstance(value, str) and value.strip():
+                return " ".join(value.split())[:160]
+        return "DENY"
 
     def _bridge_tools_enabled(self) -> bool:
         """Offer the Bridge tools only when the workspace granted them."""

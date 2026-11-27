@@ -2896,6 +2896,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         except (OSError, ValueError):
             self._set_activity(tr("Draft not saved · private state unavailable"), YELLOW)
 
+    # Typed by hand in _accept_prompt before the plugin registry sees them.
+    # /model stays out of the registry on purpose (tests pin route("/model") is
+    # None); the alias is resolved here so it never reaches the chat as text.
+    SLASH_ALIASES = {"/model": "/models"}
+
     def _is_slash_command_input(self, text: str) -> bool:
         """True for slash commands, False for absolute filesystem paths like /home/user/..."""
         if not text.startswith("/"):
@@ -2903,7 +2908,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         first = text.split(None, 1)[0]
         cmd = first.lower()
         if cmd in {"/steer", "/queue", "/msg", "/idea", "/ideas", "/backlog",
-                   "/clear", "/new", "/retry", "/resume", "/exit", "/quit"}:
+                   "/clear", "/new", "/retry", "/resume", "/exit", "/quit",
+                   "/settings", "/model"}:
             return True
         if self._plugins.route(text)[1] is not None:
             return True
@@ -2939,6 +2945,23 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if text == "/msg" or text.startswith("/msg "):
             prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
             self.run_worker(self._deliver_session_message(text), group="session-message", exit_on_error=False)
+            return
+        # /model is the alias of /models; resolve it before anything routes it.
+        first, _, rest = text.partition(" ")
+        alias = self.SLASH_ALIASES.get(first.lower())
+        if alias is not None:
+            text = alias + (" " + rest if rest else "")
+        # Built-in commands that only change the view (/new, /clear, /settings,
+        # /exit, /quit) run even while a turn is streaming: /new leaves the
+        # running lane in the background, the rest do not touch the turn.
+        if (self._loop_task and not self._loop_task.done()
+                and self._plugins.route(text)[1] is not None):
+            _plugin, cmd, arg = self._plugins.route(text)
+            prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+            self._append("  " + tr("Running /{name} while the current turn keeps going in the background.", name=cmd.name), MUTED)
+            # Not _start_operation: that would replace the running turn's
+            # loop_task and its lane activity with the view command's own.
+            self._pin_task(cmd.handler(self, arg))
             return
         if self._loop_task and not self._loop_task.done():
             if text.startswith("/steer "):
