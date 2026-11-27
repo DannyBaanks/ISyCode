@@ -1999,6 +1999,12 @@
     },
     {
       "action": "session.resume",
+      "callsite": "ChatSessionOwner.list_conversation_summaries",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "session.resume",
       "callsite": "ChatSessionOwner.resume",
       "owner": "chat_sessions",
       "status": "COVERED"
@@ -2405,14 +2411,14 @@
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 249,
-      "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
+      "line": 256,
+      "callable": "isycode.session_owner.ChatSessionOwner._list",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 336,
+      "line": 343,
       "callable": "isycode.session_owner.ChatSessionOwner.manage",
       "action": "session.create",
       "owner": "chat_sessions"
@@ -2433,7 +2439,7 @@
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 278,
+      "line": 285,
       "callable": "isycode.session_owner.ChatSessionOwner._load",
       "action": "session.resume",
       "owner": "chat_sessions"

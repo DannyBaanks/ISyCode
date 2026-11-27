@@ -118,8 +118,51 @@ class ChatSession:
     title_manual: bool = False
 
 
+@dataclass(frozen=True)
+class SessionSummary:
+    """What a conversation list shows, without the transcript.
+
+    Display only: it never authorizes, re-bases or resumes anything. Resuming
+    still loads and validates the full transcript.
+    """
+    session_id: str
+    title: str
+    created_at: float
+    updated_at: float
+    message_count: int
+    last_role: str
+    last_content: str
+    last_sent_at: str | None
+    last_truncated: bool
+    model: str
+    provider: str
+    context_chars: int
+
+    @classmethod
+    def of(cls, session: "ChatSession") -> "SessionSummary":
+        last = session.messages[-1] if session.messages else {}
+        content = str(last.get("content") or "")
+        cap = ChatSessionStore.SUMMARY_PREVIEW_CHARS
+        sent = last.get("sent_at")
+        return cls(session.session_id, session.title, session.created_at, session.updated_at,
+                   len(session.messages), str(last.get("role") or ""), content[:cap],
+                   sent if isinstance(sent, str) else None, len(content) > cap,
+                   str(session.state.get("model") or ""), str(session.state.get("provider") or ""),
+                   sum(len(message["content"]) for message in session.messages))
+
+
 class ChatSessionStore:
     """Atomically store chat history under a private, external state directory."""
+
+    # The list keeps this much of each last message; the rest is loaded on demand.
+    SUMMARY_PREVIEW_CHARS = 16_000
+    # Cache of SessionSummary rows. Each row is keyed by the transcript's
+    # (inode, size, mtime_ns, ctime_ns): every write replaces the file with a
+    # new inode, so a changed transcript misses and is parsed again. The file
+    # is a cache, never a source of truth: unreadable, foreign or malformed
+    # content is ignored and rebuilt from the transcripts.
+    _SUMMARY_INDEX = ".summary-index"
+    _SUMMARY_FIELDS = tuple(SessionSummary.__dataclass_fields__)
 
     _SESSION_ID = re.compile(r"^[a-f0-9]{32}$")
     _SECRET_VALUE = re.compile(
@@ -245,7 +288,12 @@ class ChatSessionStore:
 
     def _read_bytes(self, session_id: str) -> bytes | None:
         """The exact persisted bytes, or None if the transcript does not exist."""
-        path = self._path(session_id)
+        found = self._read_private(self._path(session_id))
+        return None if found is None else found[0]
+
+    @staticmethod
+    def _read_private(path: Path) -> tuple[bytes, os.stat_result] | None:
+        """Bytes and fstat of one private regular file, or None if it is absent."""
         # Opening a FIFO must not block before fstat can reject it. O_NONBLOCK
         # does not change regular-file reads and also closes the lstat/open race.
         flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
@@ -256,9 +304,10 @@ class ChatSessionStore:
         with os.fdopen(descriptor, "rb") as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise ChatSessionError("chat session is not a bounded regular file")
+            info = os.fstat(stream.fileno())
             if not storage.private_child(path, fd=stream.fileno()):
                 raise ChatSessionError('chat session is not private')
-            return stream.read()
+            return stream.read(), info
 
     def revision(self, session_id: str) -> str | None:
         """Fingerprint of the transcript as it is on disk right now (None if absent)."""
@@ -329,6 +378,91 @@ class ChatSessionStore:
             except (OSError, ChatSessionError, ValueError):
                 continue
         return sorted(sessions, key=lambda item: item.updated_at, reverse=True)
+
+    @staticmethod
+    def _summary_key(info: os.stat_result) -> list[int]:
+        return [info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns]
+
+    def _load_summary_index(self) -> dict[str, Any]:
+        try:
+            found = self._read_private(self.root / self._SUMMARY_INDEX)
+            payload = None if found is None else json.loads(found[0].decode("utf-8"))
+        except (OSError, ChatSessionError, ValueError):
+            return {}
+        if not isinstance(payload, dict) or payload.get("version") != 1:
+            return {}
+        entries = payload.get("entries")
+        return entries if isinstance(entries, dict) else {}
+
+    @classmethod
+    def _cached_summary(cls, session_id: str, entry: Any, key: list[int]) -> SessionSummary | None:
+        if not isinstance(entry, dict) or entry.get("key") != key:
+            return None
+        row = entry.get("summary")
+        if not isinstance(row, dict) or set(row) != set(cls._SUMMARY_FIELDS):
+            return None
+        try:
+            summary = SessionSummary(**row)
+        except TypeError:
+            return None
+        types = (str, str, (int, float), (int, float), int, str, str, (str, type(None)), bool, str, str, int)
+        if summary.session_id != session_id or not all(
+                isinstance(getattr(summary, name), kind) and not (kind is int and isinstance(getattr(summary, name), bool))
+                for name, kind in zip(cls._SUMMARY_FIELDS, types)):
+            return None
+        return summary
+
+    def _save_summary_index(self, entries: dict[str, Any]) -> None:
+        data = json.dumps({"version": 1, "entries": entries}, ensure_ascii=False,
+                          allow_nan=False).encode("utf-8")
+        try:
+            fd, temporary = tempfile.mkstemp(prefix=".summary-index-", dir=self.root)
+        except OSError:
+            return
+        try:
+            if os.name == "posix":
+                os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
+            os.replace(temporary, self.root / self._SUMMARY_INDEX)
+        except OSError:
+            pass  # a cache that cannot be written is rebuilt next time
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
+    def list_summaries(self) -> list[SessionSummary]:
+        """list_sessions() reduced to list rows, parsing only transcripts that changed."""
+        cached = self._load_summary_index()
+        entries: dict[str, Any] = {}
+        summaries = []
+        changed = False
+        for path in self.root.glob("*.json"):
+            session_id = path.stem
+            if not self._SESSION_ID.fullmatch(session_id):
+                continue
+            try:
+                info = path.lstat()
+            except OSError:
+                continue
+            summary = (self._cached_summary(session_id, cached.get(session_id), self._summary_key(info))
+                       if stat.S_ISREG(info.st_mode) else None)
+            if summary is None:
+                changed = True
+                try:
+                    found = self._read_private(self._path(session_id))
+                    if found is None:
+                        continue
+                    summary = SessionSummary.of(self._parse(session_id, found[0]))
+                except (OSError, ChatSessionError, ValueError):
+                    continue
+                info = found[1]
+            entries[session_id] = {"key": self._summary_key(info),
+                                   "summary": {name: getattr(summary, name) for name in self._SUMMARY_FIELDS}}
+            summaries.append(summary)
+        if changed or set(entries) != set(cached):
+            self._save_summary_index(entries)
+        return sorted(summaries, key=lambda item: item.updated_at, reverse=True)
 
     def delete(self, session_id: str, *, expected_revision: object = UNCHECKED) -> None:
         path = self._path(session_id)
