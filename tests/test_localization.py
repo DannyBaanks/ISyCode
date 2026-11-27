@@ -359,3 +359,71 @@ def test_every_literal_ui_message_has_a_catalog_entry():
                         and (context, argument.value) not in catalog):
                     missing.append(f"{path.name}:{node.lineno}: {argument.value[:80]!r}")
     assert missing == []
+
+
+def test_role_descriptions_and_rules_have_catalog_entries():
+    """Agent, subagent and motor rows are data, so the AST literal check cannot see them."""
+    from isycode.localization import _parse_po
+    from isycode.tui_app_menu import ISYCO_MOTORS, ISYCODE_AGENTS, ISYCODE_SUBAGENTS
+
+    messages = {role[key] for roles in (ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS)
+                for role in roles for key in ("description", "rule") if role.get(key)}
+    assert messages
+    for locale in ("en", "es", "zh"):
+        catalog = _parse_po((PACKAGE_LOCALES / locale / "LC_MESSAGES" / "isycode.po").read_text(encoding="utf-8"))
+        missing = sorted(message for message in messages if ("", message) not in catalog)
+        assert not missing, (locale, missing)
+
+
+def test_spanish_role_detail_and_lsp_note_stay_spanish_after_repaint(tmp_path, monkeypatch, capsys):
+    """Rows built after mount (role details, LSP install note) used to fall back to English."""
+    import asyncio
+    from textual.widgets import Static
+    from isycode.tui import TUIApp
+    from isycode.user_defaults import UserDefaultsStore
+    from isycode.workspace_trust import WorkspaceTrust
+
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
+    monkeypatch.setenv("ISYCODE_MODEL", "gpt-6-luna")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-not-real")
+    monkeypatch.setattr("isycode.providers.Provider.models", lambda provider: [provider.model])
+    monkeypatch.setattr("isycode.egress._ips", lambda _host, _port: ("93.184.216.34",))
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="classic", locale="es")
+    authority = WorkspaceAuthority(project)
+    authority.set_mode("classic")
+    WorkspaceTrust().decline(authority)
+
+    async def no_external_catalog(self):
+        return None
+
+    monkeypatch.setattr(TUIApp, "_startup_workspace", no_external_catalog)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app._open_settings_menu()
+            await pilot.pause()
+            app._menu_role_category({"value": "motors"})
+            await pilot.pause()
+            detail = "\n".join(entry["detail"] for entry in app._menu_entries)
+            labels = "\n".join(entry["label"] for entry in app._menu_entries)
+            assert "Motor:" in detail and "Implementación y reparación de software." in labels
+            assert "Regla: Solo escribe planes en .opencode/plans/*.md." in detail
+            assert "Capabilities:" not in detail and "Rule:" not in detail
+            app._lsp_inventory = []
+            app._show_lsp_install_hints()
+            await pilot.pause()
+            note = str(app.query_one("#lsp-install-note", Static).render())
+            assert "ISyCode no descarga servidores de lenguaje" in note
+            assert "does not download" not in note and "Not on PATH." not in note
+            assert "No están en el PATH." in note
+
+    with capsys.disabled():
+        asyncio.run(scenario())

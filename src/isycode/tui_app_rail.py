@@ -443,22 +443,22 @@ class RailMixin:
             return
         catalog = language_server_catalog(getattr(self, "_lsp_inventory", []))
         note = Text(no_wrap=False, overflow="fold")
-        note.append("ISyCode does not download language servers. Nothing was installed.\n", style=MUTED)
+        note.append(tr("ISyCode does not download language servers. Nothing was installed.") + "\n", style=MUTED)
         missing = [row for row in catalog if row.get("state") == "not_installed"]
         blocked = [row for row in catalog
                    if row.get("presence") == "installed" and row.get("state") != "sandbox_ready"]
         if not missing:
-            note.append("Nothing is missing from PATH.\n", style=TEXT)
+            note.append(tr("Nothing is missing from PATH.") + "\n", style=TEXT)
         else:
-            note.append("Not on PATH. Run the command yourself, then Refresh integrations:\n", style=TEXT)
+            note.append(tr("Not on PATH. Run the command yourself, then Refresh integrations:") + "\n", style=TEXT)
             for row in missing:
                 note.append(str(row["label"]) + "\n", style=f"bold {TEXT}")
                 note.append("  " + str(row["install_hint"]) + "\n", style=YELLOW)
         if blocked:
-            note.append("Already on PATH. Installing again will not make these ready:\n", style=MUTED)
+            note.append(tr("Already on PATH. Installing again will not make these ready:") + "\n", style=MUTED)
             for row in blocked:
-                reason = ("the sandbox does not run it" if row.get("state") == "installed_unsupported"
-                          else "the sandbox cannot launch it")
+                reason = (tr("the sandbox does not run it") if row.get("state") == "installed_unsupported"
+                          else tr("the sandbox cannot launch it"))
                 note.append(f"  {row['label']}: {reason}\n", style=MUTED)
         target.display = True
         target.update(note)

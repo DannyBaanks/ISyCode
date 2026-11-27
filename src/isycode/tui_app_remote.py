@@ -101,7 +101,7 @@ class RemoteMixin:
             return
         if status.alive:
             scheme = "https" if status.secure_transport else "http"
-            transport = "TLS" if status.secure_transport else "Loopback Only"
+            transport = "TLS" if status.secure_transport else tr("Loopback Only")
             self.query_one("#mobile-host-status", Static).update(Text(
                 tr("Alive · {scheme}://{address}:{port} · {transport}", scheme=scheme, address=status.address, port=status.port, transport=transport)))
         elif status.state == "error":
@@ -111,15 +111,15 @@ class RemoteMixin:
             self.query_one("#mobile-host-status", Static).update(Text(tr("Stopped")))
         clients = status.clients
         if not clients:
-            client_text = "No mobile clients connected."
+            client_text = tr("No mobile clients connected.")
         else:
-            lines = [f"{len(clients)} connected mobile client(s):"]
+            lines = [tr("{count} connected mobile client(s):", count=len(clients))]
             lines.extend(
-                f"• {client['device_name']} · Connected"
+                "• " + tr("{name} · Connected", name=client["device_name"])
                 for client in clients[:4]
             )
             if len(clients) > 4:
-                lines.append(f"…and {len(clients) - 4} more")
+                lines.append(tr("…and {count} more", count=len(clients) - 4))
             client_text = "\n".join(lines)
         self.query_one("#mobile-client-status", Static).update(Text(client_text))
 
