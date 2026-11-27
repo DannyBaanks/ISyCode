@@ -6962,3 +6962,27 @@ msgstr "Uses the official Claude Code CLI in an isolated home with its built-in 
 
 msgid "Claude Pro/Max sign-in through the official Claude Code CLI"
 msgstr "Claude Pro/Max sign-in through the official Claude Code CLI"
+
+msgid "Running /{name} while the current turn keeps going in the background."
+msgstr "Running /{name} while the current turn keeps going in the background."
+
+msgid "Unknown command /{name} · type /help for available commands"
+msgstr "Unknown command /{name} · type /help for available commands"
+
+msgid "Unknown command /{name}"
+msgstr "Unknown command /{name}"
+
+msgid "The turn ended without an answer because a tool call was blocked · {names} · nothing was executed; the prompt is kept in the composer."
+msgstr "The turn ended without an answer because a tool call was blocked · {names} · nothing was executed; the prompt is kept in the composer."
+
+msgid "/clear · wait for the running turn to finish, or use /new for a clean conversation."
+msgstr "/clear · wait for the running turn to finish, or use /new for a clean conversation."
+
+msgid "Chat cleared · the saved conversation keeps the earlier messages."
+msgstr "Chat cleared · the saved conversation keeps the earlier messages."
+
+msgid "Tool blocked · {name} · {reason} · nothing was executed"
+msgstr "Tool blocked · {name} · {reason} · nothing was executed"
+
+msgid "unknown tool · not registered by ISyCode"
+msgstr "unknown tool · not registered by ISyCode"
