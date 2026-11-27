@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
         self.context_meter = QLabel("Contexto estimado: ~0 tokens")
         self.context_meter.setToolTip("Estimación por longitud del texto; no es una medida del tokenizer ni del límite del modelo.")
         self.context_meter.setStyleSheet("color: #0a7d33; font-size: 11px; padding-right: 8px;")
-        self.git_notice = QLabel("GitHub · comprobar carpeta")
+        self.git_notice = QLabel("Remoto · comprobar carpeta")
         self.git_notice.setCursor(Qt.CursorShape.PointingHandCursor)
         self.git_notice.mousePressEvent = lambda _e: self.panel_bar.show_title("GitHub")
         self.statusBar().addPermanentWidget(self.git_notice)
@@ -562,11 +562,11 @@ class MainWindow(QMainWindow):
 
     def _project_git_status(self, status) -> None:
         if status is None:
-            self.git_notice.setText("GitHub · sin comprobar")
+            self.git_notice.setText("Remoto · sin comprobar")
             self.git_notice.setToolTip("La última consulta falló o se canceló. Comprueba el remoto otra vez.")
             self.workspace.git_label.setText("Git · sin comprobar")
             return
-        self.git_notice.setText("GitHub · " + (f"{status.behind} detrás · {status.ahead} delante" if status.behind is not None else "sin comprobar"))
+        self.git_notice.setText("Remoto · " + (f"{status.behind} detrás · {status.ahead} delante" if status.behind is not None else "sin comprobar"))
         self.git_notice.setToolTip(f"{status.folder} · {status.branch}\nComprobado: {status.checked or 'sin consulta reciente'}\nCambios locales: {status.local_changes}")
         self.workspace.git_label.setText(status.branch or "HEAD separado")
         self.workspace.git_label.setToolTip(f"{status.local_changes} cambios locales · {status.upstream}\n{self.git_notice.text()}")
@@ -1020,7 +1020,7 @@ class MainWindow(QMainWindow):
             )
             if branch.returncode != 0:
                 self.workspace.git_label.setText("sin repo Git")
-                self.git_notice.setText("GitHub · carpeta sin Git")
+                self.git_notice.setText("Remoto · carpeta sin Git")
                 return
             branch_name = branch.stdout.strip() or "HEAD"
             porcelain = subprocess.run(

@@ -168,7 +168,7 @@ QPushButton[variant="primary"] {{
     background: {ACCENT}; color: #06131c; border: none; font-weight: 600;
 }}
 QPushButton[variant="primary"]:hover {{ background: #7dd3ff; }}
-QPushButton[variant="primary"]:disabled {{ background: {ACCENT_DIM}; color: {TEXT_FAINT}; }}
+QPushButton[variant="primary"]:disabled {{ background: {SURFACE}; color: {TEXT_FAINT}; border: 1px solid {BORDER_SOFT}; font-weight: 500; }}
 QPushButton[variant="danger"] {{ color: {ERR}; border-color: #5a2a2e; background: transparent; }}
 QPushButton[variant="danger"]:hover {{ background: {DIFF_DEL_BG}; }}
 QPushButton[variant="danger"]:disabled {{ color: {TEXT_FAINT}; border-color: {BORDER_SOFT}; }}

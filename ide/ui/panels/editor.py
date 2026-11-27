@@ -11,7 +11,7 @@ from PySide6.QtCore import QFileSystemWatcher, QRect, QRegularExpression, QSize,
 from PySide6.QtGui import (QColor, QFont, QKeySequence, QPainter, QShortcut,
                             QSyntaxHighlighter, QTextCharFormat, QTextCursor,
                             QTextDocument, QTextFormat)
-from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QFrame, QStackedWidget, QHBoxLayout, QLabel, QLineEdit,
                                 QMessageBox, QPlainTextEdit, QPushButton,
                                 QTabBar, QTextEdit, QVBoxLayout, QWidget)
 from pygments.lexers import (PythonLexer, TextLexer, get_lexer_by_name,
@@ -281,12 +281,27 @@ PythonHighlighter = CodeHighlighter
 
 
 class EditorPanel(QWidget):
+    @property
+    def current_path(self):
+        return getattr(self, "_current_path", None)
+
+    @current_path.setter
+    def current_path(self, value) -> None:
+        self._current_path = value
+        self._sync_empty_state()
+
+    def _sync_empty_state(self) -> None:
+        stack = getattr(self, "_editor_stack", None)
+        if stack is not None:
+            stack.setCurrentWidget(self._empty_state if self._current_path is None else self.editor)
+            self.save_button.setVisible(self._current_path is not None)
+
     content_changed = Signal()
 
     def __init__(self, controller, parent=None):
         super().__init__(parent)
         self.controller = controller
-        self.current_path: Path | None = None
+        self._current_path: Path | None = None
         self.snapshot: str = ""
         self._buffers: dict[str, dict] = {}
         self._switching_tab = False
@@ -313,7 +328,7 @@ class EditorPanel(QWidget):
         self.file_badge = QLabel()
         self.file_badge.setFixedSize(22, 22)
         header.addWidget(self.file_badge)
-        self.title_label = QLabel("Abre un archivo del árbol del proyecto")
+        self.title_label = QLabel("")
         self.title_label.setObjectName("sectionTitle")
         header.addWidget(self.title_label, stretch=1)
 
@@ -410,7 +425,20 @@ class EditorPanel(QWidget):
         self.editor.setPlaceholderText("Haz doble clic en un archivo del árbol del proyecto para abrirlo y editarlo aquí.")
         self.highlighter = CodeHighlighter(self.editor.document())
         self.editor.textChanged.connect(self._on_text_changed)
-        layout.addWidget(self.editor, stretch=1)
+        self._editor_stack = QStackedWidget()
+        self._empty_state = QLabel(
+            "<div style='text-align:center'>"
+            f"<p style='font-size:20px; font-weight:600; color:{theme.TEXT}'>Ningún archivo abierto</p>"
+            f"<p style='font-size:14px; color:{theme.TEXT_DIM}'>Haz doble clic en un archivo del árbol del proyecto</p>"
+            f"<p style='font-size:13px; color:{theme.TEXT_FAINT}'>Ctrl+P abrir rápido &nbsp;·&nbsp; Ctrl+K comandos</p>"
+            "</div>"
+        )
+        self._empty_state.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._empty_state.setStyleSheet(f"background: {theme.SURFACE}; border: 1px solid {theme.BORDER_SOFT}; border-radius: 6px;")
+        self._editor_stack.addWidget(self._empty_state)
+        self._editor_stack.addWidget(self.editor)
+        layout.addWidget(self._editor_stack, stretch=1)
+        self._sync_empty_state()
 
         self.message_label = QLabel("")
         self.message_label.setStyleSheet(f"color: {theme.TEXT_FAINT}; font-size: 11px;")
@@ -664,7 +692,7 @@ class EditorPanel(QWidget):
             self.file_tabs.hide()
             self.current_path = None
             self.snapshot = ""
-            self.title_label.setText("Abre un archivo del árbol del proyecto")
+            self.title_label.setText("")
             self.file_badge.clear()
             self.editor.clear()
             self.save_button.setEnabled(False)
@@ -700,7 +728,7 @@ class EditorPanel(QWidget):
             self.file_tabs.hide()
             self.current_path = None
             self.snapshot = ""
-            self.title_label.setText("Abre un archivo del árbol del proyecto")
+            self.title_label.setText("")
             self.file_badge.clear()
             self.editor.clear()
             self.save_button.setEnabled(False)

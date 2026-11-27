@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import QEvent, QProcess, QSocketNotifier, Qt
 from PySide6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
@@ -19,9 +20,8 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
 from core.pty_shell import PtyShell, PtyShellError, is_supported as pty_is_supported
 
 _BANNER = (
-    "HOST SHELL — consola del OPERADOR HUMANO, no del agente.\n"
-    "No es el sandbox de IsyVM (Layer_a best-effort). El agente no tiene "
-    "acceso a esta consola."
+    "HOST SHELL · terminal de tu sistema, para ti. El agente no tiene acceso a esta "
+    "consola: sus comandos corren en su propio sandbox aislado."
 )
 
 # Dark-theme ANSI SGR palettes (standard 30-37 and bright 90-97)
@@ -167,10 +167,6 @@ class TerminalPanel(QWidget):
         layout.setSpacing(8)
 
         top_row = QHBoxLayout()
-        top_lbl = QLabel("HOST SHELL — TERMINAL DEL SISTEMA")
-        top_lbl.setStyleSheet("font-size: 11px; font-weight: 700; color: #6b7385; letter-spacing: 1px;")
-        top_row.addWidget(top_lbl)
-        top_row.addStretch(1)
 
         self.help_button = QPushButton("?")
         self.help_button.setObjectName("helpButton")
@@ -184,10 +180,10 @@ class TerminalPanel(QWidget):
         banner = QLabel(_BANNER)
         banner.setObjectName("hostShellBanner")
         banner.setWordWrap(True)
-        layout.addWidget(banner)
+        top_row.insertWidget(0, banner, 1)
 
         self.cwd_label = QLabel(f"Directorio de trabajo: {self.controller.working_dir}")
-        self.cwd_label.setStyleSheet("color: #9aa3b2; font-size: 11px;")
+        self.cwd_label.setStyleSheet("color: #9aa3b2; font-size: 12px;")
         layout.addWidget(self.cwd_label)
 
         self.output = QPlainTextEdit()
@@ -207,14 +203,22 @@ class TerminalPanel(QWidget):
         self.interrupt_button.setToolTip("Enviar SIGINT al proceso en primer plano")
         self.interrupt_button.clicked.connect(self.send_interrupt)
         row.addWidget(self.interrupt_button)
-        self.start_button = QPushButton("Start shell")
+        self.start_button = QPushButton("Iniciar shell")
         self.start_button.setProperty("variant", "primary")
         self.start_button.clicked.connect(self.start)
         row.addWidget(self.start_button)
-        self.restart_button = QPushButton("Reiniciar en proyecto")
+        self.restart_button = QPushButton("Reiniciar")
+        self.restart_button.setToolTip("Cierra la shell y abre una nueva en la carpeta del proyecto")
         self.restart_button.clicked.connect(self.restart)
         row.addWidget(self.restart_button)
         layout.addLayout(row)
+        self._sync_shell_buttons()
+
+    def _sync_shell_buttons(self) -> None:
+        running = self.is_running()
+        self.start_button.setVisible(not running)
+        self.restart_button.setVisible(running)
+        self.interrupt_button.setEnabled(running)
 
     # --- state / geometry helpers --------------------------------------
 
@@ -313,7 +317,7 @@ class TerminalPanel(QWidget):
             notifier.activated.connect(self._on_pty_readable)
             notifier.setEnabled(True)
             self._notifier = notifier
-            self.output.appendPlainText(f"$ {shell._argv[0]} (PTY) started in {self.controller.working_dir}")
+            self._announce_start(shell._argv[0])
             return
 
         self._start_qprocess()
@@ -324,10 +328,16 @@ class TerminalPanel(QWidget):
         self._process.readyReadStandardOutput.connect(self._read_output)
         self._process.readyReadStandardError.connect(self._read_error)
         self._process.finished.connect(
-            lambda _code, _status: self.output.appendPlainText("\n[host shell exited]"))
+            lambda _code, _status: (self.output.appendPlainText("\n[la shell terminó]"), self._sync_shell_buttons()))
         shell = "powershell.exe" if sys.platform == "win32" else "bash"
         self._process.start(shell, ["-NoLogo"] if shell == "powershell.exe" else [])
-        self.output.appendPlainText(f"$ {shell} started in {self.controller.working_dir}")
+        self._announce_start(shell)
+
+    def _announce_start(self, shell_name: str) -> None:
+        # The banner is its own block; the shell prompt must start on a fresh line.
+        self.output.appendPlainText(f"── {Path(str(shell_name)).name} iniciada en {self.controller.working_dir} ──")
+        self.output.appendPlainText("")
+        self._sync_shell_buttons()
 
     # --- input, history & interrupt ------------------------------------
 
@@ -407,7 +417,7 @@ class TerminalPanel(QWidget):
 
     def _send(self) -> None:
         if not self.is_running():
-            self.output.appendPlainText("shell not running; press Start shell")
+            self.output.appendPlainText("La shell no está activa; pulsa «Iniciar shell».")
             return
         command = self.input.text()
         self.input.clear()
@@ -440,7 +450,8 @@ class TerminalPanel(QWidget):
                 pty_shell.close(timeout=0.2)
             except Exception:
                 pass
-            self.output.appendPlainText("\n[host shell exited]")
+            self.output.appendPlainText("\n[la shell terminó]")
+            self._sync_shell_buttons()
 
     def append_ansi(self, text: str) -> None:
         """Parse ANSI SGR colors, clear-screen, OSC, CR/BS and render into output."""

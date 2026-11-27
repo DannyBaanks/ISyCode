@@ -325,7 +325,8 @@ class GitHubPanel(QWidget):
         worker.ready.connect(ready)
         worker.failed.connect(failed or self._failed)
         worker.finished.connect(lambda w=worker: self._finished(w))
-        self.notice.setText("Actualizando carpeta; espera a que Git termine…" if mutating else "Consultando…")
+        self._busy_notice = "Actualizando carpeta; espera a que Git termine…" if mutating else "Consultando…"
+        self.notice.setText(self._busy_notice)
         worker.start()
         self._controls()
         return True
@@ -334,6 +335,8 @@ class GitHubPanel(QWidget):
         if self._worker is worker:
             self._worker = None
             self._catalog_loading = False
+            if self.notice.text() == getattr(self, "_busy_notice", None):
+                self.notice.clear()
             self._controls()
             if self._detail_pending:
                 QTimer.singleShot(0, self._load_pending_activity)
@@ -368,6 +371,7 @@ class GitHubPanel(QWidget):
                 self.project_status_changed.emit(None)
 
     def load_catalog(self):
+        self.auto_verify_banner.hide()
         if self._job(self.service.catalog, self._catalog_ready):
             self._catalog_loading = True
             self._account_verified = False
@@ -380,6 +384,7 @@ class GitHubPanel(QWidget):
             self._details.clear()
 
     def _catalog_ready(self, report):
+        self.auto_verify_banner.hide()
         self._account_verified = report["verified"]
         self.account.setProperty("verified", self._account_verified)
         theme.repolish(self.account)
@@ -464,8 +469,9 @@ class GitHubPanel(QWidget):
         self._controls()
 
     def _empty_activity(self, message):
+        loading = message.startswith(("Consultando", "Verificando"))
         for value in self.metrics.values():
-            value.setText("—")
+            value.setText("…" if loading else "—")
         self.activity_stamp.setText("Actividad sin consultar · no describe la sincronización local.")
         for view in self.activity_views.values():
             view.setHtml("<p>" + html.escape(message) + "</p>")

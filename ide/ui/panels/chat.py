@@ -901,6 +901,7 @@ class ChatPanel(QWidget):
         self.stop_button = QPushButton("Detener  Esc")
         self.stop_button.setProperty("variant", "danger")
         self.stop_button.setEnabled(False)
+        self.stop_button.setVisible(False)
         status_row.addWidget(self.stop_button)
         c_layout.addLayout(status_row)
         layout.addWidget(composer)
@@ -920,7 +921,7 @@ class ChatPanel(QWidget):
         self.stats_label.setVisible(not compact)
         self.empty_state.keys.setText("Enter enviar · Shift+Enter nueva línea\nEsc detener" if compact else
                                       "Enter enviar · Shift+Enter nueva línea · Esc detener\nCtrl+K comandos · Ctrl+N conversación · Ctrl+B archivos")
-        self.input.setPlaceholderText("Escribe a ISyCode…" if compact else "Pide un cambio o haz una pregunta…")
+        self.input.setPlaceholderText("Pide un cambio o haz una pregunta…")
 
     def _show_conversation(self) -> None:
         if self.stack.currentWidget() is not self.scroll:
@@ -1268,6 +1269,7 @@ class ChatPanel(QWidget):
             self.set_agent_progress({"phase": "provider_wait", "step": 1})
         self.send_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+        self.stop_button.setVisible(True)
         self.input.setReadOnly(True)
 
     def set_status_ready(self) -> None:
@@ -1276,6 +1278,7 @@ class ChatPanel(QWidget):
         self._set_state("ready", "● Listo")
         self.send_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self.stop_button.setVisible(False)
         self.stop_button.setText("Detener  Esc")
         self.input.setReadOnly(False)
         self.input.setFocus()
@@ -1286,6 +1289,7 @@ class ChatPanel(QWidget):
         self._set_state("error", f"● Error: {message}")
         self.send_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self.stop_button.setVisible(False)
         self.input.setReadOnly(False)
 
     def set_agent_progress(self, event: dict) -> None:
