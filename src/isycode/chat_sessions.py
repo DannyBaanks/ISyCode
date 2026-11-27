@@ -128,6 +128,22 @@ class ChatSessionStore:
     )
     _BEARER_VALUE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{12,}={0,2}")
     _API_TOKEN = re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b")
+    # Every redaction pattern above needs one of these words (case-insensitive is
+    # a superset of the case-sensitive "sk-"). Text without any of them cannot
+    # change, so one scan replaces three substitutions on the common path. The
+    # shared leading class matches a superset of the words (it also accepts
+    # e.g. "bccess_token") and is several times faster than a plain alternation;
+    # a false positive only runs the full redaction.
+    _REDACTION_TRIGGER = re.compile(
+        r"(?i)[abprs](?:earer|pi[_-]?key|ccess[_-]?token|efresh[_-]?token|ecret|assword|uthorization|k-)")
+    # validate_state results per sha256 of repr(state). validate_state is pure for
+    # a plain dict (PRESETS is fixed at import), and repr keeps every distinction
+    # it can see (types, key order, -0.0, tuple vs list), so a hit is
+    # indistinguishable from validating again. Entries are JSON text: callers get
+    # fresh objects. Reads and the write after them hit the same entry.
+    _STATE_CACHE_LIMIT = 32
+    _state_cache: "dict[str, str]" = {}
+    _state_cache_guard = threading.Lock()
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root).expanduser()
@@ -182,7 +198,7 @@ class ChatSessionStore:
             return path
 
     def _write(self, session: ChatSession) -> tuple[Path, str]:
-        state = self.validate_state(session.state)
+        state = self._validated_state(session.state)
         for message in session.messages:
             if (not isinstance(message, dict)
                     or message.get("role") not in {"user", "assistant"}
@@ -283,8 +299,25 @@ class ChatSessionStore:
             self._validate_sent_at(message)
         return ChatSession(session_id, payload["title"], messages,
                            float(payload["created_at"]), float(payload["updated_at"]),
-                           self.validate_state(payload.get("state", {})),
+                           self._validated_state(payload.get("state", {})),
                            payload.get("title_manual") is True)
+
+    @classmethod
+    def _validated_state(cls, state: Any) -> dict[str, Any]:
+        """validate_state(state), memoized for plain dicts."""
+        if type(state) is not dict:
+            return cls.validate_state(state)
+        key = hashlib.sha256(repr(state).encode("utf-8", "surrogatepass")).hexdigest()
+        with cls._state_cache_guard:
+            cached = cls._state_cache.get(key)
+        if cached is not None:
+            return json.loads(cached)
+        clean = cls.validate_state(state)
+        with cls._state_cache_guard:
+            if len(cls._state_cache) >= cls._STATE_CACHE_LIMIT:
+                cls._state_cache.pop(next(iter(cls._state_cache)))
+            cls._state_cache[key] = json.dumps(clean, ensure_ascii=False)
+        return clean
 
     def list_sessions(self) -> list[ChatSession]:
         sessions = []
@@ -362,6 +395,8 @@ class ChatSessionStore:
     def _sanitize_text(cls, value: str) -> str:
         # Redact bearer values before key/value matching consumes "Bearer" and
         # leaves the actual credential orphaned after Authorization:.
+        if not cls._REDACTION_TRIGGER.search(value):
+            return value
         value = cls._BEARER_VALUE.sub("Bearer [redacted]", value)
         value = cls._SECRET_VALUE.sub(lambda match: f"{match.group(1)}{match.group(2)}[redacted]", value)
         return cls._API_TOKEN.sub("[redacted]", value)
