@@ -381,6 +381,47 @@ async def _resume_cmd(app: "TUIApp", arg: str) -> None:
     del arg
     app.action_resume_interrupted_turn()
 
+async def _new_cmd(app: "TUIApp", arg: str) -> None:
+    # A running lane keeps running in the background; the new lane takes the screen.
+    del arg
+    app._start_new_conversation()
+
+async def _clear_cmd(app: "TUIApp", arg: str) -> None:
+    """Clear the chat view and the in-memory transcript; the saved conversation is kept."""
+    del arg
+    lane = app._foreground_lane()
+    # The handler runs as the lane's own loop_task (_start_operation pins it
+    # before the coroutine starts), so that task is not the turn to wait for;
+    # only a different live task is a turn still streaming.
+    if (lane.loop_task is not None and lane.loop_task is not asyncio.current_task()
+            and not lane.loop_task.done()):
+        app._append("  " + tr("/clear · wait for the running turn to finish, or use /new for a clean conversation."), YELLOW)
+        return
+    app._history.clear()
+    lane.history.clear()
+    lane.tool_history.clear()
+    lane.lines.clear()
+    lane.partial = ""
+    lane.partial_reason = ""
+    lane.partial_reason_chunks = []
+    lane.stream_widget = None
+    lane.stream_block = None
+    lane.retry_prompt = None
+    lane.interrupted_turn = None
+    app._retry_prompt = None
+    app._clear_pending_plan()
+    app._repaint_conversation()
+    app._append_startup("  " + tr("Chat cleared · the saved conversation keeps the earlier messages."), MUTED)
+    app.query_one(PromptArea).focus()
+
+async def _settings_cmd(app: "TUIApp", arg: str) -> None:
+    del arg
+    app._open_settings_menu()
+
+async def _exit_cmd(app: "TUIApp", arg: str) -> None:
+    del arg
+    app.action_quit()
+
 async def _doctor_cmd(app: "TUIApp", arg: str) -> None:
     from isycode.diagnostics import collect_diagnostics, format_diagnostics
     report = await asyncio.to_thread(collect_diagnostics, app._workspace_root)
@@ -842,6 +883,11 @@ class MenuMixin:
                 PluginCommand("harness", "open the read-only Multi Harness settings map", _harness_cmd),
                 PluginCommand("retry", "prepare interrupted prompt for review; never auto-replays tools", _retry_cmd),
                 PluginCommand("resume", "resume an interrupted turn without repeating completed tools", _resume_cmd),
+                PluginCommand("new", "start a new conversation; a running turn keeps going in the background", _new_cmd),
+                PluginCommand("clear", "clear the chat view; the saved conversation keeps the earlier messages", _clear_cmd),
+                PluginCommand("settings", "open the settings menu", _settings_cmd),
+                PluginCommand("exit", "quit ISyCode", _exit_cmd),
+                PluginCommand("quit", "quit ISyCode", _exit_cmd),
                 PluginCommand("doctor", "local configuration and dependencies; no network requests", _doctor_cmd),
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
                 PluginCommand("usage", "show provider-reported chat token usage", _usage_cmd),
