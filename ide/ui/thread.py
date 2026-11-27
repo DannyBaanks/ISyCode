@@ -226,7 +226,7 @@ class AgentWorker(QThread):
             )
             agent.on_progress = self._on_progress
             agent.on_reasoning = self._on_reasoning
-            stream = (ConversationService(self._conversations).run_agent(agent, self.prompt)
+            stream = (ConversationService(self._conversations).run_agent(agent, self.prompt, attachments=self.attachments)
                       if self._session_id else agent.run(self.prompt))
             try:
                 async for chunk in stream:

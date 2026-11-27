@@ -168,10 +168,13 @@ class ConversationService:
     def __init__(self, store: ConversationStore):
         self.store = store
 
-    async def run_agent(self, agent, prompt: str):
+    async def run_agent(self, agent, prompt: str, attachments: list[str] | None = None):
         config = agent.ctx.provider_config or agent.provider_registry.get_config(agent.ctx.provider_name, agent.ctx.model or None)
         agent.ctx.provider_config = config
         turn = self.store.begin(agent.session_id, prompt, config.name, config.model, config.provider_type)
+        if attachments:  # lets a resumed conversation show the same thumbnails
+            self.store.append_event(agent.session_id, turn, {"type": "user_attachments",
+                                                             "paths": [str(path) for path in attachments][:16]})
         status = "failed"
         stream = None
         reasoning, reasoning_size, reasoning_truncated = [], 0, False

@@ -87,8 +87,13 @@ QPushButton#viewSwitch:checked, QPushButton#modeSwitch:checked {{ background: {A
 QTabWidget#ideInspector {{ border-left: 1px solid {BORDER_SOFT}; }}
 QLabel#pageTitle {{ font-size: 27px; font-weight: 700; padding: 2px 0; }}
 QLabel#pageSubtitle {{ color: {TEXT_DIM}; font-size: 14px; padding-bottom: 14px; }}
-QGroupBox {{ border: 1px solid {BORDER}; border-radius: 10px; margin-top: 26px; padding: 18px 12px 12px 12px; }}
-QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top left; left: 4px; top: 0px; padding: 0 4px 6px 4px; color: {TEXT}; font-weight: 700; font-size: 15px; }}
+QGroupBox {{ border: 1px solid {BORDER}; border-radius: 10px; margin-top: 24px; padding: 6px 4px 4px 4px; }}
+QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top left; left: 2px; top: 0px; padding: 0 4px 4px 4px; color: {TEXT}; font-weight: 700; font-size: 15px; }}
+QCheckBox {{ spacing: 8px; }}
+QCheckBox::indicator {{ width: 16px; height: 16px; border: 1px solid {TEXT_DIM}; border-radius: 4px; background: {SURFACE_2}; }}
+QCheckBox::indicator:hover {{ border-color: {ACCENT}; }}
+QCheckBox::indicator:checked {{ background: {ACCENT}; border-color: {ACCENT}; image: url({_THEME_ASSETS}/check.svg); }}
+QCheckBox::indicator:disabled {{ border-color: {BORDER}; background: {SURFACE}; }}
 QStatusBar {{ background: {BG}; border-top: 1px solid {BORDER_SOFT}; color: {TEXT_DIM}; }}
 QStatusBar QLabel {{ color: {TEXT_DIM}; font-size: 12px; }}
 QLabel#modeBadge {{

@@ -631,6 +631,25 @@ class MainWindow(QMainWindow):
         self.chat.add_system_message("Nueva sesión iniciada.")
         self._update_statusbar()
 
+    @staticmethod
+    def _reasoning_status(event: dict) -> str:
+        return "guardado · " + _status_es(event.get("status", "parcial")) + (" · vista limitada" if event.get("truncated") else "")
+
+    def _replay_turn_events(self, events: list[dict]) -> None:
+        for item in events:
+            if item["type"] == "user_attachments":
+                continue  # shown on the user's bubble
+            if item["type"] == "proposal_decided":
+                self.chat.add_system_message("Cambio " + item.get("proposal_id", "")[:12] + " · " + _status_es(item.get("status", "desconocido")) + " · consultar Cambios")
+            elif item["type"] == "provider_reasoning":
+                self.chat.start_assistant_stream()
+                self.chat.append_reasoning(item.get("text", ""))
+                self.chat.end_assistant_stream(self._reasoning_status(item))
+            elif item["type"] == "agent_failed":
+                self.chat.add_system_message(item.get("code", "AGENT_INTERNAL_ERROR") + " · " + item.get("message", "") + " · paso " + str(item.get("step", "?")))
+            elif item["type"] == "command_decided":
+                self.chat.add_system_message("Comando · " + _status_es(item.get("status", "desconocido")) + " · permiso " + item.get("scope", "sin permiso"))
+
     def _resume_session(self, session_id: str) -> None:
         if self._worker is not None and self._worker.isRunning():
             self.chat.add_system_message("Detén el turno actual antes de cambiar de conversación.")
@@ -661,34 +680,41 @@ class MainWindow(QMainWindow):
         except ValueError:
             self.chat.add_system_message("El provider/modelo guardado no está disponible. Elige explícitamente un reemplazo en la barra antes de enviar; esta conversación se enviará al provider elegido.")
         transcript = self.controller.conversations.transcript(session_id)
+        status = self.controller.conversations.turn_status(session_id)
+        # Events (saved reasoning, decisions, failures) belong to a turn: replay them inside
+        # that turn instead of piling them up after the whole transcript.
+        events_by_turn: dict[str, list[dict]] = {}
+        for event in self.controller.conversations.events(session_id):
+            events_by_turn.setdefault(event.get("turn") or "", []).append(event["payload"])
+        answered = {item.get("turn") for item in transcript if item["role"] == "assistant"}
         tokens = 0
         last_user_prompt = ""
         for item in transcript:
             content = item.get("content") or ""
+            turn = item.get("turn") or ""
             tokens += max(1, len(content) // 4) if content else 0
             if item["role"] == "user":
                 last_user_prompt = content
-                self.chat.add_user_message(content)
+                attached = [path for event in events_by_turn.get(turn, []) if event["type"] == "user_attachments"
+                            for path in event.get("paths", [])]
+                self.chat.add_user_message(content, attachments=attached or None)
+                if turn and turn not in answered:
+                    self._replay_turn_events(events_by_turn.pop(turn, []))
             elif item["role"] == "assistant":
+                turn_events = events_by_turn.pop(turn, []) if turn else []
+                reasoning = [e for e in turn_events if e["type"] == "provider_reasoning"]
                 self.chat.start_assistant_stream()
+                for event in reasoning:
+                    self.chat.append_reasoning(event.get("text", ""))
                 self.chat.append_chunk(content)
-                self.chat.end_assistant_stream()
+                self.chat.end_assistant_stream(self._reasoning_status(reasoning[-1]) if reasoning else
+                                               "turno cerrado · puede ser parcial")
+                self._replay_turn_events([e for e in turn_events if e["type"] != "provider_reasoning"])
+        for leftover in events_by_turn.values():
+            self._replay_turn_events(leftover)
         self._last_prompt = last_user_prompt
         self._total_tokens_estimated = tokens
         self._update_context_meter(tokens)
-        status = self.controller.conversations.turn_status(session_id)
-        for event in self.controller.conversations.events(session_id):
-            item = event["payload"]
-            if item["type"] == "proposal_decided":
-                self.chat.add_system_message("Cambio " + item.get("proposal_id", "")[:12] + " · " + _status_es(item.get("status", "desconocido")) + " · consultar Cambios")
-            elif item["type"] == "provider_reasoning":
-                self.chat.start_assistant_stream()
-                self.chat.append_reasoning(item.get("text", ""))
-                self.chat.end_assistant_stream("guardado · " + _status_es(item.get("status", "parcial")) + (" · vista limitada" if item.get("truncated") else ""))
-            elif item["type"] == "agent_failed":
-                self.chat.add_system_message(item.get("code", "AGENT_INTERNAL_ERROR") + " · " + item.get("message", "") + " · paso " + str(item.get("step", "?")))
-            elif item["type"] == "command_decided":
-                self.chat.add_system_message("Comando · " + _status_es(item.get("status", "desconocido")) + " · permiso " + item.get("scope", "sin permiso"))
         if status in {"interrupted", "cancelled", "failed"}:
             actions = []
             if last_user_prompt:
