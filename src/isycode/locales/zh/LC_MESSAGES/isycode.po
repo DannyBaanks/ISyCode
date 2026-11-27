@@ -6999,3 +6999,90 @@ msgstr "工具已拦截 · {name} · {reason} · 未执行任何操作"
 
 msgid "unknown tool · not registered by ISyCode"
 msgstr "未知工具 · 未在 ISyCode 注册"
+
+msgid "ISyCode does not download language servers. Nothing was installed."
+msgstr "ISyCode 不会下载语言服务器。未安装任何内容。"
+
+msgid "Nothing is missing from PATH."
+msgstr "PATH 中没有缺失项。"
+
+msgid "Not on PATH. Run the command yourself, then Refresh integrations:"
+msgstr "不在 PATH 中。请自行运行命令，然后点击“刷新集成”："
+
+msgid "Already on PATH. Installing again will not make these ready:"
+msgstr "已在 PATH 中。重新安装也不会使其就绪："
+
+msgid "the sandbox does not run it"
+msgstr "sandbox 不运行它"
+
+msgid "the sandbox cannot launch it"
+msgstr "sandbox 无法启动它"
+
+msgid "Motor"
+msgstr "Motor"
+
+msgid "Inference engine"
+msgstr "推理引擎"
+
+msgid "Capabilities: {scopes}"
+msgstr "能力：{scopes}"
+
+msgid "Rule: {rule}"
+msgstr "规则：{rule}"
+
+msgid "Verdicts: {verdicts}"
+msgstr "裁决：{verdicts}"
+
+msgid "Workspace preferences · {warning}"
+msgstr "工作区偏好 · {warning}"
+
+msgid "General implementation guidance for the active ISyCode workspace."
+msgstr "针对当前 ISyCode 工作区的通用实现指导。"
+
+msgid "Plan-mode guidance for the active ISyCode workspace."
+msgstr "针对当前 ISyCode 工作区的计划模式指导。"
+
+msgid "General-purpose help grounded in the active ISyCode workspace."
+msgstr "基于当前 ISyCode 工作区的通用帮助。"
+
+msgid "Read-only exploration of the active ISyCode workspace; report paths and evidence."
+msgstr "只读探索当前 ISyCode 工作区；报告路径和证据。"
+
+msgid "Fast, focused search in the active ISyCode workspace; return exact matches and locations."
+msgstr "在当前 ISyCode 工作区中快速、聚焦地搜索；返回精确匹配及其位置。"
+
+msgid "Implementation and software repair."
+msgstr "实现与软件修复。"
+
+msgid "Hypotheses, experiments, and measured evidence."
+msgstr "假设、实验与实测证据。"
+
+msgid "Milestone plans with dependencies, risks, and a coder handoff."
+msgstr "包含依赖、风险和编码交接的里程碑计划。"
+
+msgid "Only writes plans under .opencode/plans/*.md."
+msgstr "只在 .opencode/plans/*.md 下写计划。"
+
+msgid "Knowledge inventory, documentation reconciliation, and provenance."
+msgstr "知识清单、文档核对与来源追溯。"
+
+msgid "Platform, plugins, MCP, brokers, and daemon integration."
+msgstr "平台、插件、MCP、代理与守护进程集成。"
+
+msgid "Repair mode requires explicit --yes; run check and inspect the diff first."
+msgstr "修复模式需要显式 --yes；请先运行 check 并检查 diff。"
+
+msgid "Adversarial review, counterexamples, and risk challenges."
+msgstr "对抗式审查、反例与风险质疑。"
+
+msgid "Tracks staleness and records the verified project timeline."
+msgstr "跟踪过时内容并记录经验证的项目时间线。"
+
+msgid "This motor does not converse; user input runs the staleness workflow."
+msgstr "此 motor 不进行对话；用户输入会运行过时检查流程。"
+
+msgid "Supervises Bridge leases, agent health, dispatch, and escalation."
+msgstr "监督 Bridge lease、代理健康、调度与升级。"
+
+msgid "Sweeps are dry-run unless --apply is explicitly supplied."
+msgstr "除非显式提供 --apply，否则清扫均为试运行。"
