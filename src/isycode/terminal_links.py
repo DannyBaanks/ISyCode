@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from markdown_it import MarkdownIt
 from rich.markdown import Markdown as RichMarkdown
 from rich.text import Text
 
@@ -187,10 +188,67 @@ def _encode_markdown_file_links(text: str) -> str:
     return _MD_LINK_RE.sub(_replace, text)
 
 
+_HTML_PARSER = MarkdownIt().enable("strikethrough").enable("table")
+
+
+def _escape_span(lines: list[str], start: int, end: int, needle: str, offset: int) -> int:
+    """Escape ``<``/``>`` of ``needle`` inside ``lines[start:end]``; return the new offset."""
+    block = "\n".join(lines[start:end])
+    found = block.find(needle, offset)
+    if found < 0:
+        return offset
+    # Walk the lines, keeping the absolute position inside the block.
+    position = 0
+    for index in range(start, end):
+        length = len(lines[index]) + 1  # the joined newline
+        local_start = max(found, position)
+        local_end = min(found + len(needle), position + length - 1)
+        if local_start < local_end:
+            line = lines[index]
+            a, b = local_start - position, local_end - position
+            lines[index] = line[:a] + line[a:b].replace("<", "&lt;").replace(">", "&gt;") + line[b:]
+            offset = found + len(needle)
+        position += length
+    return offset
+
+
+def literal_html(text: str) -> str:
+    """Show raw HTML from a model reply as literal text instead of dropping it.
+
+    markdown-it classifies ``<script>``, ``<b>`` or ``<!-- -->`` as ``html_inline``
+    and a tag alone on its line as ``html_block``; every renderer (Rich's and
+    ``selectable_markdown``) then hides those tokens, so ``<script>alert(1)</script>``
+    reached the screen as ``alert(1)``. Escaping the angle brackets with entities
+    turns each tag into ordinary ``text`` that prints verbatim, while fenced and
+    indented code blocks never produce HTML tokens and stay untouched.
+    """
+    if "<" not in text:
+        return text
+    lines = text.split("\n")
+    # Longest ranges first so earlier replacements never shift later ones.
+    spans: list[tuple[int, int, list[str]]] = []
+    for token in _HTML_PARSER.parse(text):
+        if token.type == "html_block" and token.map:
+            spans.append((token.map[0], token.map[1], []))
+        elif token.type == "inline" and token.map and token.children:
+            tags = [child.content for child in token.children if child.type == "html_inline"]
+            if tags:
+                spans.append((token.map[0], token.map[1], tags))
+    for start, end, tags in sorted(spans, reverse=True):
+        if not tags:  # whole block is HTML
+            for index in range(start, min(end, len(lines))):
+                lines[index] = lines[index].replace("<", "&lt;").replace(">", "&gt;")
+            continue
+        offset = 0
+        for tag in tags:
+            offset = _escape_span(lines, start, end, tag, offset)
+    return "\n".join(lines)
+
+
 def rich_markdown(text: str, *, root: Path | str | None = None) -> RichMarkdown:
-    """Markdown with autolinks and the repository's PR anchors."""
+    """Markdown with autolinks and the repository's PR anchors; raw HTML shown literally."""
     repo_url = repository_web_url(root) if root is not None else None
-    linked = _encode_markdown_file_links(linkify_markdown(text, repo_url))
+    linked = _encode_markdown_file_links(linkify_markdown(literal_html(text), repo_url))
     return RichMarkdown(linked, code_theme="monokai")
 
 
@@ -245,6 +303,7 @@ __all__ = [
     "FileLink",
     "classify_link",
     "linkify_markdown",
+    "literal_html",
     "repository_web_url",
     "rich_markdown",
     "semantic_plain",
