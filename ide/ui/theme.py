@@ -7,8 +7,13 @@ whole app stays consistent and the look can change in one place.
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from PySide6.QtCore import QEvent, QObject
 from PySide6.QtGui import QColor, QFont, QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QTableView
+
+_THEME_ASSETS = (Path(__file__).parent / "assets" / "theme").as_posix()
 
 # --- palette ---------------------------------------------------------------
 BG = "#0c121a"          # window
@@ -81,10 +86,10 @@ QPushButton#viewSwitch:checked, QPushButton#modeSwitch:checked {{ background: {A
 QTabWidget#ideInspector {{ border-left: 1px solid {BORDER_SOFT}; }}
 QLabel#pageTitle {{ font-size: 27px; font-weight: 700; padding: 2px 0; }}
 QLabel#pageSubtitle {{ color: {TEXT_DIM}; font-size: 14px; padding-bottom: 14px; }}
-QGroupBox {{ border: 1px solid {BORDER}; border-radius: 10px; margin-top: 18px; padding-top: 8px; }}
-QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top left; left: 16px; padding: 0 8px; color: {TEXT}; font-weight: 600; }}
+QGroupBox {{ border: 1px solid {BORDER}; border-radius: 10px; margin-top: 26px; padding: 18px 12px 12px 12px; }}
+QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top left; left: 4px; top: 0px; padding: 0 4px 6px 4px; color: {TEXT}; font-weight: 700; font-size: 15px; }}
 QStatusBar {{ background: {BG}; border-top: 1px solid {BORDER_SOFT}; color: {TEXT_DIM}; }}
-QStatusBar QLabel {{ color: {TEXT_DIM}; font-size: 11px; }}
+QStatusBar QLabel {{ color: {TEXT_DIM}; font-size: 12px; }}
 QLabel#modeBadge {{
     border-radius: 9px; padding: 1px 10px; font-size: 11px; font-weight: 600;
 }}
@@ -129,15 +134,21 @@ QComboBox::drop-down {{
     background: {SURFACE_3};
 }}
 QComboBox::down-arrow {{
-    width: 0px;
-    height: 0px;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid {TEXT_DIM};
+    image: url({_THEME_ASSETS}/chevron-down.svg);
+    width: 12px; height: 12px;
 }}
-QComboBox::down-arrow:hover {{
-    border-top-color: {ACCENT};
+QComboBox::down-arrow:hover, QComboBox::down-arrow:on {{
+    image: url({_THEME_ASSETS}/chevron-down-hover.svg);
 }}
+QSpinBox {{ max-width: 160px; padding-right: 22px; }}
+QSpinBox::up-button, QSpinBox::down-button {{
+    subcontrol-origin: border; width: 18px; background: {SURFACE_3}; border: none;
+}}
+QSpinBox::up-button {{ subcontrol-position: top right; border-top-right-radius: 6px; }}
+QSpinBox::down-button {{ subcontrol-position: bottom right; border-bottom-right-radius: 6px; }}
+QSpinBox::up-arrow {{ image: url({_THEME_ASSETS}/chevron-up.svg); width: 10px; height: 10px; }}
+QSpinBox::down-arrow {{ image: url({_THEME_ASSETS}/chevron-down.svg); width: 10px; height: 10px; }}
+QSpinBox:disabled, QLineEdit:disabled, QComboBox:disabled {{ color: {TEXT_FAINT}; background: {SURFACE}; border-color: {BORDER_SOFT}; }}
 QComboBox QAbstractItemView {{
     background: {SURFACE_2}; border: 1px solid {BORDER}; selection-background-color: {SURFACE_3};
 }}
@@ -165,7 +176,7 @@ QPushButton[variant="approve"] {{ background: #1f7a3f; color: white; border: non
 QPushButton[variant="approve"]:hover {{ background: #26924b; }}
 QPushButton[variant="ghost"] {{
     background: transparent; border: 1px solid transparent; color: {TEXT_DIM};
-    padding: 2px 8px; font-size: 11px;
+    padding: 3px 10px; font-size: 12px;
 }}
 QPushButton[variant="ghost"]:hover {{ background: {SURFACE_3}; color: {TEXT}; }}
 QPushButton#scrollBottom {{
@@ -183,7 +194,7 @@ QPlainTextEdit#promptComposer:focus {{ border-color: {ACCENT}; }}
 QLabel#composerStatus[state="ready"] {{ color: {OK}; }}
 QLabel#composerStatus[state="working"] {{ color: {ACCENT}; }}
 QLabel#composerStatus[state="error"] {{ color: {ERR}; }}
-QLabel#composerStats, QLabel#composerHint {{ color: {TEXT_FAINT}; font-size: 11px; }}
+QLabel#composerStats, QLabel#composerHint {{ color: {TEXT_FAINT}; font-size: 12px; }}
 
 QTextBrowser#userBubble {{
     background: {USER_BUBBLE}; border: 1px solid #27506f; border-radius: 12px; padding: 6px 10px;
@@ -194,7 +205,7 @@ QFrame#assistantBubble {{
 QTextBrowser#assistantBody {{ background: transparent; border: none; padding: 0; }}
 QLabel#bubbleAuthor {{ color: {TEXT}; font-weight: 600; font-size: 15px; }}
 QLabel#bubbleAuthorUser {{ color: {TEXT_DIM}; font-weight: 600; font-size: 12px; }}
-QLabel#systemMessage {{ color: {TEXT_FAINT}; font-size: 11px; padding: 2px 6px; }}
+QLabel#systemMessage {{ color: {TEXT_FAINT}; font-size: 12px; padding: 2px 6px; }}
 
 QFrame#toolCard {{
     background: {SURFACE}; border: 1px solid {BORDER_SOFT}; border-left: 3px solid {TEXT_FAINT};
@@ -204,8 +215,8 @@ QFrame#toolCard[state="ok"] {{ border-left-color: {OK}; }}
 QFrame#toolCard[state="fail"] {{ border-left-color: {ERR}; }}
 QFrame#toolCard[state="running"] {{ border-left-color: {ACCENT}; }}
 QLabel#toolTitle {{ font-family: {MONO}; font-size: 12px; font-weight: 600; }}
-QLabel#toolArgs {{ font-family: {MONO}; font-size: 11px; color: {TEXT_DIM}; }}
-QLabel#toolStatus {{ font-size: 11px; color: {TEXT_DIM}; }}
+QLabel#toolArgs {{ font-family: {MONO}; font-size: 12px; color: {TEXT_DIM}; }}
+QLabel#toolStatus {{ font-size: 12px; color: {TEXT_DIM}; }}
 
 QFrame#approvalCard {{
     background: {SURFACE}; border: 1px solid #176182; border-radius: 10px;
@@ -230,7 +241,7 @@ QWidget#workspacePanel {{ background: {BG}; }}
 QLabel#sectionTitle {{
     color: {TEXT_DIM}; font-size: 11px; font-weight: 700; letter-spacing: 1px;
 }}
-QLabel#gitLabel {{ color: {TEXT_FAINT}; font-size: 11px; }}
+QLabel#gitLabel {{ color: {TEXT_FAINT}; font-size: 12px; }}
 QTreeView, QListWidget, QTreeWidget, QTableWidget {{
     background: {BG}; border: none; outline: none; alternate-background-color: {SURFACE};
 }}
@@ -241,7 +252,7 @@ QTreeView::item:selected, QListWidget::item:selected, QTreeWidget::item:selected
 }}
 QHeaderView::section {{
     background: {SURFACE}; color: {TEXT_DIM}; border: none;
-    border-bottom: 1px solid {BORDER}; padding: 5px 8px; font-size: 11px;
+    border-bottom: 1px solid {BORDER}; padding: 6px 10px; font-size: 12px; font-weight: 600;
 }}
 QTableWidget {{ gridline-color: {BORDER_SOFT}; }}
 
@@ -249,7 +260,7 @@ QFrame#githubMetric, QFrame#githubLocalCard {{ background: {SURFACE}; border: 1p
 QLabel#repoTitle {{ font-size: 26px; font-weight: 700; }}
 QLabel#repoDescription {{ color: {TEXT_DIM}; font-size: 15px; }}
 QLabel#repoMetadata {{ color: {TEXT_FAINT}; font-size: 12px; }}
-QLabel#metricCaption {{ color: {TEXT_FAINT}; font-size: 10px; font-weight: 600; }}
+QLabel#metricCaption {{ color: {TEXT_FAINT}; font-size: 11px; font-weight: 600; letter-spacing: 1px; }}
 QLabel#metricValue {{ color: {ACCENT}; font-size: 18px; font-weight: 600; }}
 QLabel#githubSectionTitle {{ font-size: 18px; font-weight: 600; }}
 QLabel#githubAccount {{ color: {TEXT_DIM}; font-size: 14px; }}
@@ -261,8 +272,8 @@ QTextBrowser#githubActivity {{ background: {SURFACE}; border: none; padding: 14p
 /* drawer tabs */
 QTabWidget::pane {{ border: none; border-top: 1px solid {BORDER_SOFT}; background: {SURFACE}; }}
 QTabBar::tab {{
-    background: transparent; color: {TEXT_FAINT}; padding: 6px 11px; margin-right: 1px;
-    border: none; border-bottom: 2px solid transparent; font-size: 11px; font-weight: 500;
+    background: transparent; color: {TEXT_DIM}; padding: 9px 16px; margin-right: 2px;
+    border: none; border-bottom: 2px solid transparent; font-size: 13px; font-weight: 500;
 }}
 QTabBar::tab:hover {{ color: {TEXT}; background: {SURFACE_2}; }}
 QTabBar::tab:selected {{ color: {ACCENT}; border-bottom-color: {ACCENT}; font-weight: 600; background: {SURFACE}; }}
@@ -278,7 +289,7 @@ QPushButton#drawerToggle:hover {{ background: {SURFACE_3}; color: {TEXT}; }}
 
 QLabel#hostShellBanner {{
     background: #2a2412; color: {WARN}; border: 1px solid #6b5517;
-    border-radius: 6px; padding: 6px 8px; font-size: 12px;
+    border-radius: 6px; padding: 8px 10px; font-size: 13px;
 }}
 
 /* splitters + scrollbars */
@@ -304,10 +315,10 @@ QWidget#chatgptSidebar {{
     border-right: 1px solid {BORDER_SOFT};
 }}
 QLabel#sectionTitle {{
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: {TEXT_FAINT};
-    letter-spacing: 1.5px;
+    letter-spacing: 1.2px;
 }}
 QListWidget#chatgptNavList {{
     background: transparent;
@@ -320,7 +331,7 @@ QListWidget#chatgptNavList::item {{
     border-radius: 6px;
     padding: 7px 10px;
     margin-bottom: 2px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
 }}
 QListWidget#chatgptNavList::item:hover {{
@@ -361,7 +372,7 @@ QFrame#statusCard {{
     padding: 10px;
 }}
 QLabel#statusCardTitle {{
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: {TEXT_FAINT};
     letter-spacing: 1px;
@@ -398,6 +409,18 @@ def repolish(widget) -> None:
     widget.update()
 
 
+class _TablePolisher(QObject):
+    """Hide Qt's numeric row header on every table; rows already carry their own identity."""
+
+    def eventFilter(self, obj, event):  # noqa: N802 (Qt API)
+        if event.type() == QEvent.Type.Polish and isinstance(obj, QTableView) and not obj.property("keepRowNumbers"):
+            obj.verticalHeader().setVisible(False)
+        return False
+
+
+_POLISHER: _TablePolisher | None = None
+
+
 def apply_theme(app: QApplication) -> None:
     app.setStyle("Fusion")
     palette = QPalette()
@@ -419,3 +442,7 @@ def apply_theme(app: QApplication) -> None:
     font.setPointSize(10)
     app.setFont(font)
     app.setStyleSheet(STYLESHEET)
+    global _POLISHER
+    if _POLISHER is None:
+        _POLISHER = _TablePolisher(app)
+        app.installEventFilter(_POLISHER)

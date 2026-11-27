@@ -9,13 +9,12 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
-    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -30,6 +29,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from ui.widgets import enable_on_selection, format_command, mono_font
 
 
 def _mcp_config_path() -> Path:
@@ -165,16 +166,16 @@ class ISyMCPControlPanel(QWidget):
 
         self.hub_badge = QLabel("Hub :8798 · sin comprobar")
         self.hub_badge.setStyleSheet("padding: 4px 10px; border-radius: 10px; background: #142030; color: #94a3b8; font-weight: 600;")
-        hdr.addWidget(self.hub_badge)
+        hdr.addWidget(self.hub_badge, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.web_btn = QPushButton("Abrir Hub :8798")
         self.web_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("http://127.0.0.1:8798")))
-        hdr.addWidget(self.web_btn)
+        hdr.addWidget(self.web_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.refresh_btn = QPushButton("Comprobar todo")
         self.refresh_btn.setProperty("variant", "primary")
         self.refresh_btn.clicked.connect(self.refresh_all)
-        hdr.addWidget(self.refresh_btn)
+        hdr.addWidget(self.refresh_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         layout.addLayout(hdr)
 
         self.tabs = QTabWidget()
@@ -188,14 +189,15 @@ class ISyMCPControlPanel(QWidget):
         self.mcp_path_label = QLabel("")
         self.mcp_path_label.setStyleSheet("color: #9aa3b2; font-size: 12px;")
         m_top.addWidget(self.mcp_path_label, 1)
-        add_mcp_btn = QPushButton("➕ Añadir servidor MCP")
+        add_mcp_btn = QPushButton("Añadir servidor")
         add_mcp_btn.setProperty("variant", "primary")
         add_mcp_btn.clicked.connect(self._add_mcp_server)
         m_top.addWidget(add_mcp_btn)
-        del_mcp_btn = QPushButton("Eliminar seleccionado")
+        self.del_mcp_btn = del_mcp_btn = QPushButton("Eliminar")
         del_mcp_btn.setProperty("variant", "danger")
+        del_mcp_btn.setToolTip("Quita el servidor seleccionado de mcp.json (se guarda copia .bak)")
         del_mcp_btn.clicked.connect(self._remove_mcp_server)
-        m_top.addWidget(del_mcp_btn)
+        m_top.insertWidget(1, del_mcp_btn)
         m_lay.addLayout(m_top)
 
         self.mcp_warning_banner = QLabel("")
@@ -217,8 +219,11 @@ class ISyMCPControlPanel(QWidget):
         mhdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         mhdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         mhdr.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.mcp_table.setAlternatingRowColors(True)
+        self.mcp_table.setShowGrid(False)
         m_lay.addWidget(self.mcp_table, stretch=1)
-        self.tabs.addTab(mcp_page, "🔌 Servidores MCP")
+        enable_on_selection(self.mcp_table, del_mcp_btn)
+        self.tabs.addTab(mcp_page, "Servidores MCP")
 
         # --- Tab 2: Skills ---
         skills_page = QWidget()
@@ -233,7 +238,7 @@ class ISyMCPControlPanel(QWidget):
         self.skills_count = QLabel("0 skills")
         self.skills_count.setStyleSheet("color: #9aa3b2; font-size: 12px;")
         sk_top.addWidget(self.skills_count)
-        add_skill_btn = QPushButton("➕ Nueva Skill")
+        add_skill_btn = QPushButton("Nueva skill")
         add_skill_btn.setProperty("variant", "primary")
         add_skill_btn.clicked.connect(self._add_skill)
         sk_top.addWidget(add_skill_btn)
@@ -258,7 +263,7 @@ class ISyMCPControlPanel(QWidget):
         sk_split.addWidget(self.skill_preview)
         sk_split.setSizes([560, 440])
         sk_lay.addWidget(sk_split, stretch=1)
-        self.tabs.addTab(skills_page, "✨ Skills")
+        self.tabs.addTab(skills_page, "Skills")
 
         # --- Tab 3: Connectors ---
         conn_page = QWidget()
@@ -278,7 +283,7 @@ class ISyMCPControlPanel(QWidget):
         chdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         chdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         c_lay.addWidget(self.conn_table, stretch=1)
-        self.tabs.addTab(conn_page, "🔗 Conectores")
+        self.tabs.addTab(conn_page, "Conectores")
 
         layout.addWidget(self.tabs, stretch=1)
         self._skills_data: list[dict] = []
@@ -379,12 +384,23 @@ class ISyMCPControlPanel(QWidget):
             if not isinstance(spec, dict):
                 spec = {}
             transport = "HTTP/SSE" if spec.get("url") else "stdio"
-            target = str(spec.get("url") or (str(spec.get("command", "")) + " " + " ".join(map(str, spec.get("args", [])))).strip())
+            if spec.get("url"):
+                target = str(spec["url"])
+            else:
+                cmd = spec.get("command", "")
+                argv = list(cmd) if isinstance(cmd, (list, tuple)) else ([str(cmd)] if cmd else [])
+                argv += [str(a) for a in (spec.get("args") or [])]
+                target = format_command(argv)
             disabled = bool(spec.get("disabled"))
             self.mcp_table.setItem(idx, 0, QTableWidgetItem(name))
             self.mcp_table.setItem(idx, 1, QTableWidgetItem(transport))
-            self.mcp_table.setItem(idx, 2, QTableWidgetItem(target))
-            self.mcp_table.setItem(idx, 3, QTableWidgetItem("Desactivado" if disabled else "Registrado"))
+            target_item = QTableWidgetItem(target)
+            target_item.setFont(mono_font(10))
+            target_item.setToolTip(target)
+            self.mcp_table.setItem(idx, 2, target_item)
+            state_item = QTableWidgetItem("○ Desactivado" if disabled else "● Registrado")
+            state_item.setForeground(QColor("#859ab2" if disabled else "#4ade80"))
+            self.mcp_table.setItem(idx, 3, state_item)
 
     def _add_mcp_server(self) -> None:
         dlg = AddMcpServerDialog(self)

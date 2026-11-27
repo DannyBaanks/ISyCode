@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-import json
 import uuid
 
 from PySide6.QtCore import Signal
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
 from core.runtime.base import ToolCall
 from ..thread import HostToolWorker
 from ..approval_dialog import request_decision
+from ..widgets import format_command, mono_font, parse_command
 
 
 def discover_project_tests(working_dir) -> dict:
@@ -68,20 +68,27 @@ class TestsPanel(QWidget):
         layout.setSpacing(8)
 
         row = QHBoxLayout()
-        lbl = QLabel("PRUEBAS DEL PROYECTO · COPIA AISLADA")
-        lbl.setStyleSheet("font-size: 11px; font-weight: 700; color: #6b7385; letter-spacing: 1px;")
-        row.addWidget(lbl)
-        row.addStretch(1)
+        self.discovery_label = QLabel("")
+        self.discovery_label.setWordWrap(True)
+        self.discovery_label.setStyleSheet("color: #adbed1; font-size: 13px;")
+        row.addWidget(self.discovery_label, 1)
 
         self.run_button = QPushButton("Revisar y ejecutar")
         self.run_button.setProperty("variant", "primary")
         self.run_button.setToolTip("Ejecuta la suite de pruebas del proyecto en copia aislada")
         self.run_button.clicked.connect(self.run)
-        row.addWidget(self.run_button)
 
         self.discover_button = QPushButton("Detectar pruebas")
         self.discover_button.clicked.connect(self.refresh_discovery)
         row.addWidget(self.discover_button)
+
+        self.stop_button = QPushButton("Detener")
+        self.stop_button.setProperty("variant", "danger")
+        self.stop_button.setEnabled(False)
+        self.stop_button.setVisible(False)
+        self.stop_button.clicked.connect(self.cancel)
+        row.addWidget(self.stop_button)
+        row.addWidget(self.run_button)
 
         self.help_button = QPushButton("?")
         self.help_button.setObjectName("helpButton")
@@ -92,29 +99,27 @@ class TestsPanel(QWidget):
         row.addWidget(self.help_button)
         layout.addLayout(row)
 
-        self.discovery_label = QLabel("")
-        self.discovery_label.setWordWrap(True)
-        self.discovery_label.setStyleSheet("color: #9aa3b2; font-size: 12px;")
-        layout.addWidget(self.discovery_label)
-
-        self.last_run_label = QLabel("Última ejecución: ninguna en esta sesión")
-        self.last_run_label.setStyleSheet("color: #6b7385; font-size: 11px;")
-        layout.addWidget(self.last_run_label)
-
-        self.command = QLineEdit('["python3", "-m", "pytest", "-q"]')
-        self.command.setPlaceholderText('argv JSON, por ejemplo ["python3", "-m", "unittest"]')
-        layout.addWidget(self.command)
-        hint = QLabel("El perfil inicial usa herramientas/Python del sistema y no copia venv, node_modules ni credenciales. Revisa la disponibilidad de dependencias en la salida.")
+        cmd_row = QHBoxLayout()
+        cmd_label = QLabel("Comando")
+        cmd_label.setStyleSheet("color: #adbed1; font-weight: 600;")
+        cmd_row.addWidget(cmd_label)
+        self.command = QLineEdit("python3 -m pytest -q")
+        self.command.setFont(mono_font(11))
+        self.command.setPlaceholderText("por ejemplo: python3 -m unittest discover -v")
+        self.command.returnPressed.connect(self.run)
+        cmd_row.addWidget(self.command, 1)
+        layout.addLayout(cmd_row)
+        hint = QLabel("Se ejecuta en una copia aislada con las herramientas del sistema (sin venv, node_modules ni credenciales).")
         hint.setWordWrap(True)
+        hint.setStyleSheet("color: #859ab2; font-size: 12px;")
         layout.addWidget(hint)
-        self.stop_button = QPushButton("Detener")
-        self.stop_button.setEnabled(False)
-        self.stop_button.clicked.connect(self.cancel)
-        layout.addWidget(self.stop_button)
+        self.last_run_label = QLabel("Última ejecución: ninguna en esta sesión")
+        self.last_run_label.setStyleSheet("color: #859ab2; font-size: 12px;")
+        layout.addWidget(self.last_run_label)
 
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
-        self.output.setStyleSheet("font-family: Consolas, monospace; font-size: 12px;")
+        self.output.setFont(mono_font(11))
         layout.addWidget(self.output, stretch=1)
         self.refresh_discovery()
 
@@ -122,7 +127,7 @@ class TestsPanel(QWidget):
         info = discover_project_tests(self.controller.working_dir)
         self.discovery_label.setText(f"{self.controller.working_dir.name}: {info['detail']}")
         if info["framework"] != "none":
-            self.command.setText(json.dumps(info["argv"], ensure_ascii=False))
+            self.command.setText(format_command(info["argv"]))
         self.output.setPlaceholderText(
             f"Proyecto: {self.controller.working_dir}\n"
             f"Detección: {info['detail']}\n"
@@ -137,11 +142,11 @@ class TestsPanel(QWidget):
             self.output.appendPlainText("Espera a que termine el agente o la operación Git antes de ejecutar pruebas.")
             return
         try:
-            argv = json.loads(self.command.text())
-            if not isinstance(argv, list) or not argv or not all(isinstance(arg, str) for arg in argv):
+            argv = parse_command(self.command.text())
+            if not argv:
                 raise ValueError()
         except ValueError:
-            self.output.appendPlainText("Introduce una lista JSON de argumentos.")
+            self.output.appendPlainText("Introduce un comando, por ejemplo: python3 -m pytest -q")
             return
         self.output.clear()
         self.run_button.setEnabled(False)
@@ -156,6 +161,7 @@ class TestsPanel(QWidget):
         worker.failed.connect(self.output.appendPlainText)
         worker.finished.connect(lambda w=worker: self._finished(w))
         self.stop_button.setEnabled(True)
+        self.stop_button.setVisible(True)
         worker.start()
 
     def _approve(self, identifier, tool_name, arguments, diff):
@@ -183,4 +189,5 @@ class TestsPanel(QWidget):
             self._worker = None
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
+            self.stop_button.setVisible(False)
         worker.deleteLater()

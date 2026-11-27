@@ -2,7 +2,7 @@
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFormLayout, QGroupBox,
-                               QHBoxLayout, QLabel, QPushButton, QScrollArea,
+                               QLabel, QPushButton, QScrollArea,
                                QSpinBox, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout, QWidget)
 import json
@@ -10,6 +10,7 @@ from pathlib import Path
 
 from core.ide_state import migrate_project_metadata, migrate_provider_metadata
 from core.ui_preferences import UiPreferences
+from ui.widgets import button_row, enable_on_selection, format_command, mono_font, stretch_columns
 
 
 class SettingsPanel(QWidget):
@@ -43,6 +44,7 @@ class SettingsPanel(QWidget):
         self.view = QComboBox()
         self.view.addItem("Conversación", "conversation")
         self.view.addItem("Código + chat", "code")
+        self.view.setMaximumWidth(320)
         form.addRow("Vista inicial", self.view)
         self.remember = QCheckBox("Recordar la última vista")
         form.addRow("", self.remember)
@@ -62,7 +64,7 @@ class SettingsPanel(QWidget):
         save = QPushButton("Guardar preferencias")
         save.setProperty("variant", "primary")
         save.clicked.connect(self.save)
-        form.addRow("", save)
+        form.addRow("", button_row(save, align="left"))
         sections.addWidget(appearance)
 
         ws_group = QGroupBox("Proyecto / Workspace activo")
@@ -74,7 +76,7 @@ class SettingsPanel(QWidget):
         ws_box.addWidget(self.workspace_info)
         ws_btn = QPushButton("Cambiar carpeta de proyecto…")
         ws_btn.clicked.connect(self.workspace_change_requested.emit)
-        ws_box.addWidget(ws_btn)
+        ws_box.addLayout(button_row(ws_btn, align="left"))
         sections.addWidget(ws_group)
 
         permissions = QGroupBox("Permisos de comandos · este proyecto")
@@ -85,21 +87,26 @@ class SettingsPanel(QWidget):
         permission_box.addWidget(hint)
         self.grants_empty_label = QLabel("Sin permisos permanentes todavía: se agregan aquí cuando eliges «Permitir siempre» al aprobar un comando en el chat.")
         self.grants_empty_label.setWordWrap(True)
-        self.grants_empty_label.setStyleSheet("color: #9aa3b2; font-size: 11px;")
+        self.grants_empty_label.setStyleSheet("color: #9aa3b2; font-size: 12px;")
         permission_box.addWidget(self.grants_empty_label)
         self.grants = QTreeWidget()
         self.grants.setHeaderLabels(["Comando", "Estado"])
         self.grants.setMinimumHeight(160)
+        self.grants.setRootIsDecorated(False)
+        self.grants.setAlternatingRowColors(True)
+        self.grants.setFont(mono_font(10))
+        stretch_columns(self.grants.header(), 0, fit=(1,))
         permission_box.addWidget(self.grants)
-        revoke = QPushButton("Revocar permiso seleccionado")
+        self.revoke_button = revoke = QPushButton("Revocar permiso")
         revoke.setProperty("variant", "danger")
         revoke.clicked.connect(self.revoke_grant)
-        permission_box.addWidget(revoke)
-        refresh = QPushButton("Actualizar permisos")
+        refresh = QPushButton("Actualizar")
+        refresh.setProperty("variant", "ghost")
         refresh.clicked.connect(self.refresh_grants)
-        permission_box.addWidget(refresh)
+        permission_box.addLayout(button_row(refresh, revoke))
+        enable_on_selection(self.grants, revoke)
         sections.addWidget(permissions)
-        migration = QGroupBox("Migración desde IsyVM")
+        self.migration_group = migration = QGroupBox("Migración desde IsyVM")
         box = QVBoxLayout(migration)
         box.setContentsMargins(20, 22, 20, 22)
         self.migration_state_label = QLabel("")
@@ -111,10 +118,9 @@ class SettingsPanel(QWidget):
         box.addWidget(hint)
         global_button = QPushButton("Importar configuración pública de providers")
         global_button.clicked.connect(lambda: self.migrate(False))
-        box.addWidget(global_button)
         project_button = QPushButton("Importar estado antiguo de este proyecto")
         project_button.clicked.connect(lambda: self.migrate(True))
-        box.addWidget(project_button)
+        box.addLayout(button_row(global_button, project_button, align="left"))
         sections.addWidget(migration)
         self.notice = QLabel("")
         self.notice.setWordWrap(True)
@@ -150,7 +156,9 @@ class SettingsPanel(QWidget):
                 if has_legacy_proj:
                     parts.append("estado legacy en proyecto (.isyvm/)")
                 self.migration_state_label.setText("Estado: Pendiente / disponible (" + ", ".join(parts) + ")")
+                self.migration_group.setVisible(True)
             else:
+                self.migration_group.setVisible(False)
                 self.migration_state_label.setText("Estado: No aplica (no se detectó estado legacy de IsyVM en este proyecto ni en ~/.isyvm)")
         self.refresh_grants()
 
@@ -165,7 +173,7 @@ class SettingsPanel(QWidget):
             self.grants_empty_label.setVisible(not records)
         for record in records:
             identity = record["identity"]
-            item = QTreeWidgetItem([json.dumps(identity["argv"], ensure_ascii=False), "Activo" if record["enabled"] else "Revocado"])
+            item = QTreeWidgetItem([format_command(identity["argv"]), "Activo" if record["enabled"] else "Revocado"])
             item.setData(0, Qt.ItemDataRole.UserRole, record["key"])
             item.setToolTip(0, json.dumps(identity, ensure_ascii=False, indent=2))
             self.grants.addTopLevelItem(item)
