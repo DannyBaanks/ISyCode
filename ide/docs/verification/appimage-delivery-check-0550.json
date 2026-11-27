@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T05:14:13.736441+00:00",
+  "command": "APPIMAGE_EXTRACT_AND_RUN=1 QT_QPA_PLATFORM=offscreen /home/danny/Development/ISyCode-IDE/dist/ide-20261011T051159Z-237f93/ISyCode-IDE-x86_64.AppImage --self-check",
+  "exit": 0,
+  "sha256": "49785a05eddba13c1fffc80bd5bc025181f301f50b936f903520f18e9f9f6a01",
+  "scope": "Private temporary projects and synthetic/local fixtures, or own additive launcher; no real account requests"
+}

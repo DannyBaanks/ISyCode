@@ -1,0 +1,16 @@
+{
+  "command": [
+    "env",
+    "QT_QPA_PLATFORM=offscreen",
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_ide_provider_streams.py",
+    "tests/test_provider_endpoints.py",
+    "tests/test_providers.py",
+    "tests/test_opencode_import.py"
+  ],
+  "exit_status": 0,
+  "sha256": "375bc10085c365190bc8a26cf5f22c06d674f9ca96d3629326e6ce31a385bedb"
+}

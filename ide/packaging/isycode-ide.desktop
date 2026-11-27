@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ISyCode IDE
+Comment=Entorno nativo de programación con agentes y cambios revisados
+Exec=isycode-ide %f
+Icon=isycode-ide
+Terminal=false
+Categories=Development;IDE;
+StartupWMClass=ISyCode IDE

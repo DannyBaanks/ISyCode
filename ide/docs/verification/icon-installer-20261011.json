@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T05:37:16.244248+00:00",
+  "command": "QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q tests/test_ide_package_install.py",
+  "exit": 0,
+  "sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2",
+  "scope": "One installer test with temporary HOME; absolute icon path and image bytes checked; no account requests"
+}

@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-10-11T02:39:52.209096+00:00",
+  "raw_output": "full-suite-0320.log",
+  "exit_status": 0,
+  "sha256": "3c909bf794a059b3465c1c5a38a1438c3803ebd3cbc124908505e30fcecdd860",
+  "command": "QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q",
+  "scope": "private fixtures; no real account generation or GitHub user repositories"
+}

@@ -1,0 +1,10 @@
+SYNTAX_OK core/project_tree.py
+SYNTAX_OK core/runtime/base.py
+SYNTAX_OK core/agent/run.py
+SYNTAX_OK core/agent/providers/openai.py
+SYNTAX_OK core/tool_settings.py
+SYNTAX_OK ui/thread.py
+SYNTAX_OK ui/bridge.py
+SYNTAX_OK ui/main_window.py
+SYNTAX_OK ui/panels/chat.py
+SYNTAX_OK ui/panels/workspace.py

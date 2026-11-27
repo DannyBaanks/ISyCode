@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-10-11T13:06:35.780529+00:00",
+  "scope": "Source syntax and additive build only; no runtime regression or account inference run",
+  "source": {
+    "GUIA.md": "7148a464246ffe176a6bb092e02c4e46e43ef3a3b52d14480336204e26c23452",
+    "core/runtime/base.py": "1c716025898d6087d81e25f4abb615116158784c9f7d07f27dafe21c148ebff3",
+    "core/agent/run.py": "7c04a8a0096b7ac32c477ac83c70c95efc76ed1cba2254f118956c62c153b978",
+    "core/agent/providers/openai.py": "02d4513fd03ee2200c8fa9a2c92b5c653d7b937d11506a11b91bbf13feaf61d6",
+    "ui/thread.py": "8ac363ce0f7ce98b78bf5633e05067887ae6b4836bf7fd776a594e56acada0e9",
+    "ui/bridge.py": "663dd6272ace80357e4f04575fe316dcfd23cde581a247151410f0b2171d9ea2",
+    "ui/main_window.py": "ed9e9af491d260b017682930d0c1e36fb82eef93ec2f12338f08b517382b496a",
+    "ui/panels/chat.py": "0254c8ac1c4f99afe3a33bc0d9de338038ff15defd4a27b6b8233ef425951bac"
+  },
+  "build": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T130503Z-00b6c2",
+  "package_manifest_sha256": "14bbfc6191091e12a63f2a70c298f4bb78d771bd9332f39bd8edea97f9ade639",
+  "build_log_sha256": "8de526f4389d2ee8d5ead210d98aeb6003718804a0b2fc4bd1b4cb59ecb2ba98",
+  "syntax_log_sha256": "f283f5361b231a7daa1c1826343b5014c034549e01e8eb2b2d48842b23479855",
+  "bundled_guide_identical": true,
+  "automated_tests_run": false,
+  "live_nemotron_and_cancel_e2e": "NOT_DEMONSTRATED",
+  "known_pending_issue": "Explorer restore affordance reported by user"
+}

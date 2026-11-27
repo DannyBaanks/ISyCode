@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-10-11T02:37:22.933453+00:00",
+  "command": "QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q",
+  "exit_status": 0,
+  "raw_output": "full-suite-0310.log",
+  "sha256": "9e7776b87f6e3c4daea9307e6917f2c9b2e8e0aa19e2e11c2c7562a0a454d5be",
+  "scope": "179 local tests; private test state/keyring; no real inference or GitHub account requests"
+}

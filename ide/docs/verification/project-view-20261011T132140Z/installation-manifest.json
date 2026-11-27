@@ -1,0 +1,11 @@
+{
+  "operation": "Replace installed IDE launcher only; historical executables and original launcher content preserved",
+  "paths": [
+    "/home/danny/.local/bin/isycode-ide"
+  ],
+  "file_count": 1,
+  "tracked": false,
+  "reason": "Use the final project-view and cancellation build of ISyCode IDE",
+  "equivalent_content": "/home/danny/Development/ISyCode-IDE/docs/verification/project-view-20261011T132140Z/previous-launcher.sh",
+  "deletions": []
+}

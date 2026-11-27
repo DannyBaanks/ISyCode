@@ -1,0 +1,12 @@
+usage: isycode-ide [-h] [workspace]
+
+ISyCode IDE — interfaz gráfica nativa
+
+positional arguments:
+  workspace   Carpeta del proyecto
+
+options:
+  -h, --help  show this help message and exit
+
+Otros modos: isycode-ide tui [comandos] · accounts (suscripciones) · migrate
+(solo metadatos) · --self-check

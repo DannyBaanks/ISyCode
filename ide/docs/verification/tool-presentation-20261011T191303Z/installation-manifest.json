@@ -1,0 +1,13 @@
+{
+  "exact_paths": [
+    "/home/danny/.local/bin/isycode-ide"
+  ],
+  "replacement_file_count": 1,
+  "directory_replacements": 0,
+  "tracked": false,
+  "reason": "Point existing ISyCode IDE launcher to new tool presentation build",
+  "backup": "/home/danny/Development/ISyCode-IDE/docs/verification/tool-presentation-20261011T191303Z/previous-launcher.sh",
+  "old_sha256": "25fe11fb09aa67fe43abaab0f7ad3b3246ad2c6557a33c081dcc7839ac7626d6",
+  "old_builds_preserved": true,
+  "deleted_files": []
+}

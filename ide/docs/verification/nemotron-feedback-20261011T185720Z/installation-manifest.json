@@ -1,0 +1,13 @@
+{
+  "exact_paths": [
+    "/home/danny/.local/bin/isycode-ide"
+  ],
+  "replacement_file_count": 1,
+  "directory_replacements": 0,
+  "tracked": false,
+  "backup": "/home/danny/Development/ISyCode-IDE/docs/verification/nemotron-feedback-20261011T185720Z/previous-launcher.sh",
+  "reason": "Point existing ISyCode IDE launcher to the new additive build",
+  "prior_sha256": "976c7c0ac743c666916d84819b35dcab7f87a74a8be381644d3589722cd262e1",
+  "previous_build_preserved": true,
+  "deleted_files": []
+}

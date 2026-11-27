@@ -1,0 +1,15 @@
+{
+  "command": [
+    "env",
+    "QT_QPA_PLATFORM=offscreen",
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_ide_qt_shell.py",
+    "tests/test_ide_daily_workflow.py",
+    "tests/test_ui_panels.py"
+  ],
+  "exit_status": 0,
+  "sha256": "636897375c713857fbed525a3a5f7f4fee397ffe2e4e10c59f563f2a33ae589c"
+}

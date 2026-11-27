@@ -1,0 +1,82 @@
+{
+  "source": "https://github.com/tabler/tabler-icons",
+  "commit": "a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+  "license": "MIT",
+  "icons": [
+    {
+      "file": "message-circle.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/message-circle.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "b91882d50b30e3884b289a51c2f1134464844fbd5bb5f61633d2d068db2d57a0"
+    },
+    {
+      "file": "code.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/code.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "ff3d40c83c1a908bc3aa173671232e5015dba2f7f3538edc23fa2218a3d329e2"
+    },
+    {
+      "file": "folder.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/folder.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "acdf398775addb8104673e5a8ef29d01d40184c6a5b3c62a93f10309cf9ef253"
+    },
+    {
+      "file": "git-branch.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/git-branch.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "7c45a13d2b0e6a6915730471345ebf7fbe0374bcd61d19679d59c5ffa38a234b"
+    },
+    {
+      "file": "tool.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/tool.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "f812b6a05026dd0b242533272ff99f3e05eab6fc647063d8a322707c25558e6e"
+    },
+    {
+      "file": "flask.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/flask.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "28459e1fcdf7e9d8b0664aa3fe350995c4df3dda6ee9823351df3ea0f5714d17"
+    },
+    {
+      "file": "file-text.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/file-text.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "afc807ae397fc2419ac5cbca6a1e085a5f761277397682cbad3d907ca78693f5"
+    },
+    {
+      "file": "database.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/database.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "7cdcca11c1555d48e19c2fcd2fce4420cbec734f3fa3d28274f8167a796ee0d6"
+    },
+    {
+      "file": "brand-github.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/brand-github.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "1ba4d43069f269d4aedc71bd5887632ae08b17435d64f47f331b18c316ffeb37"
+    },
+    {
+      "file": "settings.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/settings.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "ef9cf42d822c00b4fad5bc5eeceddd4e1ec3774bb7ddd09891d0fba274bc3e95"
+    },
+    {
+      "file": "terminal-2.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/terminal-2.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "ea232ff7461f39a6c65c5919c0f9b28de29d2586730a9eeef2b2428526ceb069"
+    },
+    {
+      "file": "cpu.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/cpu.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "d9ecd8e0f4a140f8a0c272d3cb6d7e380c6a57f2d5e823980dc40024fa7387ac"
+    },
+    {
+      "file": "menu-2.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/menu-2.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "bcef199c5e53082a56c7bf33d4c48181b71373eb5d923cce8884aca09d106842"
+    },
+    {
+      "file": "search.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/search.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "3dd53b9606283dfa0adcb0b10a7d9a4432369d4bebcfacf67f80fbe358381c34"
+    },
+    {
+      "file": "plus.svg",
+      "url": "https://api.github.com/repos/tabler/tabler-icons/contents/icons/outline/plus.svg?ref=a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+      "sha256": "9cc497d4cc1eb38cf9daae18f41ffdc1a5e2a8431d70247b0854978f303f28d6"
+    }
+  ]
+}

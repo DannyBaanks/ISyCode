@@ -1,0 +1,302 @@
+{
+  "scope": "actual Qt renders; fictitious project/messages; no network/account requests",
+  "renders": [
+    {
+      "path": "conversation-1024.png",
+      "sha256": "b3ba2d0748882b47e5033fda85fa2401c674ef3b64beea19c558f61702b43cd8",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "code-1024.png",
+      "sha256": "746f8c1348f15b172500504a05553c1d62334f730877adb2b4d679f822d39a56",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "tools-1024.png",
+      "sha256": "8f40131de2da028a2675920442724482a71e52d954849e9b9f6fab1642de5d5c",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "tests-1024.png",
+      "sha256": "ae5cc81a43ae5c335b23d54395d83c0147197ba9bd63e4154dee38b4ce6275c1",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "evidence-1024.png",
+      "sha256": "a09e2af5e0539f6ace5328c03d1da450c1562152f70f1a4398d3ee4661f02dd0",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "system-1024.png",
+      "sha256": "1c06f3bfd7525d79d987c9249bffbfbb8b14dbf746d9fad8d2084b83d69a0cd7",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "github-1024.png",
+      "sha256": "7729a498c423e1c595d4ff9aabe9c89c48efc5a729307de281756467990fd6f6",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "provider-1024.png",
+      "sha256": "022f3159fbe28e4e451c5f57ea8e5ca2c8854520d56abb431f0007a32f7a3083",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "settings-1024.png",
+      "sha256": "55771c89bd29f7ef97d39d3948c265126a446ab68d3c4d6cd26a626966a73e27",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "terminal-1024.png",
+      "sha256": "063a479d561148dbaccb50b0fd889f352b1bd4218a14cd3dbf26eb1b428f1580",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "subscriptions-1024.png",
+      "sha256": "ad0f8695c7ca17cc042cd8c4ee4a997eebd0b5e1c90145d42b4dd98c48a0ce67",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "conversation-1366.png",
+      "sha256": "2c9df4e7d182a0060e074615a78b54339fc9d18714b4b1e1c0fc57927213ec83",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "code-1366.png",
+      "sha256": "8ea61027cfa5ca521700a3fbfbb8eb578164238c373bd6b469159d0b258280c3",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "tools-1366.png",
+      "sha256": "e5766d2906b295fe4f225ed7bc1c7460c64ac29494b455460b809d228bb5ddd6",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "tests-1366.png",
+      "sha256": "4bae361bb5541601a56181dabd863543e0271c10a2eb0ca74ed4fb82a5c0c2c1",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "evidence-1366.png",
+      "sha256": "0acc042d30a453bfd24488e6cf2120c44dce35a80dbac076c12993095692e8b7",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "system-1366.png",
+      "sha256": "6360e7f98d52a47e446b09eae0b4ca50291f8dc50f627ac0ef9ae4a831f6a93e",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "github-1366.png",
+      "sha256": "468176950af0671710aff311acfd8ec210f70a7aac5511178ed1000c2a4b1454",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "provider-1366.png",
+      "sha256": "11115ed7cf9bcaf1c16f845041a7784b7521799e4e87281ec4594fca6360f1c2",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "settings-1366.png",
+      "sha256": "13f24a5e52ccabb49fed5e0288cf0699eeeb0eb6dc5f6a7656fb6c49d3153064",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "terminal-1366.png",
+      "sha256": "924fb43dbc1b9d0bcbc73b20ceacb343d70a3f3c0f8dcefece318a59e9f234a6",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "subscriptions-1366.png",
+      "sha256": "615e66f0e18257b76467be3a941b83c5e2b8cda52ff0cbe0e951c429d248de27",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "conversation-1920.png",
+      "sha256": "48bad02028365345550902ab5e9e8e5879f761da166e0ee7b80b62dd94070102",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "code-1920.png",
+      "sha256": "d3bbb7d69c4b2f3dc4aca7b5f09b8ba0a4202eede0173e7d3ff360883879ca2d",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "tools-1920.png",
+      "sha256": "5370ff932c799bf513bd5d54b3746e47550447d8edb5515562b29b1dc1b9eab7",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "tests-1920.png",
+      "sha256": "fcf303980359ee257f157664a3764cc9eed118f22665b01ccc545bae68b1270e",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "evidence-1920.png",
+      "sha256": "dfa17b7522ea95ee077776e92d5aa3b80d6ad3ccc5ce7b189ae5d7467b82d236",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "system-1920.png",
+      "sha256": "a7359f3093cf22d0415aa6ccc68c242b30deec8172b846aa6b2fcf12af82ab7a",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "github-1920.png",
+      "sha256": "517425a85b37414f496e596a8a462aaf03b824cf335cf5ba406b7673068fb252",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "provider-1920.png",
+      "sha256": "f18ac6159c48311082fb1ceba6d62eab9a965ab1302f4a91b8ee76a515c3d6da",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "settings-1920.png",
+      "sha256": "bc3bf210905c5c26759882f8c665c0f781f7bbd00e79c36b055835990e6c077c",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "terminal-1920.png",
+      "sha256": "7e2415f05e33dc9466177e6f8c360f9c4a1d01cd9507d79105e08f01c0b2801c",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    },
+    {
+      "path": "subscriptions-1920.png",
+      "sha256": "33197bc9b42edc0b0acbd6f1e48a5bf45cdb210e909a38dff5b7045beecf1f3c",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 2.0
+    }
+  ]
+}

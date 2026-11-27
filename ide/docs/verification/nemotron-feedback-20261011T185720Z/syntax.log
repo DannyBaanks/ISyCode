@@ -1,0 +1,9 @@
+AST parsed core/agent/diagnostics.py
+AST parsed core/agent/providers/base.py
+AST parsed core/agent/providers/openai.py
+AST parsed core/agent/run.py
+AST parsed core/conversations.py
+AST parsed core/project_tree.py
+AST parsed ui/thread.py
+AST parsed ui/panels/chat.py
+AST parsed ui/main_window.py

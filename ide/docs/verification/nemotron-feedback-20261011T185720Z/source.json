@@ -1,0 +1,20 @@
+{
+  "baseline_commit": "6cc424719410e1b166b1a9a9d5f0c4378bad1599",
+  "timestamp_utc": "20261011T185720Z",
+  "sha256": {
+    "core/agent/diagnostics.py": "7a83ea5374cc21de14ad1c5c863b426fedf814807b30050aefe1ffa9d93be7f2",
+    "core/agent/providers/base.py": "4a0b52dbcf83774e5c4d7505d7044ae6ba0870a95ddaf8fb41c5fd09e15a33da",
+    "core/agent/providers/openai.py": "39ec64e45894fd31eab7d19745ce03e85856c6390d7e4523dd6c13286af5abf2",
+    "core/agent/run.py": "eff756b8b3ca747c64e1793b46f0cedc9601f128c3ceb3b3ef4a81fe3ac8c6ea",
+    "core/conversations.py": "2560db941a886cf79748ed5ce52ace9c10b8d7545891be14cf6eba6562c24b6d",
+    "core/project_tree.py": "5bf663325efbc633a21e1bfb4d0cbbbcf806ca7c492af04bec82b8dc24f35a13",
+    "ui/thread.py": "226b3623185775ef9eef69193ed15b1ec5747a75c66e086def62da219a13a1c0",
+    "ui/panels/chat.py": "ccf30391b60abd7b509719ac9e1f57c2e16df7ae4f2fd617b138917cdeadc3d8",
+    "ui/main_window.py": "17b75f64f93720dd92a3ad12d9fb236824c1d444f71e7d6b982232311e573de1",
+    "GUIA.md": "a9651f1d0ca39e9513d6b34dce59f1e6955b55672791956fb245ff8d224cdf14",
+    "docs/design/2026-10-11-nemotron-feedback.md": "50943dd189f98ea6344d81f0e841f5c6f07ca07a4058c4cb0fb1eae055717dbd"
+  },
+  "automated_tests_run": false,
+  "live_provider_calls": 0,
+  "runtime_regression": "NOT_DEMONSTRATED"
+}

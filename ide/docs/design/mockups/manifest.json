@@ -1,0 +1,78 @@
+{
+  "kind": "approved-design-reference",
+  "created": "2026-10-10",
+  "images": [
+    {
+      "name": "conversation",
+      "file": "conversation.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-43040977-1623-4f38-a09a-6b644dc29c9c.png",
+      "sha256": "0c57f64ff4522ea9189f467abf7431e50fde8608236b15158a8a580757ce32c6"
+    },
+    {
+      "name": "code-chat",
+      "file": "code-chat.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-439437c3-c1c3-4663-8cb2-ead5d399e39f.png",
+      "sha256": "46de6f325f7808f90fe49cf46a0328534eb42358e7b76ca1f0fa6038f6f4bf4e"
+    },
+    {
+      "name": "providers",
+      "file": "providers.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-3cb7237e-08f4-40ad-a607-3a05942bed5a.png",
+      "sha256": "279b8626b538fe43cf9e3650be780152d1ea4052e3fce492b9769bdb4e33e2b4"
+    },
+    {
+      "name": "tools",
+      "file": "tools.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-77319dff-eeee-46bd-a8d8-51073806cd96.png",
+      "sha256": "641230fd6770d42f29bccca3daeb49167610bef3ed6f15824ec4fa51e380d7ac"
+    },
+    {
+      "name": "changes",
+      "file": "changes.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-499ede26-23d1-4f1c-b879-726ff85f9260.png",
+      "sha256": "1c208b76c8dba46ab4f7ce68d982a634c26cbeda379e2b8bff6b55e6c539103a"
+    },
+    {
+      "name": "tests",
+      "file": "tests.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-f9392ac7-8b68-4d1d-9f44-b868a7dcd4c9.png",
+      "sha256": "94dacc001c26c9f35e41c0c7f8fb37b1f08626b7af21dd88bdbd3e51d0257a5f"
+    },
+    {
+      "name": "evidence",
+      "file": "evidence.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-dd8aa13b-dff2-46ab-99b3-3590904ea2e6.png",
+      "sha256": "76f11522cd6c9d497d9b76c901d617998921b7bd880e97a3f44a0511f087c2d1"
+    },
+    {
+      "name": "system",
+      "file": "system.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-2e9c8a7d-2684-4825-aafc-7c1746481a1f.png",
+      "sha256": "32d0d26a459a37ec225c44c0cf4782bc2689cbdad13aafc563df85ffc4739994"
+    },
+    {
+      "name": "settings",
+      "file": "settings.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-a682e35a-516b-424c-9913-349400b8fb4e.png",
+      "sha256": "31d5b666ba9c9352ac7d79706cd7f06229e7e766904aa1f0041be0b0e983e202"
+    },
+    {
+      "name": "terminal",
+      "file": "terminal.png",
+      "source": "/home/danny/.codex/generated_images/01a12542-d658-7ec1-91ac-e50e3f6f6403/exec-26a8eae1-2b87-4a1d-93e2-54b627a535b7.png",
+      "sha256": "192bcdcc60dea024316c3056fde6d15cc8b78089bff621f0d5df2b479cc5114d"
+    },
+    {
+      "name": "github-sync",
+      "file": "github-sync.png",
+      "source": "/home/danny/.codex/generated_images/01a12664-404c-72e0-b807-0a3eb471ef60/exec-873351aa-de2d-4b9b-94f0-d0d84dae1f6f.png",
+      "sha256": "858efb94a308a11aeaac849f7efb21d7cface491ed15f6758ef4e8bb60826909",
+      "status": "proposed-extension",
+      "data": "fictional example repositories; not a live diagnosis",
+      "created": "2026-10-10",
+      "tool": "built-in image_gen",
+      "prompt_file": "github-sync.prompt.txt",
+      "reference": "conversation.png"
+    }
+  ]
+}

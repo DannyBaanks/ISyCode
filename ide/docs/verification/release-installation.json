@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-10-11T05:14:13.737009+00:00",
+  "installed_files": [
+    {
+      "path": "/home/danny/.local/bin/isycode-ide",
+      "sha256": "e2ffc58225f09e7c541ca4eb215f6ff266fecd7b891a4fd5c89a1d4b24416652",
+      "mode": "0o755"
+    },
+    {
+      "path": "/home/danny/.local/share/applications/isycode-ide.desktop",
+      "sha256": "61ee4285e86ff286cedc6ec9ce17c7fc0e37f2bf68d9da94804f984b2eeb557b",
+      "mode": "0o664"
+    },
+    {
+      "path": "/home/danny/.local/share/icons/hicolor/256x256/apps/isycode-ide.png",
+      "sha256": "cf12089cdeed5d2483faa8cb655751430b2738e1aff0fce0d5f390d5623922e2",
+      "mode": "0o664"
+    }
+  ],
+  "release_sources": [
+    {
+      "path": "core/github_service.py",
+      "sha256": "d8fa3003b009267aea1c09339028d73d7423aff8f483f4c42226a17b0a8bce42"
+    },
+    {
+      "path": "core/agent/providers/anthropic.py",
+      "sha256": "5b00a538f564edcc2240fe8eec30cb838dad57a0bdd5e72bc5222f8248d2e1e8"
+    },
+    {
+      "path": "core/agent/chat.py",
+      "sha256": "05cc84cc5500003a57b17fbdf894c9fb2224d7e28e7c7e666d0fdd40f37555c3"
+    },
+    {
+      "path": "ui/main_window.py",
+      "sha256": "b792e6d2822fac00bcb2f082bb50aed442dcbe98c427c1ee76a5034354cd7cce"
+    },
+    {
+      "path": "packaging/isycode_ide.spec",
+      "sha256": "d670d6feef28aef8ea380df4a16fbad9478308f6d7e15006a0a39dce4f948e84"
+    },
+    {
+      "path": "packaging/install_ide.py",
+      "sha256": "13ea1c9736fdbf8ded37df9fdc6b52eacb8609651d2653da777fe186cae3fc22"
+    }
+  ],
+  "appimage": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T051159Z-237f93/ISyCode-IDE-x86_64.AppImage",
+  "account_requests": 0,
+  "final_checks": [
+    "full-suite-delivery-0540.json",
+    "appimage-delivery-check-0550.json",
+    "installed-delivery-check-0550.json",
+    "installed-delivery-tui-0550.json",
+    "installed-delivery-accounts-0550.json"
+  ]
+}

@@ -1,0 +1,57 @@
+Identity: vm.bridge_isyco
+Version: 0.1.0
+Status: Active
+Layer: Membrane
+Category: BridgeContract
+Title: Puente solo-lectura entre IsyVM e ISyCo
+
+Purpose: >
+  Define los unicos puntos de contacto permitidos entre IsyVM e ISyCo.
+  Todo es lectura. Nada se ejecuta. Rigor COBOL: allowlist explicita.
+
+SupeditadoA: vm.isolation.iesy
+
+ALLOWED_READS:
+  - read_contract             # lee texto raw de un .iesy bajo contracts/
+  - list_contracts            # lista nombres .iesy bajo un subdir autorizado
+  - read_capability_contract  # lee .iesy de una capability via routes.json
+
+ALLOWED_DIRS_REL  (enumeracion explicita de paths relativos a ISYCO_ROOT
+                    que un path objetivo debecibirse para pasar _vet):
+  - bridge_core\contracts
+  - bridge_core\contracts\bootstrap
+  - bridge_core\contracts\bootstrap\atoms
+  - bridge_core\capabilities\runtime_exe
+  - bridge_core\runtimes\windows\python
+
+DENY_SEGMENTS:
+  - .git
+  - __pycache__
+  - _backups
+  - .pytest_cache
+  - .aider.tags.cache.v4
+  - .claude
+
+Nota: el cliente aprobo originalmente un allowlist de nombres sueltos
+(bridge_core, contracts, capabilities, docs), pero en la corrida GOLDEN 1
+se detecto que bridge_core/cli (que existe en ISyCo y no tiene .iesy)
+pasaba _vet sin raise y hacia fallar test_peligrosa_1c. Se ajusto _vet
+a enumeracion explicita de paths relativos autorizados (rigor COBOL:
+nada implicito). Si se necesita leer un nuevo subdir, hay que enumerarlo
+aca explicitamente.
+
+Laws:
+  - Nombre: read_only
+    Regla: Ningun helper devuelve un callable ni un modulo importable.
+    Violation: Fuga via ejecucion
+
+  - Nombre: explicit_extension
+    Regla: read_contract rechaza archivos que no terminen en .iesy.
+    Violation: Fuga via path
+
+  - Nombre: routes_resolved_under_root
+    Regla: read_capability_contract resuelve el contract path via
+      routes.json de ISyCo y lo veta con _vet() antes de leerlo.
+    Violation: Fuga via path
+
+See: vm.isolation.iesy

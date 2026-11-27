@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-10-11T05:31:34.449711+00:00",
+  "authorization": "User: PUEDES PONERLE EL ICONO DE ISYCODE, Y BORRA EL PROGRAMA ANTIGUO",
+  "file_count": 2,
+  "directory_count": 0,
+  "paths": [
+    {
+      "path": "/home/danny/.local/share/applications/isycode.desktop",
+      "size": 341,
+      "sha256": "0787e8ff94f56e851167a01b2f2352613f3772cd0522dc0af459761e5d817dbf",
+      "tracked": "Installed user file outside source repositories",
+      "reason": "Old desktop GUI installation; desktop Exec explicitly selects this old AppImage",
+      "replacement": "/home/danny/.local/bin/isycode-ide and installed ISyCode IDE desktop/AppImage; old source preserved, binaries are not byte-identical"
+    },
+    {
+      "path": "/home/danny/Applications/ISyCode.AppImage",
+      "size": 92251328,
+      "sha256": "7655f16cad885e11c482fb3fb253da33325587f07a9fedb524bb5c7874b82edb",
+      "tracked": "Installed user file outside source repositories",
+      "reason": "Old desktop GUI installation; desktop Exec explicitly selects this old AppImage",
+      "replacement": "/home/danny/.local/bin/isycode-ide and installed ISyCode IDE desktop/AppImage; old source preserved, binaries are not byte-identical"
+    }
+  ],
+  "preserved": [
+    "/home/danny/.local/bin/isycode (official TUI)",
+    "/home/danny/Development/IsyVM (source and shared Git backing the IDE worktree)",
+    "ISyCode shared icons and user configuration/conversations"
+  ],
+  "completed": "2026-10-11T05:32:58.204167+00:00",
+  "result": "Exactly the two manifested files removed; no source/config/icon directories removed."
+}

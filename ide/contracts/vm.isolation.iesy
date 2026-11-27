@@ -1,0 +1,101 @@
+Identity: vm.isolation
+Version: 0.2.0
+Status: Active
+Layer: Membrane
+Category: IsolationContract
+Title: Las tres capas de contencion, cada una con lo que puede prometer
+
+Purpose: >
+  IsyVM es una caja de contencion que ENCAPSULA tres capas de boundary
+  real, no una sola promesa mentirosa. Cada capa promete solo lo que
+  puede sostener honestamente. El contrato dice cual es cual y cual
+  se considera el boundary de confianza.
+
+Layering:
+  Layer_c_OS:
+    What: Maquina virtual Hyper-V (isyco_vm/) Ubuntu headless + NAT + checkpoint.
+    Promises: aislamiento de proceso y OS real. Sobrevive a un .mal
+      que esconda un ejecutable Python que adrede fuga. Snapshot rollback.
+    Boundary_Trust: SI — pero solo SI esta verified corriendo.
+    Status: Documented — pending verification
+      (isyco_vm/README.md describe los pasos. No marcar Active
+       hasta ver Hyper-V arriba + Ubuntu booteado + checkpoint
+       restaurando de verdad.)
+
+  Layer_b_WASM:
+    What: Membrana wasmtime/wasmer ejecutando bytecode compilado, proceso aparte.
+    Promises: no puede llamar al host sin import explicito, memoria lineal propia.
+    Boundary_Trust: SI si esta activa y el programa corre como wasm.
+    Status: Lazy — solo si el payload es wasm. Si no, no promete nada.
+
+  Layer_a_Interprete:
+    What: Interprete Python-puro dentro del proceso IsyVM. Sin builtins peligrosos.
+    Promises: >
+      FILTRO PRE-LINTER best-effort, NO boundary de seguridad.
+      Atrapa lo obvio barato (import os, subprocess.run en el texto),
+      igual que el Pattern Linter actual. NO puede sostener
+      "nada de lo que corre dentro toca el host" porque el grafo de
+      objetos vivos del proceso es alcanzable via introspeccion
+      (().__class__.__bases__[0].__subclasses__()). Lecciones:
+      rexec/Bastion quitados en Python 3.0, RestrictedPython roto
+      de forma recurrente.
+    Boundary_Trust: NO — es filtro, no muro.
+    Status: Siempre activo, pero solo como pre-linter del Layer_c.
+
+Laws:
+  - Nombre: layers_must_stack
+    Regla: >
+      Layer_a corre DENTRO de Layer_c (la VM Hyper-V). No compite.
+      IsyVM interna (a)+(b) vive dentro del guest isyco_vm/, no en
+      el host. (c) respalda a (a) por debajo; no se reinventa.
+    Violation: Tautologia peligrosa (promesa solitaria)
+
+  - Nombre: layer_a_best_effort_only
+    Regla: >
+      Ningun .iesy de IsyVM puede afirmar que la capa (a) AISLA.
+      Solo puede afirmar FILTRA (BEST_EFFORT). El boundary_real
+      siempre es (c) o (b), nunca (a) sola.
+    Violation: Promesa mentirosa
+    Precedent: rexec/Bastion deprecados Python 3.0
+
+  - Nombre: cobol_rigor_static_first
+    Regla: >
+      Antes de ejecutar NADA en cualquier capa, un verifier estatico
+      valida campos/tipos/saltos. Igual que el verifier de eBPF de
+      Linux: analiza sin ejecutar, sin dejar nada implicito. Rigor
+      COBOL = non-optional static pass. Este SI es real en cualquier
+      capa porque no depende del runtime.
+    Violation: Cargo no verificado
+    Precedent: Linux eBPF verifier
+
+  - Nombre: no_hosts_builtins
+    Regla: >
+      El interprete capa (a) no importa, ni usa, ni expone:
+      os, sys, subprocess, importlib, builtins.open, builtins.eval,
+      builtins.exec, ctypes, pickle, marshal. Explicitamente como
+      FILTRO, no como AISLAMIENTO. La distincion la da Layer_c.
+    Violation: Filtro roto (no fuga directa — la fuga la detiene (c))
+
+  - Nombre: no_path_escape
+    Regla: >
+      Toda ruta del bridge se resuelve bajo ISYCO_ROOT y se
+      normaliza (Path.resolve). Rechaza fuera de root o bajo
+      .git/, __pycache__/, _backups/.
+    Violation: Fuga via path (capa (c) la sigue conteniendo)
+
+  - Nombre: no_capability_invocation
+    Regla: >
+      El bridge expone read_contract(name) -> str y
+      list_contracts() -> list[str]. Nunca Engine, Executor,
+      Registry, ni callable que ejecute codigo ISyCo.
+    Violation: Fuga via ejecucion
+
+  - Nombre: explicit_allowlist
+    Regla: >
+      Cada helper del bridge se anade a ALLOWED_READS explicitamente.
+      Aprendido de COBOL: nada implicito.
+    Violation: Fuga por omision
+
+Trust_Boundary_target: Layer_c_OS (pending verification)
+Trust_Boundary_operational: Layer_b_WASM_if_active_else_none_today
+See: vm.bridge_isyco.iesy, isyco_vm/README.md

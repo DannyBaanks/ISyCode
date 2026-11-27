@@ -1,0 +1,30 @@
+{
+  "scope": "installed official CLI private unauthenticated account checks; no login/prompt",
+  "checks": [
+    {
+      "kind": "codex-subscription",
+      "report": {
+        "authenticated": false,
+        "state": "login_required",
+        "models": [],
+        "method": null
+      }
+    },
+    {
+      "kind": "claude-subscription",
+      "report": {
+        "authenticated": false,
+        "state": "login_required",
+        "models": []
+      }
+    },
+    {
+      "kind": "grok-subscription",
+      "report": {
+        "authenticated": false,
+        "state": "login_required_or_expired",
+        "models": []
+      }
+    }
+  ]
+}

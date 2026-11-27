@@ -1,0 +1,38 @@
+[
+  {
+    "path": "diff-check.log",
+    "sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+  },
+  {
+    "path": "installation-manifest.json",
+    "sha256": "4d26e7271e17c4ed1b696a09aa90559aa2c40c5e3ecf7777e0fc3feb5acfcd2c"
+  },
+  {
+    "path": "package-manifest.json",
+    "sha256": "60817ead103cbe8d39aca14cdafd59003d10cb8bc330b68704715b8c1028aa0f"
+  },
+  {
+    "path": "previous-launcher.sh",
+    "sha256": "9afec978a051b69bb1aa1f42c9b746721fd675916b27f1cbe9d0907186a62686"
+  },
+  {
+    "path": "provider-icons-preview.png",
+    "sha256": "e39fb4926327809c3c0069d02443814f29217c420777103858c0262ea07e9fd6"
+  },
+  {
+    "path": "render-icons.py",
+    "sha256": "655a6fda111b33f394cac594ad414cf94c92f11314a64092b26e3469a678aaed"
+  },
+  {
+    "path": "result.json",
+    "sha256": "733069042ac19c21c111c0d6a9660baea6c0fa552c764bf96d76aa638ac4295a"
+  },
+  {
+    "path": "source.json",
+    "sha256": "d879d71a093fccbf57b7d1500d0718dd8d5a2edb8df060e8e1fc359c3fd419bc"
+  },
+  {
+    "path": "syntax.log",
+    "sha256": "5621869b4e56bb94804e68ded1857d6457a21ac55d6139bb99ed258ccc8e6cd1"
+  }
+]

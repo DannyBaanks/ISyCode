@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/danny/Development/ISyCode-IDE/build/appimagetool-official-610035789/squashfs-root/AppRun",
+    "--no-appstream",
+    "--runtime-file",
+    "/home/danny/Development/ISyCode-IDE/build/appimagetool-official-610035789/runtime-x86_64",
+    "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T130503Z-00b6c2/ISyCode-IDE.AppDir",
+    "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T130503Z-00b6c2/ISyCode-IDE-x86_64.AppImage"
+  ],
+  "output": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T130503Z-00b6c2",
+  "artifacts": [
+    {
+      "path": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T130503Z-00b6c2/ISyCode-IDE.AppDir/usr/lib/isycode-ide/isycode-ide",
+      "sha256": "55d34411817ee5d6743c128efc05829cd8fdb4ef74185710c8c321f8828f54c2"
+    },
+    {
+      "path": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T130503Z-00b6c2/ISyCode-IDE-x86_64.AppImage",
+      "sha256": "06d724142eb9a5e4bde3ec514b5c87b7c60e6d3e4fc1f4fe9903dd6d70fa9b7d"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+usage: isycode-ide tui [-h] COMMAND ...
+
+ISyCode IDE — cliente de terminal con autoridad compartida
+
+positional arguments:
+  COMMAND
+    provider  Manage providers
+    secret    Manage API keys (secure)
+    chat      Interactive chat (TUI)
+    run       Run agent once with prompt
+    policy    Show policy rules
+    config    Show config paths
+
+options:
+  -h, --help  show this help message and exit
