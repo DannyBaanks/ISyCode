@@ -1676,6 +1676,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             # report its counters, because an unknown count is real information.
             widget.update("")
             return
+        try:
+            collapsed = self.query_one("#idea-box-row").has_class("idea-collapsed")
+        except NoMatches:
+            collapsed = False
+        if collapsed:
+            # One-row status (small terminal): three rows would overflow the composer line.
+            from isycode.context_meter import usage_row as usage_panel
         widget.update(usage_panel(
             self._history, widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
