@@ -192,25 +192,34 @@ def _encode_markdown_file_links(text: str) -> str:
 _HTML_PARSER = MarkdownIt().enable("strikethrough").enable("table")
 
 
-def _escape_span(lines: list[str], start: int, end: int, needle: str, offset: int) -> int:
-    """Escape ``<``/``>`` of ``needle`` inside ``lines[start:end]``; return the new offset."""
-    block = "\n".join(lines[start:end])
-    found = block.find(needle, offset)
-    if found < 0:
-        return offset
-    # Walk the lines, keeping the absolute position inside the block.
-    position = 0
-    for index in range(start, end):
-        length = len(lines[index]) + 1  # the joined newline
-        local_start = max(found, position)
-        local_end = min(found + len(needle), position + length - 1)
-        if local_start < local_end:
-            line = lines[index]
-            a, b = local_start - position, local_end - position
-            lines[index] = line[:a] + line[a:b].replace("<", "&lt;").replace(">", "&gt;") + line[b:]
-            offset = found + len(needle)
-        position += length
-    return offset
+_CODE_SPAN_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)", re.DOTALL)
+
+
+def _escape_tags(block: str, tags: list[str]) -> str:
+    """Escape ``<``/``>`` of each tag in ``block``, in order, outside code spans.
+
+    The tags come from markdown-it without columns, so they are found by text.
+    A code span (`` `<b>` ``) can hold the same characters as a real tag; it is
+    masked first, so the search lands on the tag markdown-it saw and the code
+    stays exactly as written.
+    """
+    masked = _CODE_SPAN_RE.sub(lambda match: "\0" * len(match.group(0)), block)
+    found: list[tuple[int, int]] = []
+    offset = 0
+    for tag in tags:
+        position = masked.find(tag, offset)
+        if position < 0:
+            continue
+        found.append((position, position + len(tag)))
+        offset = position + len(tag)
+    pieces: list[str] = []
+    cursor = 0
+    for a, b in found:
+        pieces.append(block[cursor:a])
+        pieces.append(block[a:b].replace("<", "&lt;").replace(">", "&gt;"))
+        cursor = b
+    pieces.append(block[cursor:])
+    return "".join(pieces)
 
 
 def literal_html(text: str) -> str:
@@ -240,9 +249,8 @@ def literal_html(text: str) -> str:
             for index in range(start, min(end, len(lines))):
                 lines[index] = lines[index].replace("<", "&lt;").replace(">", "&gt;")
             continue
-        offset = 0
-        for tag in tags:
-            offset = _escape_span(lines, start, end, tag, offset)
+        stop = min(end, len(lines))
+        lines[start:stop] = _escape_tags("\n".join(lines[start:stop]), tags).split("\n")
     return "\n".join(lines)
 
 

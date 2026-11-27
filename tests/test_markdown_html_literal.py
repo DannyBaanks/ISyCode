@@ -69,3 +69,18 @@ def test_link_style_survives_html_escaping():
     console = Console(record=True, width=120)
     segment = next(s for s in console.render(text) if s.text == "sitio")
     assert segment.style.link == "https://example.com"
+
+
+def test_a_tag_quoted_in_a_code_span_does_not_steal_the_escape_of_the_real_tag():
+    # The same characters appear first inside `code`: the code must stay as
+    # written and the real tag after it must be the one shown literally.
+    for source, expected in (
+        ("`<b>` y <b>negrita</b>", "<b> y <b>negrita</b>"),
+        ("``a <b> `x` ``  <b>y</b>", "a <b> `x`   <b>y</b>"),
+        ("- item <b>uno</b> `<b>`\n- <i>dos</i>", "• item <b>uno</b> <b>\n• <i>dos</i>"),
+        ("multi `<b>\nspan` <b>z</b>", "multi <b> span <b>z</b>"),
+    ):
+        plain = _plain(source).strip()
+        assert plain == expected, source
+        assert "&lt;" not in plain and "&gt;" not in plain
+        assert "<b>" in _rich_plain(source)
