@@ -29,7 +29,7 @@ from typing import Any, Callable
 from isycode.platform_storage import storage
 from isycode.workspace_setup import state_root
 
-MULTI_ACCOUNT_PROVIDERS: tuple[str, ...] = ("antigravity", "chatgpt", "grok")
+MULTI_ACCOUNT_PROVIDERS: tuple[str, ...] = ("antigravity", "chatgpt", "claude", "grok")
 PRIMARY_SLOT = "primary"
 QUOTA_WARN_PCT = 20.0
 QUOTA_CRIT_PCT = 5.0
@@ -74,6 +74,7 @@ def _slots_root(provider: str) -> Path:
     folder = {
         "antigravity": "antigravity-slots",
         "chatgpt": "chatgpt-codex-slots",
+        "claude": "claude-code-slots",
         "grok": "grok-slots",
     }[prov]
     return (state_root() / "accounts" / folder).absolute()
@@ -88,6 +89,8 @@ def slot_home(provider: str, slot: str | None = None, *, path: Path | None = Non
             return (state_root() / "accounts" / "antigravity").absolute()
         if prov == "chatgpt":
             return (state_root() / "accounts" / "chatgpt-codex").absolute()
+        if prov == "claude":
+            return (state_root() / "accounts" / "claude-code").absolute()
         return Path.home().absolute()
     return (_slots_root(prov) / resolved_slot).absolute()
 

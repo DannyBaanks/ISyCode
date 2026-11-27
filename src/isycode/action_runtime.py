@@ -1167,7 +1167,7 @@ class ProviderAuthSystembility:
         params = request.parameters
         if request.target == "chatgpt":
             allowed_methods = {"browser", "device"}
-        elif request.target == "antigravity":
+        elif request.target in {"antigravity", "claude"}:
             allowed_methods = {"browser"}
         else:
             allowed_methods = set()
@@ -1261,6 +1261,11 @@ class ProviderNetworkSystembility:
             from isycode.provider_auth import ANTIGRAVITY_ENDPOINT
             if url != ANTIGRAVITY_ENDPOINT or not ProviderAuthSystembility.identity_valid(
                     request.parameters.get("connector", {}), target="antigravity"):
+                return SystembilityResult(self.name, False, "subscription inference requires a bound official connector")
+        elif provider_name == "claude":
+            from isycode.provider_auth import CLAUDE_ENDPOINT
+            if url != CLAUDE_ENDPOINT or not ProviderAuthSystembility.identity_valid(
+                    request.parameters.get("connector", {}), target="claude"):
                 return SystembilityResult(self.name, False, "subscription inference requires a bound official connector")
         return SystembilityResult(self.name, True, "provider endpoint is secure and host-bound")
 
@@ -2892,7 +2897,7 @@ class ProviderNetworkOwner:
             if parsed.port:
                 host += f":{parsed.port}"
             connector = getattr(provider, "connector_identity", None)
-            if provider.name in {"chatgpt", "antigravity"}:
+            if provider.name in {"chatgpt", "antigravity", "claude"}:
                 if (not isinstance(request_material, dict)
                         or not ProviderAuthSystembility.identity_valid(connector, target=provider.name)):
                     raise ValueError("invalid subscription connector identity")
@@ -2904,7 +2909,7 @@ class ProviderNetworkOwner:
                 "provider.request", self.root, host,
                 {"provider": provider.name, "model": provider.model,
                  "url": url, "payload_digest": material_digest,
-                 **({"connector": connector} if provider.name in {"chatgpt", "antigravity"} else {})},
+                 **({"connector": connector} if provider.name in {"chatgpt", "antigravity", "claude"} else {})},
                 execution_owner="provider_network")
         except (AttributeError, TypeError, ValueError, OSError):
             return None, ActionOutcome("Provider request denied.", "DENY", None,
