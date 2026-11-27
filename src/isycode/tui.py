@@ -1911,6 +1911,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._models_target = "chat"
         self._models_return_settings = False
         self.query_one("#prompt-input", PromptArea).focus()
+        # Esc used to close the menu silently; say where the keyboard is now so
+        # the next keypress is never a surprise (finding 13).
+        self._set_activity(tr("Menu closed · back to the composer · nothing changed"), MUTED)
 
 
     def _branch_entries(self, branch: str) -> list[dict[str, str]]:
@@ -2736,6 +2739,35 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._set_activity(tr("Could not save your global default; existing settings remain"), RED)
         self._open_user_defaults_menu()
 
+    def _restore_startup_focus(self) -> None:
+        """Hand the keyboard to the composer once startup is over, unless someone
+        already took it.
+
+        Startup runs as a worker after the first paint. The old unconditional
+        ``prompt.focus()`` pulled the keyboard out of whatever the user had
+        opened meanwhile: a /providers list highlighted by arrow keys lost its
+        focus mid-walk, so Enter landed in an empty composer and selected
+        nothing (finding 13). A modal, an open command menu or any other focused
+        widget means the user is in control; leave the focus where it is.
+        """
+        if isinstance(self.screen, ModalScreen):
+            return
+        try:
+            if self.query_one("#action-menu", Vertical).display:
+                return
+        except (NoMatches, NoScreen, ScreenStackError):
+            pass
+        focused = self.focused
+        if focused is not None and not isinstance(focused, PromptArea):
+            return
+        try:
+            if self._initial_view == "files":
+                self.query_one("#workspace-tree", Tree).focus()
+                return
+            self.query_one("#prompt-input", PromptArea).focus()
+        except (NoMatches, NoScreen, ScreenStackError):
+            pass
+
     async def _startup_workspace(self) -> None:
         """Offer recurrence once, then choose persistent or temporary chat storage."""
         try:
@@ -2792,10 +2824,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             warning = self._shared_root_warning()
             if warning:
                 self._append_startup(f"  {warning}", YELLOW)
-            if self._initial_view == "files":
-                self.query_one("#workspace-tree", Tree).focus()
-            else:
-                self.query_one("#prompt-input", PromptArea).focus()
+            self._restore_startup_focus()
 
             # Transcripts are saved only through the chat_sessions owner, only for
             # recurring workspaces, and only while the explicit session grants are

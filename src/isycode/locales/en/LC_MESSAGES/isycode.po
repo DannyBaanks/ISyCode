@@ -6884,3 +6884,9 @@ msgstr "{root}\nClassic (recommended): workspace-bounded review of edits and san
 
 msgid "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
 msgstr "Flow gives broad host access: reads, edits, moves, deletes, host shell commands with network, and configured local MCPs run without asking. Direct file tools still block sensitive files like .env, but host shell commands run with your normal user access (not a sandbox). /undo restores verified workspace preimages captured by ISyCode, not arbitrary external or oversized effects. Commits of human-edited files, push, and authority changes still ask. Use Classic for workspace-bounded sandboxing or Security for explicit per-action grants."
+
+msgid "Menu closed · back to the composer · nothing changed"
+msgstr "Menu closed · back to the composer · nothing changed"
+
+msgid "Back to providers · {provider} not selected · model unchanged"
+msgstr "Back to providers · {provider} not selected · model unchanged"

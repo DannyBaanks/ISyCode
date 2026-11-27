@@ -1,4 +1,4 @@
-"""Regression tests for the adv-ux findings (Haiku pass, findings 5/6/7/9/11/12).
+"""Regression tests for the adv-ux findings (Haiku pass, findings 5/6/7/9/11/12/13).
 
 Each test pins the user-visible behaviour that was reported broken:
 
@@ -9,12 +9,15 @@ Each test pins the user-visible behaviour that was reported broken:
 * Escape from the right rail returns to the composer and closes the rail when
   the hint promises "esc back"; the rail hint never leaks into the main column.
 * The Idea box collapses on short / narrow terminals so it stops crowding chat.
-* Modal screens dim the splash art behind the dialog instead of letting the
-  block landscape bleed through the dialog border.
-* Enter on the highlighted provider in /providers always opens that provider's
-  model list, and Enter on a model row always applies it.
+* Modal screens hide the splash board instead of letting the block landscape
+  bleed through the dialog border, and bring it back once the last modal closes.
+* /providers keyboard model (finding 13): startup never pulls the keyboard out
+  of the list, ↑/↓ skip section headings, Enter on the highlighted provider
+  opens that provider's models with focus on a model row, Enter on the row
+  applies it, and Esc closes each level with a status line that says so.
 """
 import asyncio
+import os
 import pathlib
 
 import pytest
@@ -396,7 +399,42 @@ def test_stacked_modals_keep_the_splash_hidden_until_the_last_one_closes(tmp_pat
     asyncio.run(scenario())
 
 
-# ── Finding 5: Enter always activates the highlighted provider ───────────────
+# ── Finding 13: /providers keyboard model ───────────────────────────────────
+
+def _hold_startup(monkeypatch) -> tuple:
+    """Block ``_startup_workspace`` in its first disk step until released.
+
+    Startup runs as a worker after the first paint. The provider menu opened
+    before it finishes is the exact race from the finding: the keyboard walked
+    the list while startup was still running.
+    """
+    import threading
+    gate, started = threading.Event(), threading.Event()
+    original = TUIApp._register_saved_key_reader
+
+    def slow_reader(self):
+        started.set()
+        gate.wait(10)
+        return original(self)
+
+    monkeypatch.setattr(TUIApp, "_register_saved_key_reader", slow_reader)
+    return gate, started
+
+
+async def _walk_to(pilot, options, app, value: str) -> None:
+    """Move the highlight to ``value`` with arrow keys only."""
+    target = next(i for i, e in enumerate(app._menu_filtered) if e.get("value") == value)
+    for _ in range(len(app._menu_filtered) + 1):
+        if options.highlighted == target:
+            return
+        assert options.highlighted is not None
+        if options.highlighted < target:
+            await pilot.press("down")
+        else:
+            await pilot.press("up")
+        await pilot.pause()
+    raise AssertionError(f"never reached {value}: {options.highlighted} vs {target}")
+
 
 def test_providers_enter_opens_the_highlighted_provider_models(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
@@ -411,12 +449,10 @@ def test_providers_enter_opens_the_highlighted_provider_models(tmp_path, monkeyp
             await pilot.pause()
             options = app.query_one("#action-list", OptionList)
             assert app.focused is options
-            target = next(i for i, e in enumerate(app._menu_filtered) if e.get("value") == "lmstudio")
-            # Walk the list with the keyboard only.
-            for _ in range(target):
-                await pilot.press("down")
-                await pilot.pause()
-            assert options.highlighted == target, (options.highlighted, target)
+            # The first highlight is a real choice, never a section heading.
+            assert app._menu_filtered[options.highlighted].get("kind") == "provider", app._menu_filtered[options.highlighted]
+            await _walk_to(pilot, options, app, "lmstudio")
+            assert options.highlighted is not None
             await pilot.press("enter")
             await pilot.pause()
             await pilot.pause()
@@ -427,11 +463,191 @@ def test_providers_enter_opens_the_highlighted_provider_models(tmp_path, monkeyp
             # model screen must put focus on a row, not on the search box, when
             # the user arrived with the keyboard.
             assert isinstance(app.focused, ModelChoice), type(app.focused).__name__
+            assert app.screen.choices[app.focused.id]["value"] == "lmstudio|local"
             await pilot.press("enter")
+            await pilot.pause()
             await pilot.pause()
             await pilot.pause()
             assert not isinstance(app.screen, ModelsScreen)
             import os
             assert os.environ["ISYCODE_PROVIDER"] == "lmstudio"
+            assert os.environ["ISYCODE_MODEL"] == "local"
+
+    asyncio.run(scenario())
+
+
+def test_providers_keeps_focus_while_startup_is_still_running(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    gate, started = _hold_startup(monkeypatch)
+
+    async def scenario():
+        from isycode.tui_screens_harness import ModelChoice, ModelsScreen
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            assert started.is_set(), "startup must be parked inside its first disk step"
+            app._open_provider_menu()
+            await pilot.pause()
+            await pilot.pause()
+            options = app.query_one("#action-list", OptionList)
+            assert app.focused is options
+            await pilot.press("down")
+            await pilot.pause()
+            walked = options.highlighted
+            # Startup finishing used to pull the keyboard back to the composer,
+            # so the next Enter went to an empty prompt and selected nothing.
+            gate.set()
+            for _ in range(8):
+                await pilot.pause()
+            assert app.ready is True
+            assert app.focused is options, type(app.focused).__name__
+            assert options.highlighted == walked, (options.highlighted, walked)
+            await _walk_to(pilot, options, app, "lmstudio")
+            await pilot.press("enter")
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert isinstance(app.screen, ModelsScreen), type(app.screen).__name__
+            assert app.screen.provider_scope == "lmstudio", app.screen.provider_scope
+            assert isinstance(app.focused, ModelChoice), type(app.focused).__name__
+
+    asyncio.run(scenario())
+
+
+def test_startup_never_takes_focus_from_an_open_menu_or_modal(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    gate, started = _hold_startup(monkeypatch)
+
+    async def scenario():
+        from isycode.tui_screens_grants import QuickStartScreen
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            assert started.is_set()
+            app.push_screen(QuickStartScreen(tmp_path, provider_ready=False))
+            await pilot.pause()
+            await pilot.pause()
+            modal_focus = app.focused
+            gate.set()
+            for _ in range(8):
+                await pilot.pause()
+            assert isinstance(app.screen, QuickStartScreen)
+            assert app.focused is modal_focus, type(app.focused).__name__
+            app.pop_screen()
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            # The user keeps going before startup ends and opens /providers (the
+            # same entry point as the command bar button). Startup must not pull
+            # the keyboard away from the list.
+            app._open_provider_menu()
+            await pilot.pause()
+            await pilot.pause()
+            options = app.query_one("#action-list", OptionList)
+            assert app.query_one("#action-menu").display is True
+            assert app.focused is options, type(app.focused).__name__
+            gate.set()
+            for _ in range(8):
+                await pilot.pause()
+            assert app.ready is True
+            assert app.focused is options, type(app.focused).__name__
+            # Closing the menu hands the keyboard back to the composer, and the
+            # finished startup leaves it there.
+            await pilot.press("escape")
+            await pilot.pause()
+            await pilot.pause()
+            prompt = app.query_one("#prompt-input", PromptArea)
+            assert app.focused is prompt, type(app.focused).__name__
+
+    asyncio.run(scenario())
+
+
+def test_providers_arrow_keys_skip_section_headings(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app._open_provider_menu()
+            await pilot.pause()
+            await pilot.pause()
+            options = app.query_one("#action-list", OptionList)
+            assert app.focused is options
+            headings = [i for i, e in enumerate(app._menu_filtered) if e.get("kind") == "section"]
+            assert headings, "the provider list is grouped under headings"
+            for index in headings:
+                assert options.get_option_at_index(index).disabled, index
+            # The headings still read as bold headings, not as greyed-out choices:
+            # the disabled state must not repaint them with the muted option colour.
+            # Checked before walking, while the first heading is still on screen.
+            from isycode.tui_theme import TEXT
+            first = options.get_option_at_index(headings[0])
+            heading = first.prompt.plain.strip()
+            assert heading, first.prompt
+            painted = [segment for strip in app.screen._compositor.render_strips()
+                       for segment in strip if getattr(segment, "text", "") == heading]
+            assert painted, heading
+            for segment in painted:
+                assert segment.style.bold is True, segment.style
+                from textual.color import Color
+                color = (segment.style.color.rgb if hasattr(segment.style.color, "rgb")
+                         else Color.from_rich_color(segment.style.color).rgb)
+                assert color == Color.parse(TEXT).rgb, (color, TEXT)
+            seen = []
+            for _ in range(len(app._menu_filtered)):
+                await pilot.press("down")
+                await pilot.pause()
+                seen.append(app._menu_filtered[options.highlighted].get("kind"))
+            assert "section" not in seen, [k for k in seen if k == "section"]
+            for _ in range(len(app._menu_filtered)):
+                await pilot.press("up")
+                await pilot.pause()
+                assert app._menu_filtered[options.highlighted].get("kind") != "section"
+
+    asyncio.run(scenario())
+
+
+def test_escape_closes_the_provider_menu_with_feedback(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        from isycode.tui_screens_harness import ModelsScreen
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app._open_provider_menu()
+            await pilot.pause()
+            await pilot.pause()
+            options = app.query_one("#action-list", OptionList)
+            await _walk_to(pilot, options, app, "lmstudio")
+            await pilot.press("enter")
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert isinstance(app.screen, ModelsScreen)
+            # Esc from the model list: back to the providers, nothing applied,
+            # and the status line says so.
+            await pilot.press("escape")
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert not isinstance(app.screen, ModelsScreen)
+            assert app.query_one("#action-menu").display is True
+            assert app._menu_mode == "providers"
+            assert app.focused is app.query_one("#action-list", OptionList)
+            assert "LM Studio" in app._activity_message, app._activity_message
+            assert os.environ["ISYCODE_PROVIDER"] == "openai"
+            # Esc again closes the menu and hands the keyboard to the composer.
+            await pilot.press("escape")
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert app.query_one("#action-menu").display is False
+            assert app._menu_mode == ""
+            assert app.focused is app.query_one("#prompt-input", PromptArea)
+            assert "Menu closed" in app._activity_message, app._activity_message
 
     asyncio.run(scenario())
