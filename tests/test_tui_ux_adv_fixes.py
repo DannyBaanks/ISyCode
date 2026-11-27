@@ -302,7 +302,21 @@ def test_idea_box_comes_back_on_a_large_terminal(tmp_path, monkeypatch):
 
 # ── Finding 12: noisy background behind modals ───────────────────────────────
 
-def test_onboarding_modal_dims_the_splash_behind_the_dialog(tmp_path, monkeypatch):
+LANDSCAPE_GLYPHS = set("▀▌▘▙▚▛▜")
+
+
+def _landscape_cells_outside_card(app, card) -> str:
+    """Every landscape glyph painted anywhere outside the dialog card."""
+    lines = _screen_lines(app)
+    leaked = []
+    for y, row in enumerate(lines):
+        if card.region.y <= y < card.region.bottom:
+            row = row[:card.region.x] + row[card.region.right:]
+        leaked.extend(ch for ch in row if ch in LANDSCAPE_GLYPHS)
+    return "".join(leaked)
+
+
+def test_onboarding_modal_hides_the_splash_behind_the_dialog(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
 
     async def scenario():
@@ -313,23 +327,71 @@ def test_onboarding_modal_dims_the_splash_behind_the_dialog(tmp_path, monkeypatc
             await pilot.pause()
             board = app.query_one("#idle-board", IdleBoard)
             assert board.display, "the splash must be visible before the modal opens"
+            assert set(plain_text(board)) & LANDSCAPE_GLYPHS, "the board must carry the block art"
+            # A modal's 58% dim lets the block landscape bleed around the card
+            # (finding 12); the board itself has to go while a modal is on top.
             screen = QuickStartScreen(tmp_path, provider_ready=False)
             app.push_screen(screen)
             await pilot.pause()
             await pilot.pause()
-            assert screen.query_one("#idle-board").display is False or screen.query_one("#idle-board").region.height == 0
-            # The dimmed backdrop covers the whole terminal, so block art never
-            # reaches the dialog border.
-            from textual.color import Color
-            backdrop = screen.styles.background
-            assert backdrop is not None and backdrop.a > 0.9, backdrop
+            assert isinstance(app.screen, QuickStartScreen)
+            assert board.display is False, "the splash must be hidden under the modal"
+            assert board.region.height == 0, board.region
             card = screen.query_one(".isy-dialog")
-            lines = _screen_lines(app)
-            # Nothing but the dimmed backdrop is painted between the screen edge
-            # and the dialog on the card's middle row.
-            y = card.region.y + card.region.height // 2
-            outside = lines[y][:card.region.x] + lines[y][card.region.right:]
-            assert "▀" not in outside and "▀" not in outside, repr(outside)
+            assert card.region.height > 0
+            assert _landscape_cells_outside_card(app, card) == "", repr(_landscape_cells_outside_card(app, card))
+            # Dismissing the modal brings the splash back exactly as it was.
+            screen.dismiss("custom")
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert not isinstance(app.screen, QuickStartScreen)
+            assert board.display is True, "the splash must come back once the modal is gone"
+            assert board.region.height > 0
+            assert set(plain_text(board)) & LANDSCAPE_GLYPHS
+            # The first message still archives it for good.
+            app._dismiss_idle()
+            app.push_screen(QuickStartScreen(tmp_path, provider_ready=False))
+            await pilot.pause()
+            await pilot.pause()
+            app.pop_screen()
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert board.has_class("startup-archived")
+            assert board.has_class("modal-covered") is False
+
+    asyncio.run(scenario())
+
+
+def test_stacked_modals_keep_the_splash_hidden_until_the_last_one_closes(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        from isycode.tui_screens_grants import QuickStartScreen, WorkspaceSetupScreen
+        from isycode.tui_widgets import IdleBoard
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            board = app.query_one("#idle-board", IdleBoard)
+            app.push_screen(QuickStartScreen(tmp_path, provider_ready=False))
+            await pilot.pause()
+            await pilot.pause()
+            app.push_screen(WorkspaceSetupScreen(tmp_path))
+            await pilot.pause()
+            await pilot.pause()
+            assert len([s for s in app.screen_stack if type(s).__name__ in {"QuickStartScreen", "WorkspaceSetupScreen"}]) == 2
+            app.pop_screen()
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert type(app.screen).__name__ == "QuickStartScreen"
+            assert board.display is False, "one modal is still covering the chat"
+            app.pop_screen()
+            await pilot.pause()
+            await pilot.pause()
+            await pilot.pause()
+            assert board.display is True
 
     asyncio.run(scenario())
 

@@ -2442,7 +2442,45 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         """
         if isinstance(screen, ModalScreen):
             self._reserve_rail_for_modal(screen)
+            self._cover_idle_for_modal()
         return super().push_screen(screen, callback, wait_for_dismiss, mode=mode)
+
+    def pop_screen(self):
+        """Bring the splash back once no modal is left covering it."""
+        result = super().pop_screen()
+        self.call_after_refresh(self._uncover_idle)
+        return result
+
+    def _cover_idle_for_modal(self) -> None:
+        """Hide the welcome landscape while a modal sits over the chat.
+
+        Modal screens dim the base screen by 58-70%, which is enough for text
+        but not for the block art: the landscape bled through the dialog border
+        and read as noise around the decision (finding 12). Any modal covers it;
+        the board itself stays mounted so chat history and the archived splash
+        are untouched.
+        """
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        if board.is_mounted and not board.has_class("startup-archived"):
+            board.add_class("modal-covered")
+
+    def _uncover_idle(self) -> None:
+        """Show the splash again once the last modal is gone.
+
+        ``pop_screen`` runs before the previous screen is active again, so the
+        check waits for the refresh. A dismissed (archived) board stays archived.
+        """
+        if isinstance(self.screen, ModalScreen):
+            return
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except (NoMatches, NoScreen, ScreenStackError):
+            return
+        if board.is_mounted:
+            board.remove_class("modal-covered")
 
     def _reserve_rail_for_modal(self, screen: ModalScreen) -> None:
         """Pad a modal screen on the right by the visible rail width."""

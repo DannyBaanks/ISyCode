@@ -154,6 +154,8 @@
     #prompt-input:focus { border: round #9aa3ad; background: #292630; }
     /* Every line is fitted to the board; a stale wider one is clipped, never folded. */
     #idle-board { height: auto; padding: 0 1 1 1; text-wrap: nowrap; text-overflow: clip; }
+    /* A modal's dimmed backdrop is not enough for block art: hide it (finding 12). */
+    IdleBoard.modal-covered { display: none; }
     .message-clock { height: 1; margin: 1 2 0 2; color: #9aa3ad; }
     .user-turn {
         height: auto; margin: 1 2; padding: 0 1;
