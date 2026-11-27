@@ -178,3 +178,23 @@ def test_isycode_rmdir_empty_only_and_gated(tmp_path):
         assert not empty_dir.exists()
 
     asyncio.run(_run())
+
+
+def test_mcp_discover_and_hub_route_require_user_approval(tmp_path):
+    async def _run():
+        svc = ToolExecutionService(tmp_path, PolicyEngine(), RuntimeRegistry(tmp_path))
+        res_disc = await svc.execute(
+            ToolCall("isycode_mcp_discover", {"query": "flowsight"}, "d1"),
+            mode="coder", actor="AGENT", approve=None,
+        )
+        assert not res_disc.success
+        assert res_disc.error_code == "APPROVAL_REQUIRED"
+
+        res_route = await svc.execute(
+            ToolCall("isycode_motor", {"motor": "hub_route", "query": "flowsight"}, "d2"),
+            mode="plan", actor="AGENT", approve=None,
+        )
+        assert not res_route.success
+        assert res_route.error_code == "APPROVAL_REQUIRED"
+
+    asyncio.run(_run())

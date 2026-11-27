@@ -242,6 +242,32 @@ class ToolExecutionService:
             elif name == "resident_scan":
                 result = ExecutionResult(True, stdout=json.dumps(SelfScanner(self.workspace).scan(), ensure_ascii=False))
             elif name in READONLY_ISYCODE_TOOLS:
+                needs_discover_approval = (
+                    actor == "AGENT"
+                    and (
+                        name == "isycode_mcp_discover"
+                        or (name == "isycode_motor" and str(arguments.get("motor", "")).strip().lower() == "hub_route")
+                    )
+                )
+                if needs_discover_approval:
+                    if approve is None:
+                        return self._deny(
+                            "APPROVAL_REQUIRED",
+                            "Descubrir herramientas en ISyMCP Hub consume tokens y requiere aprobación del operador.",
+                        )
+                    preview = ToolCall(name, copy.deepcopy(arguments), call_id)
+                    q = arguments.get("query") or "(todos los servidores)"
+                    srv = arguments.get("server") or "(sin filtro de servidor)"
+                    preview.prepared_diff = (
+                        f"Consulta de catálogo en ISyMCP Hub (consume tokens de contexto):\n"
+                        f"  tool:   {name}\n"
+                        f"  server: {srv}\n"
+                        f"  query:  {q}\n"
+                        f"  limit:  {arguments.get('limit', 12)}"
+                    )
+                    answer = await approve(preview)
+                    if answer is not True:
+                        return self._deny("USER_REJECTED", "El operador rechazó ejecutar discover en ISyMCP Hub.")
                 result = await execute_isycode_readonly_tool(self.workspace, name, arguments)
             elif name in MUTATING_ISYCODE_TOOLS:
                 diff_preview = preview_isycode_mutating_tool(self.workspace, name, arguments)

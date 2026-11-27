@@ -205,11 +205,11 @@ async def execute_isycode_readonly_tool(workspace: Path, name: str, arguments: d
                 server=arguments.get("server") or None,
                 query=arguments.get("query") or None,
                 include_idle=bool(arguments.get("include_idle", False)),
-                limit=int(arguments.get("limit", 25) or 25),
+                limit=int(arguments.get("limit", 12) or 12),
             )
             if not resp.get("ok"):
                 return ExecutionResult(False, stderr=resp.get("error", "Error consultando ISyMCP Hub."), returncode=1, error_code="ISYMCP_HUB_ERROR")
-            return ExecutionResult(True, stdout=_bounded(resp.get("text", "")))
+            return ExecutionResult(True, stdout=_bounded(resp.get("text", ""), limit=6_000))
 
         if name == "isycode_mcp_describe":
             from core.isymcp_hub_client import ISyMCPHubClient

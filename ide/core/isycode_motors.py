@@ -51,7 +51,7 @@ def build_tool_guide(hub_summary: dict[str, Any] | None = None) -> dict[str, Any
             "1. Antes de correr comandos o adivinar flags, llama isycode_motor(motor='planner') para obtener estructura, entrypoints y toolchains disponibles en 1 paso.",
             "2. Antes de importar o instanciar clases/funciones, llama isycode_motor(motor='inspector', target='<archivo_o_simbolo>') o read para ver firmas exactas.",
             "3. Para contexto histórico, reglas previas o memoria compartida ISyCo, llama isycode_motor(motor='historian', query='<tema>').",
-            "4. Para delegar trabajo especializado al ecosistema ISyMCP Hub (GitHub, REA, media, ChatGPT, pipelines, etc.), llama isycode_motor(motor='hub_route', query='<tarea>') y luego isycode_mcp_execute.",
+            "4. Para herramientas MCP en ISyMCP Hub: NO adivines nombres de servidor (muchas tools como FlowSight/GitHub/media viven dentro de servidores existentes como 'isymcp'). Usa solo nombres exactos de tool_guide.isymcp_hub.servers o pide permiso al usuario para ejecutar una sola llamada acotada de isycode_mcp_discover(query='<palabra>', limit=10).",
         ],
     }
     if hub_summary is not None:
@@ -63,6 +63,11 @@ def error_recovery_hint(tool_name: str, error_code: str, stderr: str) -> str:
     """Generate a concise actionable hint when a tool fails so the model self-corrects."""
     code = (error_code or "").upper()
     err = stderr or ""
+    if code == "ISYMCP_HUB_ERROR" or tool_name == "isycode_mcp_discover":
+        return (
+            "Hint: no adivines el nombre de un servidor MCP ni afirmes que no existe sin buscar por query. "
+            "Usa solo los nombres exactos listados en tool_guide.isymcp_hub.servers o haz una sola llamada con query='<palabra>' (sin server) pidiendo confirmación al usuario."
+        )
     if code == "EXECUTABLE_MISSING":
         return (
             "Hint: binario no encontrado en /usr/bin, /bin, /usr/local/bin ni ~/.local/bin. "
