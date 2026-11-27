@@ -30,7 +30,7 @@ from pathlib import Path
 
 from isycode.action_runtime import ActionOutcome, ActionReceipt, ProductActionGate
 from isycode.chat_sessions import (
-    ChatSession, ChatSessionError, ChatSessionStore, SessionDiverged, revision_of,
+    ChatSession, ChatSessionError, ChatSessionStore, SessionDiverged, SessionSummary, revision_of,
 )
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
@@ -246,12 +246,19 @@ class ChatSessionOwner:
         return ActionOutcome("Message saved.", "ALLOW", receipt, "transcript updated"), target
 
     def list_conversations(self) -> tuple[ActionOutcome, list[ChatSession]]:
+        return self._list(self.store.list_sessions)
+
+    def list_conversation_summaries(self) -> tuple[ActionOutcome, list[SessionSummary]]:
+        """The same authorized, journaled listing, as rows without transcripts."""
+        return self._list(self.store.list_summaries)
+
+    def _list(self, read):
         request = ActionRequest("session.resume", self.root, LIST_TARGET, {"operation": "list"},
                                 execution_owner="chat_sessions")
         denied = self._authorize(request)
         if denied is not None:
             return ActionOutcome("Conversations unavailable.", "DENY", None, denied), []
-        sessions = self.store.list_sessions()
+        sessions = read()
         receipt = self._receipt(request, "list:" + ",".join(s.session_id for s in sessions))
         if receipt is None:
             return ActionOutcome("Conversations unavailable.", "NOT_VERIFIABLE", None,

@@ -17,6 +17,9 @@ _SECRET_ASSIGNMENT = re.compile(
 def _sanitize_plain_text(value: str) -> str:
     # A non-JSON secret assignment can hold quoted words, arrays, or incomplete
     # objects. Its end cannot be inferred safely, so discard the entire note.
+    # _SECRET_ASSIGNMENT and every pattern in _sanitize_text need a trigger word.
+    if not ChatSessionStore._REDACTION_TRIGGER.search(value):
+        return value
     if _SECRET_ASSIGNMENT.search(value):
         return "[redacted]"
     return ChatSessionStore._sanitize_text(value)
@@ -40,6 +43,19 @@ def sanitize_historical_text(value: str) -> str:
     # can consume quotes and destroy the argument document.
     try:
         parsed = json.loads(value)
+        # With ensure_ascii=False every key and string appears literally in the
+        # canonical text (only quotes, backslashes and control characters are
+        # escaped, and no trigger word contains them), unlike the input, where
+        # "\u0073k-" hides "sk-". No trigger there means redaction is the identity.
+        # NaN can be serializable only after redaction (under a secret key), so a
+        # failed canonical dump takes the full path below.
+        try:
+            canonical = json.dumps(parsed, ensure_ascii=False, sort_keys=True,
+                                   separators=(",", ":"), allow_nan=False)
+        except ValueError:
+            canonical = None
+        if canonical is not None and not ChatSessionStore._REDACTION_TRIGGER.search(canonical):
+            return canonical
         return json.dumps(_redact_json(parsed), ensure_ascii=False, sort_keys=True,
                           separators=(",", ":"), allow_nan=False)
     except (ValueError, RecursionError):

@@ -32,6 +32,10 @@ Changed 2026-11-12 at the user's request ("render it well where it can, remove i
 
 The activity cat keeps its outline Braille drawing. While a turn runs it paces its track one dot per tick, steps every other tick, sways its tail, and stops, blinks and turns round at each end. At rest the curled cat sits beside the caption when the column has room (20 cells for `Chat ready`); a narrower column shows a whole cat lying above the caption rather than a clipped piece beside it, and under 10 cells the caption stands alone. ASCII-only display replaces both drawings with `=^.^=` and `=-.-= z`. Reduced motion still stops the walk.
 
+## Sessions board states
+
+Added 2026-11-27 at Danny's request (agy-dash/claude-dash style). The Sessions board groups conversations by state: `● Working` (the turn on screen), `◐ Background` (a turn running in a lane that is not on screen), `◆ Needs input` and `○ Idle`; ASCII mode uses `*`, `~`, `?`, `-`. The section titles and the detail panel name the state, so it reads without color. Each row shows model, title, an estimated context badge (`~34%` of the model window when the window is known, `~12k` tokens otherwise; green under 60 %, yellow under 85 %, red above) and age; a muted `you:`/`ai:` last-message line appears only when the list has at least 8 rows, so 80×24 keeps one line per conversation. The context badge is a local ~4 chars/token estimate of the saved transcript, never a provider measurement.
+
 ## Typography and compatibility
 
 The accepted comparator profile is **Ubuntu Sans Mono / Unicode / 14 CSS px / 1.3 line-height**. Textual does not set a terminal's font family or point size. Preserve the user's terminal settings unless their request specifically changes them. Calibrate terminal cell metrics separately; 14 CSS px is not a tested GNOME Terminal point size.

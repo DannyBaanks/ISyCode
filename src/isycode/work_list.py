@@ -66,6 +66,41 @@ def fit_heading(path: str, tail: str, width: int) -> str:
     return f"{shown}{gap}{tail}"
 
 
+# Session states, dash-style. The symbol identifies the state; the section
+# title and the detail panel name it, so it still reads without color.
+STATUS_ORDER = ("generating", "background", "waiting", "idle")
+STATUS_LABELS = {"generating": "Working", "background": "Background",
+                 "waiting": "Needs input", "idle": "Idle"}
+_STATUS_GLYPHS = {"generating": ("●", "*"), "background": ("◐", "~"),
+                  "waiting": ("◆", "?"), "idle": ("○", "-")}
+_STATUS_COLORS = {"generating": "#77d8b0", "background": "#7fb3d5",
+                  "waiting": "#e5c07b", "idle": "#6d7580"}
+
+
+def status_glyph(status: str) -> str:
+    from isycode.tui_theme import ascii_only
+    pair = _STATUS_GLYPHS.get(status, _STATUS_GLYPHS["idle"])
+    return pair[1] if ascii_only() else pair[0]
+
+
+def context_badge(chars: int | None, limit: int | None) -> tuple[str, int | None]:
+    """A local estimate (~4 chars/token) of the saved transcript, as a list badge."""
+    if type(chars) is not int or chars <= 0:
+        return "", None
+    tokens = (chars + 3) // 4
+    shown = f"{tokens / 1_000_000:.1f}M" if tokens >= 1_000_000 else f"{tokens // 1000}k" if tokens >= 1000 else str(tokens)
+    if type(limit) is not int or limit <= 0:
+        return f"~{shown}", None
+    percent = min(100, round(tokens * 100 / limit))
+    return f"~{percent}%", percent
+
+
+def _percent_color(percent: int | None) -> str:
+    if percent is None:
+        return "#6d7580"
+    return "#77d8b0" if percent < 60 else "#e5c07b" if percent < 85 else "#e06c75"
+
+
 def preview_line(text: str | None) -> str:
     if not isinstance(text, str):
         return ""
@@ -175,8 +210,20 @@ class SessionDetails(Static):
 
     def action_expand_message(self):
         message = getattr(self, "full_message", "")
-        if message:
+        loader = getattr(self, "full_message_loader", None)
+        if message and callable(loader):
+            # The list keeps a capped preview; read the whole message on demand.
+            self.run_worker(self._expand_loaded(loader, message), group="session-message")
+        elif message:
             self.app.push_screen(SessionMessageScreen(message))
+
+    async def _expand_loaded(self, loader, fallback):
+        import asyncio
+        try:
+            message = await asyncio.to_thread(loader)
+        except (OSError, ValueError, RuntimeError):
+            message = None
+        self.app.push_screen(SessionMessageScreen(message or fallback))
 
 
 def quoted_preview(text, console, width, max_lines):
@@ -216,6 +263,7 @@ class WorkList(Vertical):
         with Horizontal(id="work-filters"):
             yield Button(tr("All"), id="work-filter-all", classes="filter-on")
             yield Button(tr("Working"), id="work-filter-generating")
+            yield Button(tr("Background"), id="work-filter-background")
             yield Button(tr("Needs input"), id="work-filter-waiting")
             yield Button(tr("Idle"), id="work-filter-idle")
         with Horizontal(id="work-body"):
@@ -254,36 +302,61 @@ class WorkList(Vertical):
         if listing._preview_click_id not in {row["id"] for row in rows}:
             listing._preview_click_id = None
         listing.clear_options()
-        grouped: dict[str, list] = {"generating": [], "waiting": [], "idle": []}
+        grouped: dict[str, list] = {key: [] for key in STATUS_ORDER}
         for row in rows:
             grouped.get(row.get("status"), grouped["idle"]).append(row)
-        titles = (("generating", "Working"), ("waiting", "Waiting"), ("idle", "Idle"))
-        for key, title in titles:
+        width = max(8, listing.content_size.width - 2)
+        # The last-message line costs a row per conversation; a short list
+        # (80x24 leaves about three rows) keeps one line each and the detail
+        # panel carries the message.
+        previews = listing.content_size.height >= self.PREVIEW_MIN_HEIGHT
+        for key in STATUS_ORDER:
             items = grouped[key]
             if not items:
                 continue
-            listing.add_option(Option(Text(f"{title}  {len(items)}", style="bold #9aa3ad"),
+            listing.add_option(Option(Text(f"{tr(STATUS_LABELS[key])}  {len(items)}", style="bold #9aa3ad"),
                                       id=f"section-{key}", disabled=True))
             for row in items:
-                age = row.get("age") or ""
-                line = Text()
-                line.append("↻ Iterative · " if row.get("session_kind") == "iterative" else "◇ ", style="#77d8b0" if row.get("session_kind") == "iterative" else "#8fbc8f")
-                if row.get("model"):
-                    from isycode.model_presentation import model_display_name
-                    line.append(model_display_name(row["model"]) + " · ", style="bold #77d8b0")
-                line.append(row.get("title") or "Untitled", style="bold #f4f1ea" if row.get("current") else "")
-                line.append(f"  ·  {row.get('workspace') or ''}", style="#9aa3ad")
-                if age:
-                    line.append(f"    {age}", style="#6d7580")
-
-                if row["id"] not in {"memory", "child"}:
-                    width = max(8, listing.content_size.width - 2)
-                    line.truncate(width - 5, overflow="ellipsis")
-                    line.append(" " * max(1, width - 4 - cell_len(line.plain)))
-                    line.append("[×]", style=Style(color="#f87171", bold=True, meta={"delete_session": row["id"]}))
-                listing.add_option(Option(line, id=row["id"]))
+                listing.add_option(Option(self._row_text(row, key, width, previews), id=row["id"]))
         if highlight is not None and listing.option_count:
             listing.highlighted = min(highlight, listing.option_count - 1)
+
+    PREVIEW_MIN_HEIGHT = 8
+
+    @staticmethod
+    def _row_text(row, status, width, previews=True):
+        """Line 1: state · model · title … context · age [×]. Line 2: last message."""
+        line = Text()
+        line.append(status_glyph(status) + " ", style=_STATUS_COLORS.get(status, "#6d7580"))
+        if row.get("session_kind") == "iterative":
+            line.append("↻ Iterative · ", style="#77d8b0")
+        if row.get("model"):
+            from isycode.model_presentation import model_display_name
+            line.append(model_display_name(row["model"]) + " · ", style="bold #77d8b0")
+        line.append(row.get("title") or "Untitled", style="bold #f4f1ea" if row.get("current") else "")
+        tail = Text()
+        if row.get("context"):
+            tail.append(f"  {row['context']}", style=_percent_color(row.get("context_percent")))
+        if row.get("age"):
+            tail.append(f"  {row['age']}", style="#6d7580")
+        deletable = row["id"] not in {"memory", "child"}
+        right = width - (4 if deletable else 0)
+        line.truncate(max(4, right - cell_len(tail.plain)), overflow="ellipsis")
+        line.append(" " * max(1, right - cell_len(line.plain) - cell_len(tail.plain)))
+        line.append_text(tail)
+        if deletable:
+            line.append(" [×]", style=Style(color="#f87171", bold=True, meta={"delete_session": row["id"]}))
+        preview = row.get("preview") if previews else ""
+        if preview:
+            second = Text("  ")
+            who = {"user": "you: ", "assistant": "ai: "}.get(row.get("last_role") or "", "")
+            if who:
+                second.append(who, style="#9aa3ad")
+            second.append(preview, style="#6d7580")
+            second.truncate(width, overflow="ellipsis")
+            line.append("\n")
+            line.append_text(second)
+        return line
 
     def on_option_list_option_highlighted(self, event):
         if event.option_list.id != "work-conversations":
@@ -307,11 +380,19 @@ class WorkList(Vertical):
         detail = Text(style="#e0e0e0")
         detail.append(row.get("title") or "Untitled", style="bold #d7a9ff")
         status = row.get("status", "idle")
-        detail.append("\n" + {"generating": "Working", "waiting": "Needs input", "idle": "Idle"}.get(status, status), style="#77d8b0")
+        detail.append("\n" + status_glyph(status) + " " + tr(STATUS_LABELS.get(status, status)),
+                      style=_STATUS_COLORS.get(status, "#77d8b0"))
         detail.append("\n\nWorkspace\n", style="#9aa3ad")
         detail.append(str(row.get("workspace") or "Unknown"), style="#e0e0e0")
         detail.append("\n\nUpdated\n", style="#9aa3ad")
         detail.append(str(row.get("age") or "Unknown"))
+        if row.get("messages") is not None:
+            detail.append("\n\nMessages\n", style="#9aa3ad")
+            detail.append(str(row["messages"]))
+        if row.get("context"):
+            detail.append("\n\nContext (estimate)\n", style="#9aa3ad")
+            detail.append(str(row["context"]) + (" of window" if row.get("context_percent") is not None else " tokens"),
+                          style=_percent_color(row.get("context_percent")))
 
         if row.get("model"):
             from isycode.model_presentation import model_display_name
@@ -322,6 +403,7 @@ class WorkList(Vertical):
             detail.append(" · " + PRESETS.get(provider, {}).get("label", provider or "Unknown provider"), style="#d7a9ff")
         panel = self.query_one("#work-details", SessionDetails)
         panel.full_message = str(row.get("detail") or row.get("preview") or "")
+        panel.full_message_loader = row.get("load_detail")
         width = max(3, panel.content_size.width)
         overhead = len(detail.wrap(self.app.console, width)) + 5
         budget = max(1, panel.content_size.height - overhead)
@@ -342,6 +424,7 @@ class WorkList(Vertical):
         for button_id, name in (
             ("work-filter-all", "all"),
             ("work-filter-generating", "generating"),
+            ("work-filter-background", "background"),
             ("work-filter-waiting", "waiting"),
             ("work-filter-idle", "idle"),
         ):

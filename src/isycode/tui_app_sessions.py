@@ -22,6 +22,7 @@ from isycode.work_list import (
     WorkList,
     age_label,
     clock_label,
+    context_badge,
     fit_heading,
     preview_line,
 )
@@ -458,20 +459,53 @@ class SessionMixin:
         self.query_one("#work-list").display = False
         self.query_one("#chat").display = True
 
-    def _conversation_row(self, session) -> dict[str, str]:
-        last = session.messages[-1] if session.messages else {}
-        sent = last.get("sent_at") if isinstance(last, dict) else None
-        return {
+    def _conversation_row(self, session, limits: dict | None = None) -> dict[str, Any]:
+        """One list row from a SessionSummary (or, from older owners, a ChatSession)."""
+        if hasattr(session, "last_content"):
+            content, sent, role = session.last_content, session.last_sent_at, session.last_role
+            model, provider = session.model, session.provider
+            count, chars, truncated = session.message_count, session.context_chars, session.last_truncated
+        else:
+            last = session.messages[-1] if session.messages else {}
+            last = last if isinstance(last, dict) else {}
+            content, sent, role = str(last.get("content", "")), last.get("sent_at"), str(last.get("role") or "")
+            model = str(session.state.get("model") or "")
+            provider = str(session.state.get("provider") or "")
+            count, truncated = len(session.messages), False
+            chars = sum(len(str(item.get("content") or "")) for item in session.messages if isinstance(item, dict))
+        limits = {} if limits is None else limits
+        if (provider, model) not in limits:
+            from isycode.providers import model_context_limit
+            limits[(provider, model)] = model_context_limit(provider, model)[0] if provider and model else None
+        context, percent = context_badge(chars, limits[(provider, model)])
+        row = {
             "id": session.session_id,
             "workspace": self._workspace_root.name,
             "title": session.title,
-            "preview": preview_line(last.get("content") if isinstance(last, dict) else ""),
-            "detail": str(last.get("content", "")) if isinstance(last, dict) else "",
-            "model": str(session.state.get("model") or ""),
-            "provider": str(session.state.get("provider") or ""),
+            "preview": preview_line(content),
+            "detail": str(content),
+            "last_role": role,
+            "messages": count,
+            "context": context,
+            "context_percent": percent,
+            "model": model,
+            "provider": provider,
             "age": age_label(sent or session.updated_at),
             "status": "idle",
         }
+        if truncated:
+            row["load_detail"] = lambda sid=session.session_id: self._load_last_message(sid)
+        return row
+
+    def _load_last_message(self, session_id: str) -> str | None:
+        """The whole last message of a saved conversation, through the owner (worker thread)."""
+        owner = self._chat_session_owner
+        if owner is None:
+            return None
+        outcome, session, _revision = owner.review(session_id)
+        if outcome.decision != "ALLOW" or session is None or not session.messages:
+            return None
+        return str(session.messages[-1].get("content") or "")
 
     def action_open_session_search(self) -> None:
         """Cross-session search (Ctrl+Shift+F); resumes the chosen conversation."""
@@ -817,7 +851,8 @@ class SessionMixin:
                     else:
                         other = self._lanes.get(row["id"])
                         live = other is not None and other.loop_task is not None and not other.loop_task.done()
-                        row["status"] = "generating" if live else "idle"
+                        # Running in a lane that is not on screen: dash-style "background".
+                        row["status"] = "background" if live else "idle"
             rows = list(self._work_rows)
             if self._subagent_running:
                 rows.append({"id": "child", "workspace": self._workspace_root.name,
@@ -825,7 +860,11 @@ class SessionMixin:
                              "age": "now", "status": "generating", "current": False})
             idle = sum(row["status"] == "idle" for row in rows)
             working = sum(row["status"] == "generating" for row in rows)
-            tail = f"{idle} idle" + (f" · {working} working" if working else "")
+            background = sum(row["status"] == "background" for row in rows)
+            waiting = sum(row["status"] == "waiting" for row in rows)
+            tail = f"{idle} idle" + (f" · {working} working" if working else "") + (
+                f" · {background} background" if background else "") + (
+                f" · {waiting} needs input" if waiting else "")
             panel.show_rows(rows, heading=fit_heading(str(self._workspace_root), tail,
                                                       self._idle_content_width()))
         except (NoMatches, NoScreen):
@@ -841,10 +880,14 @@ class SessionMixin:
                 sessions = []
                 owner = self._chat_session_owner
                 if owner is not None and self._sessions_enabled():
-                    outcome, sessions = await asyncio.to_thread(owner.list_conversations)
+                    # Summaries skip parsing transcripts that did not change; owners
+                    # without them (older or test doubles) list full transcripts.
+                    lister = getattr(owner, "list_conversation_summaries", None) or owner.list_conversations
+                    outcome, sessions = await asyncio.to_thread(lister)
                     if outcome.decision != "ALLOW":
                         self._set_activity(tr("Conversations unavailable · {value}", value=outcome.reason[:100]), YELLOW)
-                self._work_rows = [self._conversation_row(session) for session in sessions]
+                limits: dict = {}
+                self._work_rows = [self._conversation_row(session, limits) for session in sessions]
                 if self._sessions_enabled():
                     try:
                         iterations = await asyncio.to_thread(self._iteration_owner().list_sessions)

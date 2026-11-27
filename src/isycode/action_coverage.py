@@ -334,6 +334,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("credentials.use", "CredentialUseOwner.secret_for", "credential_use", "COVERED"),
     ("session.create", "ChatSessionOwner.record", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.list_conversations", "chat_sessions", "COVERED"),
+    ("session.resume", "ChatSessionOwner.list_conversation_summaries", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.resume", "chat_sessions", "COVERED"),
     # Store primitives with no product caller outside the store: ChatSessionOwner
     # writes through its guarded compare-and-write path instead (rename included).

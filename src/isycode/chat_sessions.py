@@ -118,8 +118,51 @@ class ChatSession:
     title_manual: bool = False
 
 
+@dataclass(frozen=True)
+class SessionSummary:
+    """What a conversation list shows, without the transcript.
+
+    Display only: it never authorizes, re-bases or resumes anything. Resuming
+    still loads and validates the full transcript.
+    """
+    session_id: str
+    title: str
+    created_at: float
+    updated_at: float
+    message_count: int
+    last_role: str
+    last_content: str
+    last_sent_at: str | None
+    last_truncated: bool
+    model: str
+    provider: str
+    context_chars: int
+
+    @classmethod
+    def of(cls, session: "ChatSession") -> "SessionSummary":
+        last = session.messages[-1] if session.messages else {}
+        content = str(last.get("content") or "")
+        cap = ChatSessionStore.SUMMARY_PREVIEW_CHARS
+        sent = last.get("sent_at")
+        return cls(session.session_id, session.title, session.created_at, session.updated_at,
+                   len(session.messages), str(last.get("role") or ""), content[:cap],
+                   sent if isinstance(sent, str) else None, len(content) > cap,
+                   str(session.state.get("model") or ""), str(session.state.get("provider") or ""),
+                   sum(len(message["content"]) for message in session.messages))
+
+
 class ChatSessionStore:
     """Atomically store chat history under a private, external state directory."""
+
+    # The list keeps this much of each last message; the rest is loaded on demand.
+    SUMMARY_PREVIEW_CHARS = 16_000
+    # Cache of SessionSummary rows. Each row is keyed by the transcript's
+    # (inode, size, mtime_ns, ctime_ns): every write replaces the file with a
+    # new inode, so a changed transcript misses and is parsed again. The file
+    # is a cache, never a source of truth: unreadable, foreign or malformed
+    # content is ignored and rebuilt from the transcripts.
+    _SUMMARY_INDEX = ".summary-index"
+    _SUMMARY_FIELDS = tuple(SessionSummary.__dataclass_fields__)
 
     _SESSION_ID = re.compile(r"^[a-f0-9]{32}$")
     _SECRET_VALUE = re.compile(
@@ -128,6 +171,22 @@ class ChatSessionStore:
     )
     _BEARER_VALUE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{12,}={0,2}")
     _API_TOKEN = re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b")
+    # Every redaction pattern above needs one of these words (case-insensitive is
+    # a superset of the case-sensitive "sk-"). Text without any of them cannot
+    # change, so one scan replaces three substitutions on the common path. The
+    # shared leading class matches a superset of the words (it also accepts
+    # e.g. "bccess_token") and is several times faster than a plain alternation;
+    # a false positive only runs the full redaction.
+    _REDACTION_TRIGGER = re.compile(
+        r"(?i)[abprs](?:earer|pi[_-]?key|ccess[_-]?token|efresh[_-]?token|ecret|assword|uthorization|k-)")
+    # validate_state results per sha256 of repr(state). validate_state is pure for
+    # a plain dict (PRESETS is fixed at import), and repr keeps every distinction
+    # it can see (types, key order, -0.0, tuple vs list), so a hit is
+    # indistinguishable from validating again. Entries are JSON text: callers get
+    # fresh objects. Reads and the write after them hit the same entry.
+    _STATE_CACHE_LIMIT = 32
+    _state_cache: "dict[str, str]" = {}
+    _state_cache_guard = threading.Lock()
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root).expanduser()
@@ -182,7 +241,7 @@ class ChatSessionStore:
             return path
 
     def _write(self, session: ChatSession) -> tuple[Path, str]:
-        state = self.validate_state(session.state)
+        state = self._validated_state(session.state)
         for message in session.messages:
             if (not isinstance(message, dict)
                     or message.get("role") not in {"user", "assistant"}
@@ -229,7 +288,12 @@ class ChatSessionStore:
 
     def _read_bytes(self, session_id: str) -> bytes | None:
         """The exact persisted bytes, or None if the transcript does not exist."""
-        path = self._path(session_id)
+        found = self._read_private(self._path(session_id))
+        return None if found is None else found[0]
+
+    @staticmethod
+    def _read_private(path: Path) -> tuple[bytes, os.stat_result] | None:
+        """Bytes and fstat of one private regular file, or None if it is absent."""
         # Opening a FIFO must not block before fstat can reject it. O_NONBLOCK
         # does not change regular-file reads and also closes the lstat/open race.
         flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
@@ -240,9 +304,10 @@ class ChatSessionStore:
         with os.fdopen(descriptor, "rb") as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise ChatSessionError("chat session is not a bounded regular file")
+            info = os.fstat(stream.fileno())
             if not storage.private_child(path, fd=stream.fileno()):
                 raise ChatSessionError('chat session is not private')
-            return stream.read()
+            return stream.read(), info
 
     def revision(self, session_id: str) -> str | None:
         """Fingerprint of the transcript as it is on disk right now (None if absent)."""
@@ -283,8 +348,25 @@ class ChatSessionStore:
             self._validate_sent_at(message)
         return ChatSession(session_id, payload["title"], messages,
                            float(payload["created_at"]), float(payload["updated_at"]),
-                           self.validate_state(payload.get("state", {})),
+                           self._validated_state(payload.get("state", {})),
                            payload.get("title_manual") is True)
+
+    @classmethod
+    def _validated_state(cls, state: Any) -> dict[str, Any]:
+        """validate_state(state), memoized for plain dicts."""
+        if type(state) is not dict:
+            return cls.validate_state(state)
+        key = hashlib.sha256(repr(state).encode("utf-8", "surrogatepass")).hexdigest()
+        with cls._state_cache_guard:
+            cached = cls._state_cache.get(key)
+        if cached is not None:
+            return json.loads(cached)
+        clean = cls.validate_state(state)
+        with cls._state_cache_guard:
+            if len(cls._state_cache) >= cls._STATE_CACHE_LIMIT:
+                cls._state_cache.pop(next(iter(cls._state_cache)))
+            cls._state_cache[key] = json.dumps(clean, ensure_ascii=False)
+        return clean
 
     def list_sessions(self) -> list[ChatSession]:
         sessions = []
@@ -296,6 +378,91 @@ class ChatSessionStore:
             except (OSError, ChatSessionError, ValueError):
                 continue
         return sorted(sessions, key=lambda item: item.updated_at, reverse=True)
+
+    @staticmethod
+    def _summary_key(info: os.stat_result) -> list[int]:
+        return [info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns]
+
+    def _load_summary_index(self) -> dict[str, Any]:
+        try:
+            found = self._read_private(self.root / self._SUMMARY_INDEX)
+            payload = None if found is None else json.loads(found[0].decode("utf-8"))
+        except (OSError, ChatSessionError, ValueError):
+            return {}
+        if not isinstance(payload, dict) or payload.get("version") != 1:
+            return {}
+        entries = payload.get("entries")
+        return entries if isinstance(entries, dict) else {}
+
+    @classmethod
+    def _cached_summary(cls, session_id: str, entry: Any, key: list[int]) -> SessionSummary | None:
+        if not isinstance(entry, dict) or entry.get("key") != key:
+            return None
+        row = entry.get("summary")
+        if not isinstance(row, dict) or set(row) != set(cls._SUMMARY_FIELDS):
+            return None
+        try:
+            summary = SessionSummary(**row)
+        except TypeError:
+            return None
+        types = (str, str, (int, float), (int, float), int, str, str, (str, type(None)), bool, str, str, int)
+        if summary.session_id != session_id or not all(
+                isinstance(getattr(summary, name), kind) and not (kind is int and isinstance(getattr(summary, name), bool))
+                for name, kind in zip(cls._SUMMARY_FIELDS, types)):
+            return None
+        return summary
+
+    def _save_summary_index(self, entries: dict[str, Any]) -> None:
+        data = json.dumps({"version": 1, "entries": entries}, ensure_ascii=False,
+                          allow_nan=False).encode("utf-8")
+        try:
+            fd, temporary = tempfile.mkstemp(prefix=".summary-index-", dir=self.root)
+        except OSError:
+            return
+        try:
+            if os.name == "posix":
+                os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
+            os.replace(temporary, self.root / self._SUMMARY_INDEX)
+        except OSError:
+            pass  # a cache that cannot be written is rebuilt next time
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
+    def list_summaries(self) -> list[SessionSummary]:
+        """list_sessions() reduced to list rows, parsing only transcripts that changed."""
+        cached = self._load_summary_index()
+        entries: dict[str, Any] = {}
+        summaries = []
+        changed = False
+        for path in self.root.glob("*.json"):
+            session_id = path.stem
+            if not self._SESSION_ID.fullmatch(session_id):
+                continue
+            try:
+                info = path.lstat()
+            except OSError:
+                continue
+            summary = (self._cached_summary(session_id, cached.get(session_id), self._summary_key(info))
+                       if stat.S_ISREG(info.st_mode) else None)
+            if summary is None:
+                changed = True
+                try:
+                    found = self._read_private(self._path(session_id))
+                    if found is None:
+                        continue
+                    summary = SessionSummary.of(self._parse(session_id, found[0]))
+                except (OSError, ChatSessionError, ValueError):
+                    continue
+                info = found[1]
+            entries[session_id] = {"key": self._summary_key(info),
+                                   "summary": {name: getattr(summary, name) for name in self._SUMMARY_FIELDS}}
+            summaries.append(summary)
+        if changed or set(entries) != set(cached):
+            self._save_summary_index(entries)
+        return sorted(summaries, key=lambda item: item.updated_at, reverse=True)
 
     def delete(self, session_id: str, *, expected_revision: object = UNCHECKED) -> None:
         path = self._path(session_id)
@@ -362,6 +529,8 @@ class ChatSessionStore:
     def _sanitize_text(cls, value: str) -> str:
         # Redact bearer values before key/value matching consumes "Bearer" and
         # leaves the actual credential orphaned after Authorization:.
+        if not cls._REDACTION_TRIGGER.search(value):
+            return value
         value = cls._BEARER_VALUE.sub("Bearer [redacted]", value)
         value = cls._SECRET_VALUE.sub(lambda match: f"{match.group(1)}{match.group(2)}[redacted]", value)
         return cls._API_TOKEN.sub("[redacted]", value)

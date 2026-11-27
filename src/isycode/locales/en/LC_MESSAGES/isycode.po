@@ -1747,6 +1747,9 @@ msgstr "Needs input"
 msgid "Idle"
 msgstr "Idle"
 
+msgid "Background"
+msgstr "Background"
+
 msgid "Select a conversation to inspect it."
 msgstr "Select a conversation to inspect it."
 
