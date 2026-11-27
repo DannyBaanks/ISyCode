@@ -7086,3 +7086,42 @@ msgstr "监督 Bridge lease、代理健康、调度与升级。"
 
 msgid "Sweeps are dry-run unless --apply is explicitly supplied."
 msgstr "除非显式提供 --apply，否则清扫均为试运行。"
+
+msgid "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
+msgstr "Health 可访问。由于 Gateway 隐藏其根目录身份，Remote Files 已禁用。"
+
+msgid "Set GATEWAY_API_KEY for scoped read access."
+msgstr "设置 GATEWAY_API_KEY 以获得受限读取权限。"
+
+msgid "Unavailable. Local Files remains independent; no Gateway fallback is active."
+msgstr "不可用。Local Files 保持独立；未启用 Gateway 回退。"
+
+msgid "Gateway configuration error: {error}"
+msgstr "Gateway 配置错误：{error}"
+
+msgid "Not checked · grant Gateway MCP discovery in Settings · Authority & Security."
+msgstr "未检查 · 请在 设置 · Authority & Security 中授权 Gateway MCP 发现。"
+
+msgid "Failed · {error}"
+msgstr "失败 · {error}"
+
+msgid "API key supplied"
+msgstr "已提供 API key"
+
+msgid "API key needed for calls"
+msgstr "调用需要 API key"
+
+msgid "Ready · {count} tools · {auth} · manual calls require per-host grant + one-use approval"
+msgstr "就绪 · {count} 个工具 · {auth} · 手动调用需要按主机授权 + 一次性批准"
+
+msgid "Loopback Only"
+msgstr "仅 loopback"
+
+msgid "{count} connected mobile client(s):"
+msgstr "{count} 个已连接的移动客户端："
+
+msgid "{name} · Connected"
+msgstr "{name} · 已连接"
+
+msgid "…and {count} more"
+msgstr "…以及另外 {count} 个"

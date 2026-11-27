@@ -7086,3 +7086,42 @@ msgstr "Supervisa los leases de Bridge, la salud de los agentes, el despacho y l
 
 msgid "Sweeps are dry-run unless --apply is explicitly supplied."
 msgstr "Los barridos son de prueba salvo que se pase --apply explícitamente."
+
+msgid "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
+msgstr "Health accesible. Remote Files está desactivado porque el Gateway oculta la identidad de su raíz."
+
+msgid "Set GATEWAY_API_KEY for scoped read access."
+msgstr "Define GATEWAY_API_KEY para lectura acotada."
+
+msgid "Unavailable. Local Files remains independent; no Gateway fallback is active."
+msgstr "No disponible. Local Files sigue siendo independiente; no hay respaldo del Gateway activo."
+
+msgid "Gateway configuration error: {error}"
+msgstr "Error de configuración del Gateway: {error}"
+
+msgid "Not checked · grant Gateway MCP discovery in Settings · Authority & Security."
+msgstr "Sin comprobar · concede el descubrimiento de Gateway MCP en Configuración · Authority & Security."
+
+msgid "Failed · {error}"
+msgstr "Falló · {error}"
+
+msgid "API key supplied"
+msgstr "API key proporcionada"
+
+msgid "API key needed for calls"
+msgstr "Hace falta API key para las llamadas"
+
+msgid "Ready · {count} tools · {auth} · manual calls require per-host grant + one-use approval"
+msgstr "Listo · {count} herramientas · {auth} · las llamadas manuales requieren permiso por host + aprobación de un solo uso"
+
+msgid "Loopback Only"
+msgstr "Solo loopback"
+
+msgid "{count} connected mobile client(s):"
+msgstr "{count} cliente(s) móvil(es) conectado(s):"
+
+msgid "{name} · Connected"
+msgstr "{name} · Conectado"
+
+msgid "…and {count} more"
+msgstr "…y {count} más"
