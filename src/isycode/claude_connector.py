@@ -194,6 +194,18 @@ def parse_claude_rate_limit(info: Any) -> dict[str, Any] | None:
             "status": status if isinstance(status, str) and len(status) < 32 else None}
 
 
+def format_claude_quota_line(snapshot: Any) -> str:
+    """``5h 63% · 7d 73%`` remaining, from the last ``rate_limit_event`` snapshot."""
+    if not isinstance(snapshot, dict):
+        return ""
+    pieces = []
+    for bucket in snapshot.get("buckets") or ():
+        pct = bucket.get("remaining_pct") if isinstance(bucket, dict) else None
+        if isinstance(pct, (int, float)) and not isinstance(pct, bool):
+            pieces.append(f"{bucket.get('label')} {round(pct)}%")
+    return " · ".join(pieces)
+
+
 class ClaudeConnector:
     """Bounded subprocesses of the official ``claude`` CLI in a dedicated home.
 
@@ -381,6 +393,10 @@ class ClaudeConnector:
         async with self._operation_lock:
             if self._login_process is not None:
                 raise ClaudeConnectorError("Claude Code login is already pending")
+            if (await self.account())["authenticated"]:
+                self._login_id = secrets.token_hex(8)
+                return {"method": "browser", "login_id": self._login_id, "url": None,
+                        "already_authenticated": True, "provider": "claude"}
             self._login_process = await self._spawn(["auth", "login", "--claudeai"], login=True)
             try:
                 url = await self._oauth_capture.wait_url(30.0)
@@ -389,9 +405,13 @@ class ClaudeConnector:
                 self._login_process = None
                 raise ClaudeConnectorError("Claude Code did not emit an official sign-in link") from None
             self._login_id = secrets.token_hex(8)
-            return {"method": "browser", "login_id": self._login_id, "url": url}
+            return {"method": "browser", "login_id": self._login_id, "url": url, "provider": "claude"}
 
     async def wait_login(self, login_id: str) -> bool:
+        if login_id is not None and login_id == self._login_id and self._login_process is None:
+            # Already signed in when the login started: confirm, nothing to wait for.
+            self._login_id = None
+            return (await self.account())["authenticated"]
         if self._login_process is None or login_id != self._login_id:
             raise ClaudeConnectorError("Claude Code login is no longer pending")
         process = self._login_process
@@ -614,4 +634,4 @@ class ClaudeConnector:
 
 
 __all__ = ["ClaudeConnector", "ClaudeConnectorError", "CLAUDE_AUTH_HOSTS", "CLAUDE_ENDPOINT",
-           "CLAUDE_MODELS", "parse_claude_rate_limit"]
+           "CLAUDE_MODELS", "format_claude_quota_line", "parse_claude_rate_limit"]

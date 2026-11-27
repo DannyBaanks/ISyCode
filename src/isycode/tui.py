@@ -1591,7 +1591,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if "~0 tok" not in rtk_label:
             text += " · " + rtk_label
         active_prov = selected_provider_name()
-        if active_prov in {"antigravity", "chatgpt", "xai"}:
+        if active_prov in {"antigravity", "chatgpt", "claude", "xai"}:
             from isycode.account_slots import PRIMARY_SLOT, active_slot
             slot_key = "grok" if active_prov == "xai" else active_prov
             cur_slot = active_slot(slot_key)
@@ -1600,6 +1600,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if active_prov == "antigravity" and getattr(self, "_antigravity_quota", None):
             from isycode.antigravity_connector import format_quota_line
             qline = format_quota_line(self._antigravity_quota, resolved_chat_model("antigravity"))
+            if qline:
+                text += " · " + qline
+        if active_prov == "claude":
+            from isycode.claude_connector import format_claude_quota_line
+            from isycode.provider_quotas import get_provider_quota
+            qline = format_claude_quota_line(get_provider_quota("claude"))
             if qline:
                 text += " · " + qline
         return text
@@ -1615,6 +1621,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if selected_provider_name() == "antigravity" and getattr(self, "_antigravity_quota", None):
             from isycode.antigravity_connector import format_quota_line
             quota_line = format_quota_line(self._antigravity_quota, resolved_chat_model("antigravity"))
+        elif selected_provider_name() == "claude":
+            from isycode.claude_connector import format_claude_quota_line
+            from isycode.provider_quotas import get_provider_quota
+            quota_line = format_claude_quota_line(get_provider_quota("claude"))
         if (total == 0 and not self._history and self._throughput.last_rate is None
                 and not self._usage.requests and not self._usage.unknown_requests
                 and not quota_line):

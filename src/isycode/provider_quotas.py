@@ -32,7 +32,7 @@ _MEMORY_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
 
 # Providers that expose a dedicated read-only quota/balance query (always gated by
 # ProviderNetworkOwner before any network or subprocess call).
-LIVE_QUOTA_PROVIDERS = frozenset({"antigravity", "chatgpt", "claude", "openrouter", "deepseek"})
+LIVE_QUOTA_PROVIDERS = frozenset({"antigravity", "chatgpt", "openrouter", "deepseek"})
 
 
 def _state_file() -> Path:

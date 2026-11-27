@@ -6887,3 +6887,78 @@ msgstr "Switch account · {provider} [{slot}] ({count})…"
 
 msgid "Subscription accounts · Antigravity / ChatGPT / Grok…"
 msgstr "Subscription accounts · Antigravity / ChatGPT / Grok…"
+
+msgid "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Claude subscriptions."
+msgstr "Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Claude subscriptions."
+
+msgid "Claude [{slot}] · plan limits"
+msgstr "Claude [{slot}] · plan limits"
+
+msgid "Claude account disconnected. API keys are unchanged."
+msgstr "Claude account disconnected. API keys are unchanged."
+
+msgid "Claude connection unavailable ({name}). Install the official Claude Code CLI and check Authority grants."
+msgstr "Claude connection unavailable ({name}). Install the official Claude Code CLI and check Authority grants."
+
+msgid "Claude reports the 5h and weekly limits with each reply; none recorded yet."
+msgstr "Claude reports the 5h and weekly limits with each reply; none recorded yet."
+
+msgid "Claude sign-in blocked · {value}"
+msgstr "Claude sign-in blocked · {value}"
+
+msgid "Claude sign-in cancelled."
+msgstr "Claude sign-in cancelled."
+
+msgid "Claude sign-in not completed · {value}"
+msgstr "Claude sign-in not completed · {value}"
+
+msgid "Claude sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+msgstr "Claude sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply"
+
+msgid "Claude subscription · sign-in & plan limits…"
+msgstr "Claude subscription · sign-in & plan limits…"
+
+msgid "Claude · subscription"
+msgstr "Claude · subscription"
+
+msgid "Disconnect Claude account…"
+msgstr "Disconnect Claude account…"
+
+msgid "Manage Claude accounts [{slot}] ({count})…"
+msgstr "Manage Claude accounts [{slot}] ({count})…"
+
+msgid "No Claude plan limits recorded yet; they arrive with the next reply."
+msgstr "No Claude plan limits recorded yet; they arrive with the next reply."
+
+msgid "Remaining: {windows}"
+msgstr "Remaining: {windows}"
+
+msgid "Runs the official Claude Code CLI at {executable}. Private isolated home: {home}. Contacts claude.com, claude.ai and api.anthropic.com. ISyCode never extracts or copies OAuth tokens, Claude Code's own tools are removed, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply."
+msgstr "Runs the official Claude Code CLI at {executable}. Private isolated home: {home}. Contacts claude.com, claude.ai and api.anthropic.com. ISyCode never extracts or copies OAuth tokens, Claude Code's own tools are removed, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply."
+
+msgid "Runs the official claude sign-in inside isolated slot [{slot}]; ISyCode never reads its credentials."
+msgstr "Runs the official claude sign-in inside isolated slot [{slot}]; ISyCode never reads its credentials."
+
+msgid "Sign in through the official Claude Code CLI, see 5h/weekly plan limits, or disconnect."
+msgstr "Sign in through the official Claude Code CLI, see 5h/weekly plan limits, or disconnect."
+
+msgid "Sign in with Claude"
+msgstr "Sign in with Claude"
+
+msgid "Sign in with Claude [{slot}] · browser"
+msgstr "Sign in with Claude [{slot}] · browser"
+
+msgid "Subscription 5h & weekly quota is available when Google Antigravity or Claude is selected."
+msgstr "Subscription 5h & weekly quota is available when Google Antigravity or Claude is selected."
+
+msgid "Subscription accounts · Antigravity / ChatGPT / Claude / Grok…"
+msgstr "Subscription accounts · Antigravity / ChatGPT / Claude / Grok…"
+
+msgid "Use saved Claude sign-in · checked on request"
+msgstr "Use saved Claude sign-in · checked on request"
+
+msgid "Uses the official Claude Code CLI in an isolated home with its built-in tools removed. ISyCode never reads OAuth tokens; tools stay behind IsySentinel."
+msgstr "Uses the official Claude Code CLI in an isolated home with its built-in tools removed. ISyCode never reads OAuth tokens; tools stay behind IsySentinel."
+
+msgid "Claude Pro/Max sign-in through the official Claude Code CLI"
+msgstr "Claude Pro/Max sign-in through the official Claude Code CLI"

@@ -2089,84 +2089,84 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2706,
+      "line": 2711,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2832,
+      "line": 2837,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "workspace.files.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 3187,
+      "line": 3192,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute_image_read",
       "action": "workspace.files.read",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2487,
+      "line": 2492,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2559,
+      "line": 2564,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2629,
+      "line": 2634,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2715,
+      "line": 2720,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2766,
+      "line": 2771,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2774,
+      "line": 2779,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2840,
+      "line": 2845,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "grit.claims.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2903,
+      "line": 2908,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2991,
+      "line": 2996,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2397,7 +2397,7 @@
     },
     {
       "file": "isycode/provider_auth.py",
-      "line": 153,
+      "line": 192,
       "callable": "isycode.provider_auth.ProviderAuthOwner.request",
       "action": "provider.authenticate",
       "owner": "provider_auth"
@@ -2637,7 +2637,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2991,
+      "line": 2996,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"

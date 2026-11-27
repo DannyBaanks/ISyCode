@@ -395,12 +395,17 @@ async def _usage_cmd(app: "TUIApp", arg: str) -> None:
     app._append("  " + tr("Provider-reported usage only; ISyCode does not cap tokens or estimate billing."), MUTED)
     if selected_provider_name() == "antigravity":
         await app._refresh_antigravity_quota(report=True)
+    elif selected_provider_name() == "claude":
+        app._report_claude_quota()
 
 
 async def _quota_cmd(app: "TUIApp", arg: str) -> None:
     del arg
+    if selected_provider_name() == "claude":
+        app._report_claude_quota()
+        return
     if selected_provider_name() != "antigravity":
-        app._append("  " + tr("Subscription 5h & weekly quota is available when Google Antigravity is selected."), MUTED)
+        app._append("  " + tr("Subscription 5h & weekly quota is available when Google Antigravity or Claude is selected."), MUTED)
         return
     await app._refresh_antigravity_quota(report=True)
 
@@ -410,6 +415,7 @@ async def _accounts_cmd(app: "TUIApp", arg: str) -> None:
     active = selected_provider_name()
     default_provider = (
         "antigravity" if active == "antigravity"
+        else "claude" if active == "claude"
         else "chatgpt" if active in {"chatgpt", "openai"}
         else "grok" if active == "xai"
         else None
@@ -418,7 +424,7 @@ async def _accounts_cmd(app: "TUIApp", arg: str) -> None:
         app._open_account_slots_menu(default_provider)
         return
     head = parts[0].casefold()
-    if head in {"antigravity", "chatgpt", "grok", "xai"}:
+    if head in {"antigravity", "chatgpt", "claude", "grok", "xai"}:
         prov = "grok" if head == "xai" else head
         if len(parts) >= 2 and parts[1].casefold() in {"use", "switch"} and len(parts) >= 3:
             await app._select_account_slot(prov, parts[2])
@@ -532,6 +538,11 @@ class MenuAction(str, Enum):
     ANTIGRAVITY_AUTH_LOGOUT = "antigravity_auth_logout"
     ANTIGRAVITY_AUTH_SAVED = "antigravity_auth_saved"
     ANTIGRAVITY_QUOTA = "antigravity_quota"
+    CLAUDE_AUTH_METHODS = "claude_auth_methods"
+    CLAUDE_AUTH_BROWSER = "claude_auth_browser"
+    CLAUDE_AUTH_LOGOUT = "claude_auth_logout"
+    CLAUDE_AUTH_SAVED = "claude_auth_saved"
+    CLAUDE_QUOTA = "claude_quota"
     ACCOUNT_SLOTS_OPEN = "account_slots_open"
     ACCOUNT_SLOT_SELECT = "account_slot_select"
     ACCOUNT_SLOT_ADD = "account_slot_add"
@@ -673,6 +684,11 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.ANTIGRAVITY_AUTH_LOGOUT: "_menu_antigravity_auth_browser",
     MenuAction.ANTIGRAVITY_AUTH_SAVED: "_menu_antigravity_auth_saved",
     MenuAction.ANTIGRAVITY_QUOTA: "_menu_antigravity_quota",
+    MenuAction.CLAUDE_AUTH_METHODS: "_menu_claude_auth_methods",
+    MenuAction.CLAUDE_AUTH_BROWSER: "_menu_claude_auth_browser",
+    MenuAction.CLAUDE_AUTH_LOGOUT: "_menu_claude_auth_browser",
+    MenuAction.CLAUDE_AUTH_SAVED: "_menu_claude_auth_saved",
+    MenuAction.CLAUDE_QUOTA: "_menu_claude_quota",
     MenuAction.ACCOUNT_SLOTS_OPEN: "_menu_account_slots_open",
     MenuAction.ACCOUNT_SLOT_SELECT: "_menu_account_slot_select",
     MenuAction.ACCOUNT_SLOT_ADD: "_menu_account_slot_add",

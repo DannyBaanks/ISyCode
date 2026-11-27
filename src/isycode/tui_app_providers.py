@@ -110,10 +110,11 @@ class ProviderMixin:
         slot_labels = {
             "antigravity": "Google Antigravity",
             "chatgpt": "ChatGPT (Codex)",
+            "claude": "Claude (Claude Code)",
             "grok": "xAI Grok",
         }
         entries.append(self._entry("Accounts", "section"))
-        if active in {"antigravity", "chatgpt", "xai"}:
+        if active in {"antigravity", "chatgpt", "claude", "xai"}:
             slot_key = "grok" if active == "xai" else active
             cur_slot = active_slot(slot_key)
             count = len(list_accounts(slot_key))
@@ -126,10 +127,10 @@ class ProviderMixin:
                    slot=cur_slot, count=count),
                 translate=False))
         entries.append(self._entry(
-            tr("Subscription accounts · Antigravity / ChatGPT / Grok…"),
+            tr("Subscription accounts · Antigravity / ChatGPT / Claude / Grok…"),
             "account_slots_open", "",
             tr("Switch active subscription or add isolated accounts for {provider}.",
-               provider="Antigravity / ChatGPT / Grok"),
+               provider="Antigravity / ChatGPT / Claude / Grok"),
             translate=False))
         group = ""
         for section, key, label, blurb in PROVIDER_SCREEN:
@@ -149,7 +150,7 @@ class ProviderMixin:
                 detail = tr("{blurb}. {status}. Default model: {default}",
                             blurb=tr(blurb), status=status,
                             default=catalog_default)
-                if display_provider in {"antigravity", "chatgpt", "xai"}:
+                if display_provider in {"antigravity", "chatgpt", "claude", "xai"}:
                     skey = "grok" if display_provider == "xai" else display_provider
                     detail += f" · [{active_slot(skey)}] ({len(list_accounts(skey))})"
                 entries.append(self._entry(
@@ -173,6 +174,12 @@ class ProviderMixin:
                 tr("Google Antigravity · sign-in & 5h/weekly quota…"),
                 "antigravity_auth_methods", "antigravity",
                 tr("Sign in with Google OAuth, check 5h/weekly subscription quota, or disconnect."),
+                translate=False))
+        if active == "claude":
+            entries.append(self._entry(
+                tr("Claude subscription · sign-in & plan limits…"),
+                "claude_auth_methods", "claude",
+                tr("Sign in through the official Claude Code CLI, see 5h/weekly plan limits, or disconnect."),
                 translate=False))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
@@ -502,6 +509,121 @@ class ProviderMixin:
             if owner is not None:
                 await owner.cancel()
 
+    def _open_claude_auth_methods(self) -> None:
+        from isycode.account_slots import active_slot, list_accounts
+        from isycode.claude_connector import format_claude_quota_line
+        from isycode.provider_quotas import get_provider_quota
+        cur_slot = active_slot("claude")
+        accounts = list_accounts("claude")
+        qline = format_claude_quota_line(get_provider_quota("claude"))
+        quota_detail = qline or tr("Claude reports the 5h and weekly limits with each reply; none recorded yet.")
+        entries = [
+            self._entry(tr("Sign in with Claude [{slot}] · browser", slot=cur_slot),
+                        "claude_auth_browser", "",
+                        tr("Runs the official claude sign-in inside isolated slot [{slot}]; ISyCode never reads its credentials.", slot=cur_slot),
+                        translate=False),
+            self._entry("Use saved Claude sign-in · checked on request", "claude_auth_saved"),
+            self._entry("Show 5h & weekly plan limits", "claude_quota", "", quota_detail, translate=False),
+            self._entry(tr("Manage Claude accounts [{slot}] ({count})…", slot=cur_slot, count=len(accounts)),
+                        "account_slots_open", "claude",
+                        tr("Active slot: [{slot}] · {count} account(s). Switch, add, or remove isolated Claude subscriptions.",
+                           slot=cur_slot, count=len(accounts)),
+                        translate=False),
+            self._entry("Disconnect Claude account…", "claude_auth_logout"),
+            self._entry("Uses the official Claude Code CLI in an isolated home with its built-in tools removed. ISyCode never reads OAuth tokens; tools stay behind IsySentinel.", "info"),
+        ]
+        self._render_menu("claude_auth_methods", "Claude · subscription", entries)
+
+    async def _connect_claude(self, *, logout: bool = False, slot: str | None = None) -> None:
+        from isycode.account_slots import PRIMARY_SLOT, active_slot, set_active_slot, validate_slot_name
+        from isycode.provider_auth import CLAUDE_AUTH_HOSTS, ProviderAuthOwner
+        from isycode.provider_auth_screens import SubscriptionLoginScreen
+        owner = None
+        tasks = []
+        target_slot = validate_slot_name(slot) if slot is not None else active_slot("claude")
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            owner = ProviderAuthOwner(
+                self._workspace_root, authority, self._action_approvals,
+                provider="claude", slot=target_slot)
+            request = owner.request("logout" if logout else "login", "browser", slot=target_slot)
+            identity = request.parameters["connector"]
+            slot_suffix = f" [{target_slot}]" if target_slot != PRIMARY_SLOT else ""
+            if not await self._await_screen(ConfirmScreen(
+                    f"Disconnect Claude{slot_suffix}?" if logout else f"Connect Claude subscription{slot_suffix}?",
+                    tr("Runs the official Claude Code CLI at {executable}. Private isolated home: {home}. Contacts claude.com, claude.ai and api.anthropic.com. ISyCode never extracts or copies OAuth tokens, Claude Code's own tools are removed, and all workspace tools remain behind IsySentinel. Plan limits (5h and weekly) apply.",
+                       executable=identity["executable"], home=identity["home"]),
+                    "Disconnect" if logout else "Connect Claude")):
+                return
+            authority.set_grant("provider.authenticate", enabled=True, targets=["claude"],
+                                executables=[owner.executable], network_hosts=list(CLAUDE_AUTH_HOSTS))
+            if not logout:
+                grant = authority.effective_policy().get("grants", {}).get("provider.request", {})
+                hosts = sorted(set(grant.get("network_hosts", ())) | set(CLAUDE_AUTH_HOSTS))
+                authority.set_grant("provider.request", enabled=True, network_hosts=hosts)
+            outcome, challenge = await owner.begin(request, self._action_approvals.issue(request))
+            if outcome.decision != "ALLOW":
+                self._append("  " + tr("Claude sign-in blocked · {value}", value=outcome.reason[:160]), YELLOW)
+                return
+            if logout:
+                self._refresh_usage()
+                self._append("  " + tr("Claude account disconnected. API keys are unchanged."), GREEN)
+                return
+            if challenge and challenge.get("already_authenticated"):
+                outcome, account = await owner.finish()
+            else:
+                screen_challenge = dict(challenge or {})
+                screen_challenge.setdefault("slot", target_slot)
+                screen = SubscriptionLoginScreen(screen_challenge)
+                visible = asyncio.create_task(self._await_screen(screen)); tasks.append(visible)
+                await screen.ready.wait()
+                finished = asyncio.create_task(owner.finish()); tasks.append(finished)
+                done, _ = await asyncio.wait({visible, finished}, return_when=asyncio.FIRST_COMPLETED)
+                if finished not in done:
+                    self._append("  " + tr("Claude sign-in cancelled."), MUTED)
+                    return
+                outcome, account = await finished
+                if screen.is_mounted:
+                    screen.dismiss(None)
+                await visible
+            if outcome.decision == "ALLOW" and account:
+                set_active_slot("claude", target_slot)
+                self._append("  " + tr("Claude sign-in verified [{slot}] · plan {plan} · 5h & weekly limits apply",
+                                       slot=target_slot, plan=account["plan"]), GREEN)
+                self._select_provider("claude", "auto")
+                self._open_scoped_models("claude")
+            else:
+                self._append("  " + tr("Claude sign-in not completed · {value}", value=outcome.reason[:160]), YELLOW)
+        except (OSError, ValueError, ProviderError, WorkspaceAuthorityError) as exc:
+            self._append("  " + tr("Claude connection unavailable ({name}). Install the official Claude Code CLI and check Authority grants.",
+                                   name=type(exc).__name__), YELLOW)
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            if owner is not None:
+                await owner.cancel()
+
+    def _report_claude_quota(self) -> None:
+        """Plan limits come with each Claude reply; show the last recorded windows."""
+        from isycode.account_slots import active_slot
+        from isycode.antigravity_connector import format_reset_countdown
+        from isycode.provider_quotas import get_provider_quota
+        snapshot = get_provider_quota("claude")
+        buckets = (snapshot or {}).get("buckets") or []
+        if not buckets:
+            self._append("  " + tr("No Claude plan limits recorded yet; they arrive with the next reply."), MUTED)
+            return
+        self._append(tr("Claude [{slot}] · plan limits", slot=active_slot("claude")), CYAN)
+        pieces = []
+        for bucket in buckets:
+            countdown = format_reset_countdown(str(bucket.get("reset_time", "")))
+            pct = round(float(bucket.get("remaining_pct", 0.0)))
+            pieces.append(f"{bucket.get('label')} {pct}%" + (f" ({countdown})" if countdown else ""))
+        self._append("  " + tr("Remaining: {windows}", windows=" · ".join(pieces)), MUTED)
+
     async def _refresh_antigravity_quota(self, *, report: bool = False) -> dict | None:
         """Query 5h and weekly Antigravity subscription quota through ProviderNetworkOwner."""
         from isycode.account_slots import active_slot, compute_quota_alert, record_account_quota
@@ -678,6 +800,7 @@ class ProviderMixin:
         labels = {
             "antigravity": "Google Antigravity",
             "chatgpt": "ChatGPT (Codex)",
+            "claude": "Claude (Claude Code)",
             "grok": "xAI Grok",
         }
         if not provider:
@@ -752,7 +875,7 @@ class ProviderMixin:
     async def _add_account_slot_flow(self, provider: str, *, method: str = "browser") -> None:
         from isycode.account_slots import add_account_slot, next_suggested_slot, validate_slot_name
         from isycode.provider_auth_screens import AccountSlotScreen
-        labels = {"antigravity": "Google Antigravity", "chatgpt": "ChatGPT", "grok": "xAI Grok"}
+        labels = {"antigravity": "Google Antigravity", "chatgpt": "ChatGPT", "claude": "Claude", "grok": "xAI Grok"}
         suggested = next_suggested_slot(provider)
         raw = await self._await_screen(AccountSlotScreen(labels.get(provider, provider), suggested=suggested))
         if not raw or not raw.strip():
@@ -767,6 +890,8 @@ class ProviderMixin:
                                provider=labels.get(provider, provider), slot=slot), MUTED)
         if provider == "antigravity":
             await self._connect_antigravity(slot=slot)
+        elif provider == "claude":
+            await self._connect_claude(slot=slot)
         elif provider == "chatgpt":
             await self._connect_chatgpt(method, slot=slot)
         elif provider == "grok":
@@ -1409,6 +1534,12 @@ class ProviderMixin:
                 return
             self._open_antigravity_auth_methods()
             return
+        if value == "claude":
+            if active == "claude":
+                self._open_scoped_models("claude")
+                return
+            self._open_claude_auth_methods()
+            return
         if value == "xai":
             if active == "xai":
                 self._open_models_with_key("xai")
@@ -1527,6 +1658,23 @@ class ProviderMixin:
         self.run_worker(self._connect_antigravity(logout=kind == "antigravity_auth_logout"),
                         group="provider-login", exclusive=True)
         return
+
+    def _menu_claude_auth_methods(self, entry: dict[str, str | bool]) -> None:
+        self._open_claude_auth_methods()
+
+    def _menu_claude_auth_browser(self, entry: dict[str, str | bool]) -> None:
+        kind = entry["kind"]
+        self._close_menu()
+        self.run_worker(self._connect_claude(logout=kind == "claude_auth_logout"),
+                        group="provider-login", exclusive=True)
+
+    def _menu_claude_auth_saved(self, entry: dict[str, str | bool]) -> None:
+        self._select_provider("claude")
+        self._open_scoped_models("claude")
+
+    def _menu_claude_quota(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self._report_claude_quota()
 
     def _menu_antigravity_auth_saved(self, entry: dict[str, str | bool]) -> None:
         self._select_provider("antigravity")

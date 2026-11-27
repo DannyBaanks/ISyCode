@@ -45,11 +45,13 @@ class SubscriptionLoginScreen(ModalScreen[None]):
         self.challenge = challenge
         self.provider = challenge.get('provider', 'chatgpt')
         self.slot = challenge.get('slot') or 'primary'
-        allowed_hosts = (ANTIGRAVITY_AUTH_HOSTS[0],) if self.provider == 'antigravity' else AUTH_HOSTS
+        allowed_hosts = ((ANTIGRAVITY_AUTH_HOSTS[0],) if self.provider == 'antigravity'
+                         else ('claude.com', 'claude.ai') if self.provider == 'claude' else AUTH_HOSTS)
         self.login_url = _approved_login_url(challenge.get('url'), allowed_hosts=allowed_hosts)
         self.ready = asyncio.Event()
     def compose(self) -> ComposeResult:
-        base_title = tr('Sign in with Google Antigravity') if self.provider == 'antigravity' else tr('Sign in with ChatGPT')
+        base_title = (tr('Sign in with Google Antigravity') if self.provider == 'antigravity'
+                      else tr('Sign in with Claude') if self.provider == 'claude' else tr('Sign in with ChatGPT'))
         title = f'{base_title} [{self.slot}]' if self.slot and self.slot != 'primary' else base_title
         with Vertical(id='subscription-card', classes='isy-dialog'):
             yield Static(title, classes='isy-dialog-title', markup=False)
