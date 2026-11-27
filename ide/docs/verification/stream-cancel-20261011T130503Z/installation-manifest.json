@@ -1,0 +1,11 @@
+{
+  "operation": "Replace installed IDE launcher only; previous executable and launcher contents preserved",
+  "paths": [
+    "/home/danny/.local/bin/isycode-ide"
+  ],
+  "file_count": 1,
+  "tracked": false,
+  "reason": "Point existing ISyCode IDE command to newly built additive AppImage",
+  "equivalent_content": "/home/danny/Development/ISyCode-IDE/docs/verification/stream-cancel-20261011T130503Z/previous-launcher.sh",
+  "deletions": []
+}

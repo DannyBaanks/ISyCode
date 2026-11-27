@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T02:48:38.658394+00:00",
+  "command": "QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q tests/test_ide_review_regressions.py",
+  "exit": 0,
+  "sha256": "0d418cd1ca6d0612fbfe104fa9e618211ec3faee7733fac8e028f4a43a326741",
+  "scope": "Owned temporary Git/HTTP projects, synthetic credentials, private keyring; no real account requests."
+}

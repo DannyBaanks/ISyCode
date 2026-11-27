@@ -1,0 +1,12 @@
+usage: isycode-ide accounts [-h] [--executable EXECUTABLE]
+                            {configure,inspect,login,logout}
+                            {codex-subscription,claude-subscription,grok-subscription}
+
+positional arguments:
+  {configure,inspect,login,logout}
+  {codex-subscription,claude-subscription,grok-subscription}
+
+options:
+  -h, --help            show this help message and exit
+  --executable EXECUTABLE
+                        CLI oficial instalado, para configure

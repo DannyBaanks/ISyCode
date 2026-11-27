@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-10-11T11:05:57.770998+00:00",
+  "appimage": "/home/danny/Development/ISyCode-IDE/dist/ide-20261011T110237Z-546541/ISyCode-IDE-x86_64.AppImage",
+  "appimage_sha256": "5e543c2768edcfc15ca88a100bfc4f4d03a9d632606c5611ee570b8eec435303",
+  "installed_files": [
+    {
+      "path": "/home/danny/.local/bin/isycode-ide",
+      "sha256": "59100bdc7748955b3fcf3beb09901622b3d383979266333a640e16e6804291d2"
+    },
+    {
+      "path": "/home/danny/.local/share/applications/isycode-ide.desktop",
+      "sha256": "f6a8acdad68b8315d38e402a05b65ce1e01eba2ec150025cc2a43887067d70f5"
+    },
+    {
+      "path": "/home/danny/.local/share/icons/hicolor/256x256/apps/isycode-ide.png",
+      "sha256": "cf12089cdeed5d2483faa8cb655751430b2738e1aff0fce0d5f390d5623922e2"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "/home/danny/.local/bin/isycode-ide",
+        "--self-check"
+      ],
+      "exit_code": 0,
+      "log": "selfcheck.log",
+      "sha256": "530b99eb570458571cc31bf4f027ddec40ef25c2ee8ac76e92b4b10e886416a4"
+    },
+    {
+      "command": [
+        "/home/danny/.local/bin/isycode-ide",
+        "tui",
+        "--help"
+      ],
+      "exit_code": 0,
+      "log": "tui-help.log",
+      "sha256": "b1690330e85a96f29b3fd066bcbe72961d306c8e16890263c0ca5a974a255432"
+    }
+  ],
+  "account_requests": 0,
+  "user_sessions_interrupted": false
+}

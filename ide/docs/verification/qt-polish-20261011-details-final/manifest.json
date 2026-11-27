@@ -1,0 +1,49 @@
+{
+  "scope": "Diagnostic crops; original screenshots preserved; final source widget renders",
+  "artifacts": [
+    {
+      "file": "source-controls.png",
+      "source": "docs/design/mockups/code-chat.png",
+      "crop": [
+        1178,
+        370,
+        480,
+        436
+      ],
+      "sha256": "b87a9880ed5addece02772897cfcca55c5e58efe1ccfd442220ae966dd5fe076"
+    },
+    {
+      "file": "actual-controls.png",
+      "source": "docs/verification/qt-polish-20261011-complete/code-1672.png",
+      "crop": [
+        1197,
+        322,
+        469,
+        385
+      ],
+      "sha256": "ca5dc1bdac3dd6b83468be1ebe191794078144d0bc867ede0862bf64c6739b5b"
+    },
+    {
+      "file": "source-files.png",
+      "source": "docs/design/mockups/code-chat.png",
+      "crop": [
+        190,
+        66,
+        251,
+        339
+      ],
+      "sha256": "c2b36c4746f266cf6225cdd93c07649162856b9389221910531c801b2e6b8c31"
+    },
+    {
+      "file": "actual-files.png",
+      "source": "docs/verification/qt-polish-20261011-complete/code-1672.png",
+      "crop": [
+        167,
+        112,
+        249,
+        310
+      ],
+      "sha256": "e87c5daba4d47db91f6f374b1d8fe6f1265d09a66090ce7dca3a83fc62d04998"
+    }
+  ]
+}

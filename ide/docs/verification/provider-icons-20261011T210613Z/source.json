@@ -1,0 +1,82 @@
+[
+  {
+    "path": "ui/icons.py",
+    "sha256": "b1d2720da261856ac15e8fddc3f3890a59542b92c1c2ffc4f3e1fa0b0dac18f8"
+  },
+  {
+    "path": "ui/main_window.py",
+    "sha256": "f1a7cce244aeb4f61eceb668b0faf69c20e96199424a21f1b4630cf91e31a9f8"
+  },
+  {
+    "path": "ui/panels/config.py",
+    "sha256": "cbe913769b2e08b2955eb6e7e70140eb3cbe0eafbc78c3cd5de5d672df5f8147"
+  },
+  {
+    "path": "ui/panels/subscriptions.py",
+    "sha256": "ec48b04ec9f2ea07044d3108e7b77f776e9f0080830595405cf4989faf408e18"
+  },
+  {
+    "path": "GUIA.md",
+    "sha256": "ea1ddcb53267cd996bac1cb0a4fa283a177e22ba2a07177c3ebf1a3933148df1"
+  },
+  {
+    "path": "docs/design/2026-10-11-provider-icons.md",
+    "sha256": "0fd4ded67c548111a65b98a91792d9e07b2de47e805803d42039fa6576732095"
+  },
+  {
+    "path": "ui/assets/providers/LICENSE",
+    "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
+  },
+  {
+    "path": "ui/assets/providers/anthropic.svg",
+    "sha256": "e833fdfa7e7187a86a05b870925067556a506dcd4239089aed73e1e58c9366a3"
+  },
+  {
+    "path": "ui/assets/providers/claude-color.svg",
+    "sha256": "a3101f3047a119aa11825ad9369510f0c472428c8c52d420e31bc62db44a8364"
+  },
+  {
+    "path": "ui/assets/providers/deepseek-color.svg",
+    "sha256": "deba5f98a5c1796e20fcac3149bcd7eb8a32f0bdd04d048819400b1f28bd1439"
+  },
+  {
+    "path": "ui/assets/providers/gemini-color.svg",
+    "sha256": "8ab0a9bafec11f7e69bcb9fc4ffd8f1bc927d1ddcbbb6ff36dee5ae8b5a9d602"
+  },
+  {
+    "path": "ui/assets/providers/grok.svg",
+    "sha256": "9175fc90c22655160231976c849f25a03b888d7cc0e04c5f1b987b659bb07c95"
+  },
+  {
+    "path": "ui/assets/providers/groq.svg",
+    "sha256": "078d5cf6e7a54905040c15ddacf5ea33c13042fe7739e820cedc2096e4406651"
+  },
+  {
+    "path": "ui/assets/providers/lmstudio.svg",
+    "sha256": "4a575e8382b52ce742ac5d21d361a7d2a08cea7c12390ee1bbb755ef7d3cc25b"
+  },
+  {
+    "path": "ui/assets/providers/mistral-color.svg",
+    "sha256": "722f74b289d95486b43662fe24fa883b333701296f618406cd0ed502299170b6"
+  },
+  {
+    "path": "ui/assets/providers/nvidia-color.svg",
+    "sha256": "8c941e4eb8b782eccaaea1240c059d20be33ab8eda28d7c9ed9b53ac802fe683"
+  },
+  {
+    "path": "ui/assets/providers/ollama.svg",
+    "sha256": "3a268218fb2e6e81fa31df70f70b51331625047794db81db21d35359428fae7a"
+  },
+  {
+    "path": "ui/assets/providers/openai.svg",
+    "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186"
+  },
+  {
+    "path": "ui/assets/providers/openrouter-color.svg",
+    "sha256": "17bede1b89166f824ee06753dc526a3f5e18b769706deaab09d04a3a98de1a78"
+  },
+  {
+    "path": "ui/assets/providers/provenance.json",
+    "sha256": "2ca3869495faf9c3416e95d61abe51d1b551e1c61b65eaa9bba5f84f2de7461f"
+  }
+]

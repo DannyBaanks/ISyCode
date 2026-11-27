@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T05:09:24.600008+00:00",
+  "command": "desktop-file-validate /home/danny/.local/share/applications/isycode-ide.desktop",
+  "exit": 0,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scope": "No real account requests; owned temporary self-check project or own additive launcher"
+}

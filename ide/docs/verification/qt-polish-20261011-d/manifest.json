@@ -1,0 +1,545 @@
+{
+  "scope": "actual Qt renders; fictitious project/messages; no network/account requests",
+  "renders": [
+    {
+      "path": "conversation-1024.png",
+      "sha256": "1deaa4313f0fd22a367a68824b895cb5c93f66349c3064df99d1f302639bb7e7",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "code-1024.png",
+      "sha256": "238ecef1f633f08190e3d982e9e4308babea8d07c220d17e6d646fa5fdea8ef7",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tools-1024.png",
+      "sha256": "d032ee54cf99e1a3a25c2d547ff41bb2d93ffd8fcc9309c2f878bdd406bab288",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tests-1024.png",
+      "sha256": "6d5c0bbbccd4fd496a4c2010626d2c2ff29f8324e7b19b949956ae298c99d303",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "evidence-1024.png",
+      "sha256": "9800e8883d9e24f3373838282b80a7cab36bb1571330bc0bf8bff00434396264",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "system-1024.png",
+      "sha256": "d50499b55b036a3997bd38035415728e0d8aa2d3c7ce551b2e1eac4be96500e9",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-1024.png",
+      "sha256": "7abb31e311b64053608d2e82caec2489dc9a045f62ace2e7d7f4c76d7c18baf9",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-issues-1024.png",
+      "sha256": "24d387b640ae94a4ad0ccd9f1127bf6d8d7d527e3b7702244e33e3309197cdde",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-commits-1024.png",
+      "sha256": "353848b1b9ec8cc6ed4f40c5d75b63bf1f80d1acbcce5747d1b5d95dc4b8413c",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-actions-1024.png",
+      "sha256": "7b276d01cc87ba07daf272f25eddefdb302c6adfd7da51d6a9ff12048724cdb7",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-linked-1024.png",
+      "sha256": "73c068a9b02edfd756fe2a2921026bb84f17212b7808d528d6f438e778f55531",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "provider-1024.png",
+      "sha256": "6fd44380b6e1256c4e2ec7ed6f2c36671f610e0ba819836d408d257ede2088b4",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "settings-1024.png",
+      "sha256": "ed9a75a0e06fc880df106fb81f93d9696136010b43090230c1dcd26a4426186a",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "terminal-1024.png",
+      "sha256": "06d345935db97ed5de85c07ee400c175a97b37090281a93bd8f5c8adbc676b6c",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "subscriptions-1024.png",
+      "sha256": "3588e5673b4ed676d297f072ecf4c86ab2e7d92ec72e8a22000a66399bd8c53e",
+      "logical_size": [
+        1024,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "conversation-1366.png",
+      "sha256": "7ee3e4931a509870218397be34101e9088424df28b732c4833e73419743d558d",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "code-1366.png",
+      "sha256": "a2e6eb8c15b622155764f705b987b5d26d90dad8c03c62a27058cc9a3354659d",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tools-1366.png",
+      "sha256": "ca160a3e3fa8fe1a3d73a4ed5e8a16a7f5f70226120513eb9ae29216efa9563e",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tests-1366.png",
+      "sha256": "c747b285391adb6df659bc9a554a5626c0956afbb475d7d6c5ac5bd58822956c",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "evidence-1366.png",
+      "sha256": "ee2b2b05f659b03a4aea39c02c6c5ffc6904b30729c6cab72c2451657bb39692",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "system-1366.png",
+      "sha256": "93b6a7cdc6fd34fce807a740ed17ee1387abd5df2bc3d0ef790bb7fc63ea2e00",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-1366.png",
+      "sha256": "5c1579020bad6ae5fda64aa30384e11ce1685a72ce22376cfc143203616db251",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-issues-1366.png",
+      "sha256": "aeac7dcf490197dc36dea7331af5f05fc3053fd0ec75b83d4165a7013d0df6b4",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-commits-1366.png",
+      "sha256": "6fc8c666e97aaaa0f06a185e5b5a05e5c594ca937fbb9b9d16654389e6621c42",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-actions-1366.png",
+      "sha256": "96440c4af3c12712235fe7b826a8ed69a9f2ff7ce205d6108efe99adb5192ca2",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-linked-1366.png",
+      "sha256": "6bb5d02f8f90e60645707e54c960eff319dbde97e8a8521691a22c0678072501",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "provider-1366.png",
+      "sha256": "22066b84dc3088e2fc91f0c63f94f1d90aa7106ef261f0105f84ef9096a7b09e",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "settings-1366.png",
+      "sha256": "355e0573b7eddcfc9b6f6aeced2a7d7f5c85ffcae826a1d3d22c53677856aff4",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "terminal-1366.png",
+      "sha256": "ca40782de5f6af1a7031deff5050feefe71d7ba598e8a1213e5fe38935c8f7d4",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "subscriptions-1366.png",
+      "sha256": "0cbd29350ac00c719380036bf7967835be73fdf0cf33186d243728ec770c3e85",
+      "logical_size": [
+        1366,
+        768
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "conversation-1672.png",
+      "sha256": "a261bcb85c9fec2bb071da74c39b5cbc5e134176d2ba374f88269146da3ea1f6",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "code-1672.png",
+      "sha256": "c7256f5fd6c26621aaeb2e697ddba537f9842ed8270cbb32eb4383a08e28afa6",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tools-1672.png",
+      "sha256": "adbf6de0f979862b2bde92661f5902aaf098b554600d2d60d49d48bec20d6889",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tests-1672.png",
+      "sha256": "7844d472cc978d86faac431dfce500877b67529b0801f2bd74cbc5f5133b223f",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "evidence-1672.png",
+      "sha256": "8c59604ff031b395c5da2ebec6820021bda6928e20b112148c6d0d71389c55f9",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "system-1672.png",
+      "sha256": "0efcf8b808fff5e0f288f5967e5439b7175f6b3df6d8cfcfae4f77b585de70e3",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-1672.png",
+      "sha256": "5fc3c6214f41e3c9c28c34e64081f7ac11099713c557ae3ff3b28276cbc1c3c6",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-issues-1672.png",
+      "sha256": "6bf670d68cfcb3643c3bc3a5d8cd6e51dea5393bf0064e6e00628679bd534364",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-commits-1672.png",
+      "sha256": "23be2c685c2e1008f2ee6a77386a0ce9034090a6a413a0a8251ba26dc5ab3d10",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-actions-1672.png",
+      "sha256": "2d5b39b7926a4c21d00be9ef9c010cab6dd255a6d0deb23af2dda32809191b4a",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-linked-1672.png",
+      "sha256": "599e7a5ee7ebc15fbe7e765fd32b9b4c569fa54ca0e6296b38dafba77a298c57",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "provider-1672.png",
+      "sha256": "15275395e2fd9277c8c1d87e7090df615d4bcdcfe717449381333e930c4c55b4",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "settings-1672.png",
+      "sha256": "d1307c0d01c3935b80c8d86c1e7a5b382175a798e33c98590dd9dedafecacffb",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "terminal-1672.png",
+      "sha256": "cd594df111c5b392de2ed89192afd6c7f480dc6c780f463cdbd6cec8afabac06",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "subscriptions-1672.png",
+      "sha256": "6e9c98a7b862451bf4a11df4e4c89a3401d25a144be627518f10f64fc800e845",
+      "logical_size": [
+        1672,
+        941
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "conversation-1920.png",
+      "sha256": "56bea6c9b0f86bbaa837dca696867bae836c9b42e7031ee34c1b15282f4af6ff",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "code-1920.png",
+      "sha256": "e8a96a5839f115286d0fa3c06f344f0df248cee6790fc281e2ad172f0f75be50",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tools-1920.png",
+      "sha256": "ebbdd7d648fb8a6e55846efa3fa45783095c171f87d0716327bb62c3e63a1b9f",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "tests-1920.png",
+      "sha256": "90e6ab4b3c7b1a9954d2ef528bbaf13f893754b6d78a3a0067ab064ac259f4ae",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "evidence-1920.png",
+      "sha256": "105cf59f2cfc97175add31e42b34d8e0a2e272bfcf43abfd86a9efba667b3172",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "system-1920.png",
+      "sha256": "5614d2f125c60ecd2153cfa438a181aa5c052cb7934f914e6cc2990f27bfa147",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-1920.png",
+      "sha256": "1e297c44d465421d1111f1b3b255e10f83d6974e42f1d5ac96557e3e5dd88b4b",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-issues-1920.png",
+      "sha256": "21bab01ddb2be65537582219a79c486fe7781f9b7474fa9445040bef5e47460c",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-commits-1920.png",
+      "sha256": "1da95a3194cb385ff885d496df5d2de1f5712c54ca4f4d845619a29b24deb928",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-actions-1920.png",
+      "sha256": "e3e819d50aad59d7ce9a671b13d39bad4e5783cba988db14ffa849f0115d6928",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "github-linked-1920.png",
+      "sha256": "68e3f088881188caf5916c1c7e75c21955e0c06063bd72d44286d200d24baa20",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "provider-1920.png",
+      "sha256": "b11c4494196591888924c99f219e241dbf74b734dfffc2e76edd33c6b2d7a012",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "settings-1920.png",
+      "sha256": "7356a69ef0180d96680f58e43f43653709b8d6197bfecf08f5c654f29dee75de",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "terminal-1920.png",
+      "sha256": "31e2ee28b7a233c8c744ac2af3cbd3db584ff887618a4e394e438c8c4bcdf493",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "path": "subscriptions-1920.png",
+      "sha256": "38434c78a3fac49a0922d263e09951e5469d17821fc51030cfe9b9c1b4e0998f",
+      "logical_size": [
+        1920,
+        1080
+      ],
+      "device_pixel_ratio": 1.0
+    }
+  ]
+}

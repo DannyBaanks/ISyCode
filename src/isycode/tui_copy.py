@@ -4,7 +4,7 @@ UI choices still execute through the application's ClipboardOwner path.
 """
 from __future__ import annotations
 
-from rich.cells import cell_len
+from rich.cells import cell_len, split_graphemes
 from rich.style import Style
 from rich.text import Text
 from rich.syntax import Syntax
@@ -106,23 +106,81 @@ def _append_inline(target: Text, token, heading: bool) -> None:
                 target.append(child.content, style=" ".join(inline_styles))
 
 
-def _column_widths(natural: list[int], room: int) -> list[int]:
-    """Fit columns into ``room`` cells: narrow columns keep their width, wide ones share the rest."""
+_REGIONAL_INDICATOR = range(0x1F1E6, 0x1F200)
+
+
+def _widest_grapheme(text: Text) -> int:
+    """Cell width of the widest unbreakable unit in ``text`` (0 when empty).
+
+    Measured with Rich's own grapheme split, the same one ``Text.wrap`` and the
+    cell padding use, so a ZWJ family (👨‍👩‍👧‍👦), a VS16 flag (🏳️‍🌈) or a fullwidth
+    letter each count once, exactly as the column border will. Rich splits a
+    regional-indicator flag (🇪🇸) into two 1-cell halves that it would then fold
+    onto separate lines; the pair is one glyph to the reader, so it is measured
+    as one 2-cell unit.
+    """
+    if not text.plain:
+        return 0
+    spans, _count = split_graphemes(text.plain)
+    plain = text.plain
+    widest = 0
+    run = 0  # cells of the regional-indicator run that ends at the previous span
+    for start, end, size in spans:
+        if all(ord(char) in _REGIONAL_INDICATOR for char in plain[start:end]):
+            run += size
+            widest = max(widest, run)
+            continue
+        run = 0
+        widest = max(widest, size)
+    return widest
+
+
+def _column_widths(natural: list[int], room: int, minimum: list[int] | None = None) -> list[int]:
+    """Fit columns into ``room`` cells: narrow columns keep their width, wide ones share the rest.
+
+    ``minimum`` is a floor per column (its widest grapheme). A column never gets
+    fewer cells than that: ``Text.wrap(overflow="fold")`` drops a grapheme wider
+    than the column instead of splitting it, which would silently lose content.
+    When the floors alone do not fit ``room`` they are returned as-is and the
+    caller falls back to records.
+    """
     if sum(natural) <= room:
         return list(natural)
+    # A floor never exceeds its column's natural width (a wider floor would only
+    # add padding, and could never be paid for).
+    floors = [min(size, floor) for size, floor in zip(natural, minimum)] if minimum is not None else [0] * len(natural)
+    if sum(floors) > room:
+        return floors
     widths = [0] * len(natural)
     pending = sorted(range(len(natural)), key=lambda index: natural[index])
     left = room
     while pending:
         share = left // len(pending)
         index = pending[0]
-        if natural[index] <= share:
+        # A column settles at its natural width only if what it leaves still
+        # covers the floors of the others; otherwise the floors are split below.
+        others_floors = sum(floors[other] for other in pending[1:])
+        if natural[index] <= max(share, floors[index]) and left - natural[index] >= others_floors:
             widths[index] = natural[index]
             left -= natural[index]
             pending.pop(0)
             continue
+        # Every remaining column is wider than its share: split the room evenly,
+        # but never below a floor. The cells a floor needs are taken from the
+        # columns with the most room above their own floor, widest first.
         for position, index in enumerate(pending):
             widths[index] = share + (1 if position < left - share * len(pending) else 0)
+        deficit = sum(max(0, floors[index] - widths[index]) for index in pending)
+        if deficit:
+            for index in pending:
+                widths[index] = max(widths[index], floors[index])
+            donors = sorted((index for index in pending if widths[index] > floors[index]),
+                            key=lambda index: widths[index] - floors[index], reverse=True)
+            while deficit:
+                index = donors.pop(0)
+                give = min(deficit, widths[index] - floors[index])
+                widths[index] -= give
+                deficit -= give
         break
     return widths
 
@@ -163,11 +221,15 @@ def render_table_box(rows, width: int | None = None, *, ascii: bool = False) -> 
     header = next((cells for is_header, cells, _aligns in rows if is_header), None)
     natural = [max(1, *(cell.cell_len for _h, cells, _a in rows for cell in [cells[index]]))
                for index in range(columns)]
+    widest = [max((_widest_grapheme(cells[index]) for _h, cells, _a in rows), default=1)
+              for index in range(columns)]
     overhead = 3 * columns + 1
     room = None if not width else width - overhead
     if room is not None and room < min(sum(natural), _MIN_CELL * columns):
         return _table_as_records(rows, header)
-    widths = natural if room is None else _column_widths(natural, room)
+    widths = natural if room is None else _column_widths(natural, room, widest)
+    if any(widths[index] < widest[index] for index in range(columns)):
+        return _table_as_records(rows, header)  # a grapheme would not fit its column
     box = _BOX_ASCII if ascii else _BOX_UNICODE
     border = MUTED
 

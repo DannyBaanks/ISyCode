@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-10-11T05:09:24.600310+00:00",
+  "command": ".venv/bin/python packaging/install_ide.py /home/danny/Development/ISyCode-IDE/dist/ide-20261011T024826Z-10e2c5/ISyCode-IDE-x86_64.AppImage",
+  "exit": 0,
+  "sha256": "615dda4a3992be4cccf1524e1b34db690d85cf348c8e3ab3e3e797e3d85342bb",
+  "scope": "No real account requests; owned temporary self-check project or own additive launcher"
+}

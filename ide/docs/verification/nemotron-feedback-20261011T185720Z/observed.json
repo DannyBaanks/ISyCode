@@ -1,0 +1,64 @@
+{
+  "turn": "6d2c5acc169342b7a099851168992e2c",
+  "status": "failed",
+  "created": "2026-10-11T18:42:37.871848+00:00",
+  "wire_sha256": "aef7072e8940c877719e5eafee7e8f5dc6a4ec383ad9860291bcf75a6913440a",
+  "tool_results": [
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "6eeb15aa2e4291b196898439f6cfdc18b08b0f1af95342ac8e041e75f4f89190"
+    },
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "6eeb15aa2e4291b196898439f6cfdc18b08b0f1af95342ac8e041e75f4f89190"
+    },
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "2b3e2840fcd063698df87cbecc0f0e28001809ee8fc8d42df5893c487d673521"
+    },
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "25a17ba46cd19411902b0c3d45c3220285e3c0b0ba70b37b98bacde1bebb60b3"
+    },
+    {
+      "success": false,
+      "error_code": "PLAN_MODE_WRITE_DENIED",
+      "result_sha256": "0060859996495b9e1f8337d91680e55215ab0466eec1d93374522f9d3a876640"
+    },
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "7a878bd53226c115d27eb0b9effbe2a03455cd77cce7cad4b04332d330164307"
+    },
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "7d9883b74a52dd2e2e6979eab9991f5f2be344542e06e2eb0e052b428a6e026a"
+    },
+    {
+      "success": false,
+      "error_code": "RUNTIME_ERROR",
+      "result_sha256": "bd265368c645c9858c9850a6d1b2b48b2434cfdb8bc306a486c944529c841268"
+    },
+    {
+      "success": false,
+      "error_code": "FILE_NOT_FOUND",
+      "result_sha256": "94e2c19c235e5ff78c18dd4b43476c6e4f56d63bde62cb33383421ef8117554a"
+    },
+    {
+      "success": true,
+      "error_code": "",
+      "result_sha256": "2b3e2840fcd063698df87cbecc0f0e28001809ee8fc8d42df5893c487d673521"
+    },
+    {
+      "success": false,
+      "error_code": "RUNTIME_ERROR",
+      "result_sha256": "64bf34dd7e3ad4e6646454de8840ba92c0b63c73f2cc351779d81bd046d62473"
+    }
+  ],
+  "terminal_cause": "NOT_DEMONSTRATED; old worker did not retain exception"
+}

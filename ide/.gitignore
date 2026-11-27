@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+.pytest_cache/
+*.egg-info/
+.worktrees/
+api.txt
+.venv_linux/
+.isycode-ide/
+.superpowers/
