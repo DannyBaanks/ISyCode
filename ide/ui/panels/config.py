@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 
 from PySide6.QtCore import Qt, QThread, Signal, QSize
 from PySide6.QtWidgets import (
@@ -57,6 +58,32 @@ class _InspectWorker(QThread):
 
 # Keep running threads alive if the floating providers window closes.
 _INSPECTIONS = set()
+
+
+def drain_inspections(timeout_ms: int = 2000) -> list:
+    """Cancel and wait for detached catalog lookups; return the ones still running.
+
+    ``_INSPECTIONS`` outlives the providers window on purpose, so nothing else
+    stops these threads. Destroying a running QThread at interpreter exit aborts
+    the process ("QThread: Destroyed while thread is still running").
+    """
+    workers = list(_INSPECTIONS)
+    for worker in workers:
+        try:
+            worker.cancel()
+        except RuntimeError:  # pragma: no cover - C++ object already destroyed
+            pass
+    still_running = []
+    for worker in workers:
+        try:
+            if not worker.wait(timeout_ms):
+                still_running.append(worker)
+        except RuntimeError:  # pragma: no cover
+            continue
+    return still_running
+
+
+atexit.register(drain_inspections)
 
 
 class ConfigPanel(QWidget):

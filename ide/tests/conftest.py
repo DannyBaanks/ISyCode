@@ -24,3 +24,37 @@ def private_ide_state(tmp_path, monkeypatch):
             raise keyring.errors.PasswordDeleteError("absent fixture credential")
         values.pop((service, name))
     monkeypatch.setattr(keyring, "delete_password", remove)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Tear Qt down while the QApplication is still alive.
+
+    Tests leave top-level widgets behind. At interpreter exit
+    PySide::destroyQCoreApplication walks every wrapper still registered and
+    deletes it; one already freed by its C++ parent crashes the run (exit 139)
+    after every test passed. Stop detached workers, close and delete the
+    leftovers, and flush the deferred deletes before Python finalizes.
+    """
+    try:
+        from PySide6.QtCore import QCoreApplication, QEvent
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        return
+    app = QApplication.instance()
+    if app is None:
+        return
+    try:
+        from ui.panels.config import drain_inspections
+        drain_inspections()
+    except ImportError:
+        pass
+    for widget in list(QApplication.topLevelWidgets()):
+        try:
+            widget.close()
+            widget.deleteLater()
+        except RuntimeError:  # already destroyed on the C++ side
+            continue
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.processEvents()
+    import gc
+    gc.collect()

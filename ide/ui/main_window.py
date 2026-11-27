@@ -1499,6 +1499,8 @@ class MainWindow(QMainWindow):
             worker = getattr(owner, attr, None)
             if worker is not None and worker not in candidates:
                 candidates.append(worker)
+        from ui.panels.config import _INSPECTIONS
+        candidates.extend(w for w in list(_INSPECTIONS) if w not in candidates)
         running = []
         for worker in candidates:
             try:
