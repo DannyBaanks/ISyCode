@@ -2044,15 +2044,15 @@ class ProviderMixin:
             available = await asyncio.to_thread(client.is_available)
             state = "ready" if available else "off"
             if available:
-                message = "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
+                message = tr("Health reachable. Remote Files is disabled because the Gateway hides its root identity.")
                 if not client.api_key:
-                    message += " Set GATEWAY_API_KEY for scoped read access."
+                    message += " " + tr("Set GATEWAY_API_KEY for scoped read access.")
                 color = YELLOW
             else:
-                message = "Unavailable. Local Files remains independent; no Gateway fallback is active."
+                message = tr("Unavailable. Local Files remains independent; no Gateway fallback is active.")
                 color = YELLOW
         except Exception as exc:  # noqa: BLE001 - a background probe must never kill the app
-            message = f"Gateway configuration error: {type(exc).__name__}"
+            message = tr("Gateway configuration error: {error}", error=type(exc).__name__)
             color = RED
             state = "error"
         if self.is_mounted:
@@ -2067,7 +2067,7 @@ class ProviderMixin:
             allowed, reason = self._authorize_remote_read("mcp.discover", gateway_url + "/mcp")
             if not allowed:
                 self._gateway_mcp_snapshot = CatalogSnapshot(True, [], "denied", reason)
-                message, color = "Not checked · grant Gateway MCP discovery in Settings · Authority & Security.", YELLOW
+                message, color = tr("Not checked · grant Gateway MCP discovery in Settings · Authority & Security."), YELLOW
                 if self.is_mounted:
                     status.update(Text(message, style=color))
                     self._set_connection_state("gateway_mcp", "off")
@@ -2076,18 +2076,18 @@ class ProviderMixin:
             tools = await discover_gateway_tools()
         except GatewayMCPUnavailable as exc:
             snapshot = CatalogSnapshot(True, [], "unavailable", str(exc))
-            message, color = f"Unavailable · {exc}", YELLOW
+            message, color = tr("Unavailable · {value}", value=exc), YELLOW
         except Exception as exc:
             snapshot = CatalogSnapshot(True, [], "error", type(exc).__name__)
-            message, color = f"Failed · {type(exc).__name__}", RED
+            message, color = tr("Failed · {error}", error=type(exc).__name__), RED
         else:
             snapshot = CatalogSnapshot(True, tools, "ready")
             has_key = bool(os.environ.get("GATEWAY_API_KEY"))
             if not has_key:
                 has_key = saved_secret_exists("isyco-gateway")
-            auth_state = "API key supplied" if has_key else "API key needed for calls"
-            message = (f"Ready · {len(tools)} tools · {auth_state} · manual calls require "
-                       "per-host grant + one-use approval")
+            auth_state = tr("API key supplied") if has_key else tr("API key needed for calls")
+            message = tr("Ready · {count} tools · {auth} · manual calls require per-host grant + one-use approval",
+                         count=len(tools), auth=auth_state)
             color = GREEN if has_key else YELLOW
         self._gateway_mcp_snapshot = snapshot
         if self.is_mounted:

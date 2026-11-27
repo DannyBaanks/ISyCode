@@ -1146,23 +1146,25 @@ class MenuMixin:
             roles = ISYCO_MOTORS
         items = []
         for role in roles:
-            engine_label = "Motor" if value == "motors" else "Inference engine"
-            detail_lines = [role["description"], f"{engine_label}: {role['engine']}"]
+            engine_label = tr("Motor") if value == "motors" else tr("Inference engine")
+            description = tr(role["description"])
+            detail_lines = [description, f"{engine_label}: {role['engine']}"]
             if role.get("commands"):
                 detail_lines.append("CLI:")
                 detail_lines.extend(f"  {command}" for command in role["commands"])
             if role.get("owns"):
                 scopes = [scope.removeprefix("isycode.").replace(".", " ").replace("_", " ")
                           for scope in role["owns"]]
-                detail_lines.append("Capabilities: " + ", ".join(scopes))
+                detail_lines.append(tr("Capabilities: {scopes}", scopes=", ".join(scopes)))
             if role.get("rule"):
-                detail_lines.append("Rule: " + role["rule"])
+                detail_lines.append(tr("Rule: {rule}", rule=tr(role["rule"])))
             if role.get("verdicts"):
-                detail_lines.append("Verdicts: " + ", ".join(role["verdicts"]))
+                detail_lines.append(tr("Verdicts: {verdicts}", verdicts=", ".join(role["verdicts"])))
+            # Each piece is translated above; the joined text is not a catalog message.
             items.append(self._entry(
-                f"{role['name']}  ·  {role['description']}",
+                f"{role['name']}  ·  {description}",
                 "role_motor" if value == "motors" else "role_agent",
-                role["name"], "\n".join(detail_lines)))
+                role["name"], "\n".join(detail_lines), translate=False))
         self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("role_items:" + value, value.replace("_", " ").title(), items)
         return

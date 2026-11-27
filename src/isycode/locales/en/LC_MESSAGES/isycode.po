@@ -7011,3 +7011,129 @@ msgstr "Connections · {failed} failed · {ready}/{total} ready"
 
 msgid "Manage integrations…"
 msgstr "Manage integrations…"
+
+msgid "ISyCode does not download language servers. Nothing was installed."
+msgstr "ISyCode does not download language servers. Nothing was installed."
+
+msgid "Nothing is missing from PATH."
+msgstr "Nothing is missing from PATH."
+
+msgid "Not on PATH. Run the command yourself, then Refresh integrations:"
+msgstr "Not on PATH. Run the command yourself, then Refresh integrations:"
+
+msgid "Already on PATH. Installing again will not make these ready:"
+msgstr "Already on PATH. Installing again will not make these ready:"
+
+msgid "the sandbox does not run it"
+msgstr "the sandbox does not run it"
+
+msgid "the sandbox cannot launch it"
+msgstr "the sandbox cannot launch it"
+
+msgid "Motor"
+msgstr "Motor"
+
+msgid "Inference engine"
+msgstr "Inference engine"
+
+msgid "Capabilities: {scopes}"
+msgstr "Capabilities: {scopes}"
+
+msgid "Rule: {rule}"
+msgstr "Rule: {rule}"
+
+msgid "Verdicts: {verdicts}"
+msgstr "Verdicts: {verdicts}"
+
+msgid "Workspace preferences · {warning}"
+msgstr "Workspace preferences · {warning}"
+
+msgid "General implementation guidance for the active ISyCode workspace."
+msgstr "General implementation guidance for the active ISyCode workspace."
+
+msgid "Plan-mode guidance for the active ISyCode workspace."
+msgstr "Plan-mode guidance for the active ISyCode workspace."
+
+msgid "General-purpose help grounded in the active ISyCode workspace."
+msgstr "General-purpose help grounded in the active ISyCode workspace."
+
+msgid "Read-only exploration of the active ISyCode workspace; report paths and evidence."
+msgstr "Read-only exploration of the active ISyCode workspace; report paths and evidence."
+
+msgid "Fast, focused search in the active ISyCode workspace; return exact matches and locations."
+msgstr "Fast, focused search in the active ISyCode workspace; return exact matches and locations."
+
+msgid "Implementation and software repair."
+msgstr "Implementation and software repair."
+
+msgid "Hypotheses, experiments, and measured evidence."
+msgstr "Hypotheses, experiments, and measured evidence."
+
+msgid "Milestone plans with dependencies, risks, and a coder handoff."
+msgstr "Milestone plans with dependencies, risks, and a coder handoff."
+
+msgid "Only writes plans under .opencode/plans/*.md."
+msgstr "Only writes plans under .opencode/plans/*.md."
+
+msgid "Knowledge inventory, documentation reconciliation, and provenance."
+msgstr "Knowledge inventory, documentation reconciliation, and provenance."
+
+msgid "Platform, plugins, MCP, brokers, and daemon integration."
+msgstr "Platform, plugins, MCP, brokers, and daemon integration."
+
+msgid "Repair mode requires explicit --yes; run check and inspect the diff first."
+msgstr "Repair mode requires explicit --yes; run check and inspect the diff first."
+
+msgid "Adversarial review, counterexamples, and risk challenges."
+msgstr "Adversarial review, counterexamples, and risk challenges."
+
+msgid "Tracks staleness and records the verified project timeline."
+msgstr "Tracks staleness and records the verified project timeline."
+
+msgid "This motor does not converse; user input runs the staleness workflow."
+msgstr "This motor does not converse; user input runs the staleness workflow."
+
+msgid "Supervises Bridge leases, agent health, dispatch, and escalation."
+msgstr "Supervises Bridge leases, agent health, dispatch, and escalation."
+
+msgid "Sweeps are dry-run unless --apply is explicitly supplied."
+msgstr "Sweeps are dry-run unless --apply is explicitly supplied."
+
+msgid "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
+msgstr "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
+
+msgid "Set GATEWAY_API_KEY for scoped read access."
+msgstr "Set GATEWAY_API_KEY for scoped read access."
+
+msgid "Unavailable. Local Files remains independent; no Gateway fallback is active."
+msgstr "Unavailable. Local Files remains independent; no Gateway fallback is active."
+
+msgid "Gateway configuration error: {error}"
+msgstr "Gateway configuration error: {error}"
+
+msgid "Not checked · grant Gateway MCP discovery in Settings · Authority & Security."
+msgstr "Not checked · grant Gateway MCP discovery in Settings · Authority & Security."
+
+msgid "Failed · {error}"
+msgstr "Failed · {error}"
+
+msgid "API key supplied"
+msgstr "API key supplied"
+
+msgid "API key needed for calls"
+msgstr "API key needed for calls"
+
+msgid "Ready · {count} tools · {auth} · manual calls require per-host grant + one-use approval"
+msgstr "Ready · {count} tools · {auth} · manual calls require per-host grant + one-use approval"
+
+msgid "Loopback Only"
+msgstr "Loopback Only"
+
+msgid "{count} connected mobile client(s):"
+msgstr "{count} connected mobile client(s):"
+
+msgid "{name} · Connected"
+msgstr "{name} · Connected"
+
+msgid "…and {count} more"
+msgstr "…and {count} more"

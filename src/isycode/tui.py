@@ -700,7 +700,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         # Without a read grant there is simply nothing to apply yet; printing that at
         # every start reads like an error. The reason stays available in Settings.
         if self._workspace_config_warning and "grant" not in self._workspace_config_warning:
-            self._append_startup(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
+            self._append_startup("  " + tr("Workspace preferences · {warning}", warning=self._workspace_config_warning[:200]), YELLOW)
         self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup",
                         exit_on_error=False)
         # Mobile Host and Bridge have catalog actions but no product execution owners yet.
