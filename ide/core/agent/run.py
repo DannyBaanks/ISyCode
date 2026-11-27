@@ -322,6 +322,21 @@ AVAILABLE_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "isycode_attachment_inspect",
+            "description": "Inspect any attached or workspace file (any extension: image dimensions, ZIP entries, CSV/JSON/text preview, binary magic/SHA-256) and get its recommended ISyMCP tool route.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the attached or workspace file"}
+                },
+                "required": ["path"],
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "isycode_mkdir",
             "description": "Create a directory inside the project workspace (CODER mode, requires host approval).",
             "parameters": {

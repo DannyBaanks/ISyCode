@@ -1242,9 +1242,22 @@ class MainWindow(QMainWindow):
         self._tool_cards.clear()
 
         self._last_prompt = prompt
+        pending_atts = self.chat.take_pending_attachments() if hasattr(self.chat, "take_pending_attachments") else []
+        staged_attachments: list[str] = []
+        if pending_atts:
+            from core.attachment_router import stage_attachment
+            for att in pending_atts:
+                try:
+                    if att.get("kind") == "bytes":
+                        staged = stage_attachment(self.controller.working_dir, raw_bytes=att["raw"], filename=att.get("name"))
+                    else:
+                        staged = stage_attachment(self.controller.working_dir, source_path=att["path"], filename=att.get("name"))
+                    staged_attachments.append(str(staged))
+                except (OSError, ValueError):
+                    continue
         self._total_tokens_estimated += max(1, len(prompt) // 4)
         self._update_context_meter(self._total_tokens_estimated)
-        self.chat.add_user_message(prompt)
+        self.chat.add_user_message(prompt, attachments=staged_attachments or None)
         try:
             configured_turns = int(UiPreferences().load().get("max_turns", 0) or 0)
         except (OSError, ValueError):
@@ -1257,7 +1270,8 @@ class MainWindow(QMainWindow):
         self._worker = AgentWorker(
             self.controller, prompt, provider, model,
             max_turns=(configured_turns if configured_turns > 0 else None),
-            session_id=self._session_id)
+            session_id=self._session_id,
+            attachments=staged_attachments or None)
         self._worker.text_chunk.connect(self._on_chunk)
         self._worker.reasoning_chunk.connect(self._on_reasoning)
         self._worker.progress.connect(self.chat.set_agent_progress)

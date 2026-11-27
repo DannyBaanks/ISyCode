@@ -33,13 +33,15 @@ class AgentWorker(QThread):
     session_done = Signal(str)
 
     def __init__(self, controller, prompt: str, provider: str, model: str,
-                 max_turns: int | None = None, parent=None, session_id: str = ""):
+                 max_turns: int | None = None, parent=None, session_id: str = "",
+                 attachments: list[str] | None = None):
         super().__init__(parent)
         self._controller = controller
         self.prompt = prompt
         self.provider = provider
         self.model = model
         self.max_turns = max_turns
+        self.attachments = list(attachments or [])
         self._cancelled = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._task: asyncio.Task | None = None
@@ -197,10 +199,14 @@ class AgentWorker(QThread):
             if self._cancelled:
                 self.session_done.emit("")
                 return
+            sys_prompt = DEFAULT_SYSTEM_PROMPT
+            if self.attachments:
+                from core.attachment_router import build_hidden_attachment_prompt
+                sys_prompt += build_hidden_attachment_prompt(self.attachments)
             context = AgentContext(
                 provider_name=self.provider,
                 model=self.model,
-                system_prompt=DEFAULT_SYSTEM_PROMPT,
+                system_prompt=sys_prompt,
                 working_dir=str(self._working_dir),
                 max_turns=self.max_turns,
                 mode=self._mode,

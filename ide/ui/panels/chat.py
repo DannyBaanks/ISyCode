@@ -20,10 +20,11 @@ import time
 from pathlib import Path
 
 import markdown
-from PySide6.QtCore import QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QGuiApplication, QKeySequence, QShortcut, QTextCursor, QPixmap
+from PySide6.QtCore import QBuffer, QIODevice, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QGuiApplication, QImage, QKeySequence, QShortcut, QTextCursor, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QFrame,
     QBoxLayout,
     QHBoxLayout,
@@ -101,10 +102,12 @@ class AutoTextBrowser(QTextBrowser):
 
 
 class PromptComposer(QPlainTextEdit):
-    """Auto-expanding multi-line composer with history and keyboard shortcuts."""
+    """Auto-expanding multi-line composer with history, keyboard shortcuts, and image/file paste."""
 
     submit_requested = Signal(str)
     escape_pressed = Signal()
+    image_pasted = Signal(bytes, str)
+    files_dropped = Signal(list)
     returnPressed = submit_requested  # backward-compatible alias
 
     MIN_H = 38
@@ -113,13 +116,52 @@ class PromptComposer(QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("promptComposer")
+        self.setAcceptDrops(True)
         self._history: list[str] = []
         self._history_index = -1
         self._current_draft = ""
-        self.setPlaceholderText("Pregunta o pide un cambio…   Enter envía · Shift+Enter nueva línea")
+        self.setPlaceholderText("Pregunta, pega una foto (Ctrl+V) o arrastra archivos…")
         self.setTabChangesFocus(True)
         self.textChanged.connect(self._adjust_height)
         self.setFixedHeight(self.MIN_H)
+
+    def canInsertFromMimeData(self, source) -> bool:
+        if source.hasImage() or source.hasUrls():
+            return True
+        return super().canInsertFromMimeData(source)
+
+    def insertFromMimeData(self, source) -> None:
+        if source.hasUrls():
+            paths = [u.toLocalFile() for u in source.urls() if u.isLocalFile() and u.toLocalFile()]
+            if paths:
+                self.files_dropped.emit(paths)
+                return
+        if source.hasImage():
+            img = source.imageData()
+            if isinstance(img, QImage) and not img.isNull():
+                buf = QBuffer()
+                buf.open(QIODevice.OpenModeFlag.WriteOnly)
+                img.save(buf, "PNG")
+                raw = bytes(buf.data())
+                if raw:
+                    self.image_pasted.emit(raw, f"captura_{int(time.time())}.png")
+                    return
+        super().insertFromMimeData(source)
+
+    def dragEnterEvent(self, event) -> None:
+        if event.mimeData().hasUrls() or event.mimeData().hasImage():
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dropEvent(self, event) -> None:
+        if event.mimeData().hasUrls():
+            paths = [u.toLocalFile() for u in event.mimeData().urls() if u.isLocalFile() and u.toLocalFile()]
+            if paths:
+                self.files_dropped.emit(paths)
+                event.acceptProposedAction()
+                return
+        super().dropEvent(event)
 
     def _adjust_height(self) -> None:
         lines = max(1, self.document().lineCount())
@@ -483,11 +525,12 @@ class ToolCard(QFrame):
 
 
 class MessageBubble(QFrame):
-    """A finished message bubble (user or assistant)."""
+    """A finished message bubble (user or assistant), optionally with attachment previews."""
 
-    def __init__(self, text: str, is_user: bool, parent=None):
+    def __init__(self, text: str, is_user: bool, parent=None, attachments: list[str] | None = None):
         super().__init__(parent)
         self._is_user = is_user
+        self._attachments = list(attachments or [])
         self._build(text)
 
     def _build(self, text: str) -> None:
@@ -503,6 +546,31 @@ class MessageBubble(QFrame):
             body.setMarkdownHtml(html.escape(text).replace("\n", "<br>"))
             author.setAlignment(Qt.AlignmentFlag.AlignLeft)
             column.addWidget(author)
+            if self._attachments:
+                strip = QHBoxLayout()
+                strip.setSpacing(6)
+                from core.attachment_router import classify_extension
+                for raw_path in self._attachments[:8]:
+                    p = Path(raw_path)
+                    chip = QFrame()
+                    chip.setStyleSheet("QFrame { background: #132238; border: 1px solid #2b4162; border-radius: 8px; }")
+                    chip_box = QHBoxLayout(chip)
+                    chip_box.setContentsMargins(6, 4, 8, 4)
+                    chip_box.setSpacing(6)
+                    if classify_extension(p.suffix) == "image" and p.is_file():
+                        thumb = QLabel()
+                        pm = QPixmap(str(p))
+                        if not pm.isNull():
+                            thumb.setPixmap(pm.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
+                            thumb.setFixedSize(40, 40)
+                            chip_box.addWidget(thumb)
+                    lbl = QLabel(f"{p.name}")
+                    lbl.setStyleSheet("color: #cbd5e1; font-size: 11px; border: none;")
+                    lbl.setToolTip(str(p))
+                    chip_box.addWidget(lbl)
+                    strip.addWidget(chip)
+                strip.addStretch(1)
+                column.addLayout(strip)
             column.addWidget(body)
             outer.addLayout(column, 4)
             outer.addStretch(1)
@@ -786,11 +854,32 @@ class ChatPanel(QWidget):
         self.composer_notices_container.hide()
         c_layout.addWidget(self.composer_notices_container)
 
+        self._pending_attachments: list[dict] = []
+        self.attachments_strip = QFrame(composer)
+        self.attachments_strip.setObjectName("attachmentsStrip")
+        self._attachments_layout = QHBoxLayout(self.attachments_strip)
+        self._attachments_layout.setContentsMargins(4, 2, 4, 4)
+        self._attachments_layout.setSpacing(8)
+        self._attachments_layout.addStretch(1)
+        self.attachments_strip.hide()
+        c_layout.addWidget(self.attachments_strip)
+
         input_row = QHBoxLayout()
         input_row.setSpacing(8)
+        self.attach_button = QPushButton("📎")
+        self.attach_button.setToolTip("Adjuntar fotos o archivos (cualquier extensión) · también puedes pegar con Ctrl+V o arrastrar")
+        self.attach_button.setFixedSize(QSize(38, PromptComposer.MIN_H))
+        self.attach_button.setStyleSheet(
+            "QPushButton { border-radius: 6px; border: 1px solid #2b4162; background: #132238; color: #cbd5e1; font-size: 15px; } "
+            "QPushButton:hover { border-color: #38bdf8; background: #1a3152; }"
+        )
+        self.attach_button.clicked.connect(self._pick_attachments_dialog)
+        input_row.addWidget(self.attach_button, alignment=Qt.AlignmentFlag.AlignBottom)
         self.input = PromptComposer(self)
         self.input.submit_requested.connect(self._submit)
         self.input.textChanged.connect(self._update_stats)
+        self.input.image_pasted.connect(self.attach_image_bytes)
+        self.input.files_dropped.connect(self.attach_files)
         input_row.addWidget(self.input, stretch=1)
         self.send_button = QPushButton("Enviar")
         self.send_button.setProperty("variant", "primary")
@@ -887,10 +976,93 @@ class ChatPanel(QWidget):
         chars = len(self.input.toPlainText())
         self.stats_label.setText(f"·  {chars} car. · ~{chars // 4} tokens" if chars else "")
 
+    def _pick_attachments_dialog(self) -> None:
+        paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Adjuntar fotos o archivos (todas las extensiones)",
+            "",
+            "Todos los archivos (*)",
+        )
+        if paths:
+            self.attach_files(paths)
+
+    def attach_files(self, paths: list[str]) -> None:
+        for p in paths:
+            if p and Path(p).is_file():
+                self._pending_attachments.append({"kind": "file", "path": str(Path(p).resolve()), "name": Path(p).name})
+        self._render_attachments_strip()
+
+    def attach_image_bytes(self, raw_bytes: bytes, filename: str = "captura.png") -> None:
+        if not raw_bytes:
+            return
+        self._pending_attachments.append({"kind": "bytes", "raw": raw_bytes, "name": filename})
+        self._render_attachments_strip()
+
+    def take_pending_attachments(self) -> list[dict]:
+        items = list(self._pending_attachments)
+        self._pending_attachments.clear()
+        self._render_attachments_strip()
+        return items
+
+    def _remove_attachment_at(self, idx: int) -> None:
+        if 0 <= idx < len(self._pending_attachments):
+            self._pending_attachments.pop(idx)
+            self._render_attachments_strip()
+
+    def _render_attachments_strip(self) -> None:
+        while self._attachments_layout.count() > 1:
+            item = self._attachments_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        if not self._pending_attachments:
+            self.attachments_strip.hide()
+            return
+        from core.attachment_router import classify_extension
+        for idx, att in enumerate(self._pending_attachments):
+            chip = QFrame(self.attachments_strip)
+            chip.setStyleSheet(
+                "QFrame { background: #132238; border: 1px solid #2b4162; border-radius: 8px; }"
+            )
+            row = QHBoxLayout(chip)
+            row.setContentsMargins(6, 4, 6, 4)
+            row.setSpacing(6)
+            name = att.get("name", "archivo")
+            ext = Path(name).suffix.lower()
+            is_img = att.get("kind") == "bytes" or classify_extension(ext) == "image"
+            if is_img:
+                pm = QPixmap()
+                if att.get("kind") == "bytes":
+                    pm.loadFromData(att["raw"])
+                else:
+                    pm.load(att["path"])
+                if not pm.isNull():
+                    thumb = QLabel(chip)
+                    thumb.setPixmap(pm.scaled(42, 42, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
+                    thumb.setFixedSize(42, 42)
+                    thumb.setStyleSheet("border: none;")
+                    row.addWidget(thumb)
+            else:
+                badge = QLabel((ext.lstrip(".") or "FILE").upper()[:6], chip)
+                badge.setStyleSheet("padding: 2px 5px; border-radius: 4px; background: #1e3a5f; color: #7dd3fc; font-size: 10px; font-weight: 700; border: none;")
+                row.addWidget(badge)
+            lbl = QLabel(name[:24] + ("…" if len(name) > 24 else ""), chip)
+            lbl.setStyleSheet("color: #e2e8f0; font-size: 11px; border: none;")
+            lbl.setToolTip(att.get("path", name))
+            row.addWidget(lbl)
+            rm = QPushButton("×", chip)
+            rm.setFixedSize(18, 18)
+            rm.setStyleSheet("QPushButton { border: none; color: #94a3b8; font-weight: 700; background: transparent; } QPushButton:hover { color: #fb7185; }")
+            rm.clicked.connect(lambda _=False, i=idx: self._remove_attachment_at(i))
+            row.addWidget(rm)
+            self._attachments_layout.insertWidget(self._attachments_layout.count() - 1, chip)
+        self.attachments_strip.show()
+
     def _submit(self) -> None:
         text = self.input.toPlainText().strip()
-        if not text:
+        if not text and not self._pending_attachments:
             return
+        if not text and self._pending_attachments:
+            text = "Revisa los archivos adjuntos."
         self.input.clear()
         self.prompt_submitted.emit(text)
 
@@ -976,8 +1148,8 @@ class ChatPanel(QWidget):
 
     # --- public message API ---------------------------------------------------
 
-    def add_user_message(self, text: str) -> None:
-        self._insert(MessageBubble(text, is_user=True))
+    def add_user_message(self, text: str, attachments: list[str] | None = None) -> None:
+        self._insert(MessageBubble(text, is_user=True, attachments=attachments))
         self._scroll_to_bottom_forced()
 
     def start_assistant_stream(self) -> None:
