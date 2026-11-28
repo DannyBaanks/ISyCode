@@ -18,3 +18,9 @@ build/
 .isyroot
 .isycode/
 isycode-state/
+
+# libisyjournal build output (python -m isycode.native_journal build)
+src/isycode/native/.zig-cache/
+src/isycode/native/zig-out/
+src/isycode/native/libisyjournal.*
+src/isycode/native/*.so.tmp

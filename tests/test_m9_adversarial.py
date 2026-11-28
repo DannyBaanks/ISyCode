@@ -138,6 +138,11 @@ needs_proc = pytest.mark.skipif(not os.path.isdir("/proc/self/fd"), reason="need
 @pytest.fixture
 def writer(tmp_path, monkeypatch):
     state = tmp_path / "state"
+    # These cases inject os.write to simulate a full disk. The optional Zig
+    # journal writes through its own write(2) and never calls os.write, so a
+    # simulated failure would be skipped and the journal would report ALLOW.
+    # Pin the Python path: these tests are about the Python commit path.
+    monkeypatch.setenv("ISYCODE_NATIVE_JOURNAL", "0")
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(state))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     root = tmp_path / "w"
@@ -191,6 +196,10 @@ def test_a_short_write_never_truncates_the_effect_ledger(writer, monkeypatch):
 @needs_proc
 def test_with_the_state_disk_full_the_chat_denies_explains_and_keeps_the_prompt(tmp_path, monkeypatch, capsys):
     root = configure(tmp_path, monkeypatch)
+    # The full disk is simulated by injecting os.write; the optional Zig journal
+    # writes through its own write(2), so pin the Python commit path this test
+    # is about (same reason as the `writer` fixture above).
+    monkeypatch.setenv("ISYCODE_NATIVE_JOURNAL", "0")
     (root / "a.py").write_text("x = 1\n")
     calls = []
 

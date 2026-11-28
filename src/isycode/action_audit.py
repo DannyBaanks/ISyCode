@@ -17,6 +17,7 @@ from isycode.effect_policy import EFFECTS, POLICY_VERSION, effect_class
 from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
 from isycode.state_index import get_state_index
 from isycode.platform_storage import storage, held
+from isycode import native_journal
 
 
 # In-process observers of journaled decisions (the IsySentinel rail). They get
@@ -104,6 +105,7 @@ class ActionAuditJournal:
             directory.chmod(0o700)
         self.path = directory / f"actions-{root_id}.jsonl"
         self.root_id = root_id
+        self._verified_tail: tuple[int, int, int, int, int, str] | None = None
 
     @classmethod
     def for_read_only_inspection(cls, workspace_root: Path,
@@ -115,6 +117,7 @@ class ActionAuditJournal:
         instance = cls.__new__(cls)
         instance.path = directory / f"actions-{root_id}.jsonl"
         instance.root_id = root_id
+        instance._verified_tail = None
         return instance
 
     # ── segments ───────────────────────────────────────────────
@@ -497,11 +500,13 @@ class ActionAuditJournal:
                     or info.st_size > self.MAX_BYTES
                     or (os.name == "posix" and info.st_uid != os.getuid())):
                 raise ActionAuditError("private action journal is unsafe or full")
-            if os.name == "posix":
+            if os.name == "posix" and stat.S_IMODE(info.st_mode) != 0o600:
                 # F-03: the append runs inside the sidecar lock (held in
                 # _append), so this fchmod cannot sneak a ctime update between
                 # a concurrent reader's two fstat calls — the reader holds the
-                # same sidecar while it stats.
+                # same sidecar while it stats. It only runs when the mode is
+                # wrong: an unconditional fchmod bumps ctime on every append,
+                # and ctime is what proves the file unchanged since our last write.
                 os.fchmod(fd, 0o600)
             if not storage.private(self.path, fd=fd):
                 raise ActionAuditError("private action journal ACL or ownership is unsafe")
@@ -512,63 +517,21 @@ class ActionAuditJournal:
             if (current.st_ino, current.st_dev) != (info.st_ino, info.st_dev):
                 return False
             info = os.fstat(fd)
-            os.lseek(fd, 0, os.SEEK_SET)
-            chunks: list[bytes] = []
-            remaining = self.MAX_BYTES + 1
-            while remaining:
-                chunk = os.read(fd, min(remaining, 64 * 1024))
-                if not chunk:
-                    break
-                chunks.append(chunk)
-                remaining -= len(chunk)
-            raw = b"".join(chunks)
-            if len(raw) > self.MAX_BYTES:
-                raise ActionAuditError("private action journal is full")
-            previous = "0" * 64
-            pending: list[dict[str, Any]] = []
-            if not raw:
-                try:
-                    sealed = self._sealed_segments()
-                    if sealed:
-                        sealed_raw = self._read_private_file(sealed[-1])
-                        tail, count = self._chain_tail(sealed_raw)
-                        pending.append({
-                            "kind": "segment", "time": time.time(), "workspace": self.root_id,
-                            "sealed_index": len(sealed),
-                            "sealed_sha256": hashlib.sha256(sealed_raw).hexdigest(),
-                            "sealed_records": count,
-                        })
-                        previous = tail
-                except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
-                    raise ActionAuditError("sealed journal segments cannot be anchored") from exc
-            if raw:
-                try:
-                    lines = raw.decode("utf-8").splitlines()
-                    if not lines or raw and not raw.endswith(b"\n"):
-                        raise ValueError("incomplete journal line")
-                    first = json.loads(lines[0])
-                    if isinstance(first, dict) and first.get("kind") == "segment":
-                        anchor = first.get("previous")
-                        if not isinstance(anchor, str) or re.fullmatch(r"[0-9a-f]{64}", anchor) is None:
-                            raise ValueError("invalid segment anchor")
-                        previous = anchor
-                    for line in lines:
-                        record = json.loads(line)
-                        if not isinstance(record, dict):
-                            raise ValueError("journal record is not an object")
-                        digest = record.pop("digest")
-                        chained_from = record.get("previous")
-                        if chained_from != previous:
-                            raise ValueError("broken previous digest")
-                        canonical = json.dumps(record, ensure_ascii=False, sort_keys=True,
-                                               separators=(",", ":"))
-                        expected = hashlib.sha256((previous + canonical).encode()).hexdigest()
-                        if not isinstance(digest, str) or not hmac.compare_digest(digest, expected):
-                            raise ValueError("invalid record digest")
-                        previous = digest
-                except (UnicodeError, json.JSONDecodeError, AttributeError, KeyError,
-                        TypeError, ValueError) as exc:
-                    raise ActionAuditError("private action journal integrity check failed") from exc
+            # Verified-tail cache. The whole active file was verified by this
+            # handle, then only our own appends touched it: same inode, size,
+            # mtime and ctime. ctime cannot be set back by touch/utime, so any
+            # other write, truncation or metadata change forces a full
+            # re-verification exactly as before.
+            cached = self._verified_tail
+            cache_hit = (info.st_size > 0 and cached is not None
+                         and cached[:5] == self._stat_key(info))
+            if cache_hit:
+                raw_present = True
+                previous = cached[5]
+                pending: list[dict[str, Any]] = []
+            else:
+                raw, previous, pending = self._read_verified(fd)
+                raw_present = bool(raw)
             encoded = b""
             for record in pending + [body]:
                 record["previous"] = previous
@@ -582,7 +545,13 @@ class ActionAuditJournal:
                     raise ActionAuditError("private action journal record exceeds its limit")
                 encoded += line
                 previous = record["digest"]
-            if raw and info.st_size + len(encoded) > self.SEGMENT_BYTES:
+            if raw_present and info.st_size + len(encoded) > self.SEGMENT_BYTES:
+                if cache_hit:
+                    # Seal-time full verification: a segment is never sealed
+                    # on the strength of the cache alone.
+                    _, sealed_tail, _ = self._read_verified(fd)
+                    if sealed_tail != cached[5]:
+                        raise ActionAuditError("private action journal integrity check failed")
                 sealed_count = len(self._sealed_segments())
                 target = self._segment_path(sealed_count + 1)
                 if target.exists() or target.is_symlink():
@@ -591,21 +560,32 @@ class ActionAuditJournal:
                 os.close(fd)
                 fd = None
                 os.rename(self.path, target)
+                self._verified_tail = None
                 return False
             if info.st_size + len(encoded) > self.MAX_BYTES:
                 raise ActionAuditError("private action journal has reached its size limit")
             os.lseek(fd, 0, os.SEEK_END)
-            view = memoryview(encoded)
-            while view:
-                written = os.write(fd, view)
-                if written <= 0:
-                    raise OSError("short journal write")
-                view = view[written:]
-            os.fsync(fd)
+            self._verified_tail = None
+            native = native_journal.load()
+            if native is not None:
+                native.write_fsync(fd, encoded)
+            else:
+                view = memoryview(encoded)
+                while view:
+                    written = os.write(fd, view)
+                    if written <= 0:
+                        raise OSError("short journal write")
+                    view = view[written:]
+                os.fsync(fd)
+            after = os.fstat(fd)
+            if after.st_size == info.st_size + len(encoded):
+                self._verified_tail = self._stat_key(after) + (previous,)
             return True
         except ActionAuditError:
+            self._verified_tail = None
             raise
         except (OSError, ValueError) as exc:
+            self._verified_tail = None
             raise ActionAuditError("private action journal could not be committed") from exc
         finally:
             if fd is not None:
@@ -615,6 +595,77 @@ class ActionAuditJournal:
                     except OSError:
                         pass
                 os.close(fd)
+
+    @staticmethod
+    def _stat_key(info: os.stat_result) -> tuple[int, int, int, int, int]:
+        return (info.st_ino, info.st_dev, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+    def _read_verified(self, fd: int) -> tuple[bytes, str, list[dict[str, Any]]]:
+        """Read and fully verify the active file: (raw, chain tail, anchor records)."""
+        os.lseek(fd, 0, os.SEEK_SET)
+        chunks: list[bytes] = []
+        remaining = self.MAX_BYTES + 1
+        while remaining:
+            chunk = os.read(fd, min(remaining, 64 * 1024))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+        if len(raw) > self.MAX_BYTES:
+            raise ActionAuditError("private action journal is full")
+        previous = "0" * 64
+        pending: list[dict[str, Any]] = []
+        if not raw:
+            try:
+                sealed = self._sealed_segments()
+                if sealed:
+                    sealed_raw = self._read_private_file(sealed[-1])
+                    tail, count = self._chain_tail(sealed_raw)
+                    pending.append({
+                        "kind": "segment", "time": time.time(), "workspace": self.root_id,
+                        "sealed_index": len(sealed),
+                        "sealed_sha256": hashlib.sha256(sealed_raw).hexdigest(),
+                        "sealed_records": count,
+                    })
+                    previous = tail
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                raise ActionAuditError("sealed journal segments cannot be anchored") from exc
+            return raw, previous, pending
+        try:
+            if not raw.endswith(b"\n"):
+                raise ValueError("incomplete journal line")
+            first_end = raw.index(b"\n")
+            first = json.loads(raw[:first_end].decode("utf-8"))
+            if isinstance(first, dict) and first.get("kind") == "segment":
+                anchor = first.get("previous")
+                if not isinstance(anchor, str) or re.fullmatch(r"[0-9a-f]{64}", anchor) is None:
+                    raise ValueError("invalid segment anchor")
+                previous = anchor
+            native = native_journal.load()
+            if native is not None:
+                status, tail, _, _ = native.verify_chain(raw, previous)
+                if status == native_journal.OK:
+                    return raw, tail, pending
+                # Anything but a clean native result: the Python verifier decides.
+            for line in raw.decode("utf-8").splitlines():
+                record = json.loads(line)
+                if not isinstance(record, dict):
+                    raise ValueError("journal record is not an object")
+                digest = record.pop("digest")
+                chained_from = record.get("previous")
+                if chained_from != previous:
+                    raise ValueError("broken previous digest")
+                canonical = json.dumps(record, ensure_ascii=False, sort_keys=True,
+                                       separators=(",", ":"))
+                expected = hashlib.sha256((previous + canonical).encode()).hexdigest()
+                if not isinstance(digest, str) or not hmac.compare_digest(digest, expected):
+                    raise ValueError("invalid record digest")
+                previous = digest
+        except (UnicodeError, json.JSONDecodeError, AttributeError, KeyError,
+                TypeError, ValueError) as exc:
+            raise ActionAuditError("private action journal integrity check failed") from exc
+        return raw, previous, pending
 
 
 __all__ = ["ActionAuditError", "ActionAuditJournal", "ActionAuditReport"]

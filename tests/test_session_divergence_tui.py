@@ -30,6 +30,20 @@ async def _until(pilot, predicate, timeout=10.0):
     return False
 
 
+async def _click(pilot, selector: str) -> None:
+    """Click a dialog button once the overlay really has it under the pointer.
+
+    Pilot.click returns False when the widget is not under the pointer yet: on a
+    slow runner the dialog is in the DOM before its layout is, and a click that
+    misses leaves the dialog open while the test moves on.
+    """
+    for _ in range(int(10.0 / 0.05)):
+        if await pilot.click(selector):
+            return
+        await pilot.pause(0.05)
+    raise AssertionError(f"{selector} never came under the pointer")
+
+
 def _run(tui_env, choice, check):
     async def scenario():
         app = TUIApp()
@@ -47,14 +61,16 @@ def _run(tui_env, choice, check):
                 peer.close()
             other_window = owner.store._read_bytes(sid)
             app.run_worker(app._run_chat('A: agrega tests'))
-            assert await _until(pilot, lambda: isinstance(app.screen, SessionDivergedScreen))
+            # Pushed is not mounted: wait for the dialog's buttons before clicking one.
+            assert await _until(pilot, lambda: isinstance(app.screen, SessionDivergedScreen)
+                                and bool(app.screen.query('#diverged-reload')))
             assert owner.store._read_bytes(sid) == other_window  # nothing merged
             if choice == 'reload':
-                await pilot.click('#diverged-reload')
+                await _click(pilot, '#diverged-reload')
                 assert await _until(pilot, lambda: not isinstance(app.screen, SessionDivergedScreen))
                 await pilot.press('y')  # confirm discarding what exists only here
             elif choice == 'fork':
-                await pilot.click('#diverged-fork')
+                await _click(pilot, '#diverged-fork')
             else:
                 await pilot.press('escape')
             assert await _until(pilot, lambda: app.screen is app.screen_stack[0])

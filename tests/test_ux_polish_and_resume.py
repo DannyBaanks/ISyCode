@@ -413,10 +413,16 @@ def test_area_f_resume_when_provider_rejects(tmp_path, monkeypatch):
             monkeypatch.setattr("isycode.tui.provider_complete", mock_failing_complete)
 
             app.action_resume_interrupted_turn()
-            await pilot.pause()
-
-            # Ensure safe fallback message is shown and app didn't crash
-            transcript = "\n".join(plain_text(w) for w in app.query_one("ChatArea").walk_children())
-            assert "rejected turn continuation" in transcript
+            # The failing provider call and its fallback note run in a worker; a
+            # single pause catches the turn resumed but the note not yet painted
+            # on a slow runner. Wait for the note itself.
+            async def until_noted():
+                for _ in range(200):
+                    await pilot.pause(.05)
+                    transcript = "\n".join(plain_text(w) for w in app.query_one("ChatArea").walk_children())
+                    if "rejected turn continuation" in transcript:
+                        return True
+                return False
+            assert await until_noted()
 
     asyncio.run(scenario())

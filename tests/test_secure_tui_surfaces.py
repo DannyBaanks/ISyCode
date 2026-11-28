@@ -68,8 +68,8 @@ def test_secure_tui_persists_chat_sessions_only_through_the_owner():
     sources, methods = _tui_methods()
 
     store_methods = {"create", "append", "save", "load", "list_sessions", "import_json"}
-    for name in ("_startup_workspace", "_persist_chat_message", "_show_chat_sessions",
-                 "_refresh_work_list", "_resume_chat_session"):
+    for name in ("_startup_workspace", "_persist_chat_message", "_persist_chat_message_async",
+                 "_show_chat_sessions", "_refresh_work_list", "_resume_chat_session"):
         source = sources[name]
         assert "ChatSessionStore" not in _method_calls(methods[name]), name
         for node in ast.walk(methods[name]):
@@ -79,6 +79,9 @@ def test_secure_tui_persists_chat_sessions_only_through_the_owner():
                 assert "session" not in receiver.casefold(), (name, receiver)
     persist = ast.get_source_segment(sources["_persist_chat_message"], methods["_persist_chat_message"])
     assert persist.index("_sessions_enabled()") < persist.index("owner.record(")
+    persist_async = ast.get_source_segment(sources["_persist_chat_message_async"],
+                                           methods["_persist_chat_message_async"])
+    assert persist_async.index("_sessions_enabled()") < persist_async.index("owner.record,")
     shown = ast.get_source_segment(sources["_show_chat_sessions"], methods["_show_chat_sessions"])
     assert "_refresh_work_list" in shown
     assert "owner.list_conversations" in ast.get_source_segment(

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import pytest
+import time
 from isycode.provider_errors import classify_provider_error, error_signals
 from isycode.streaming import StreamError, async_stream_complete
 
@@ -52,8 +53,12 @@ def test_subagent_failure_reopens_selector_before_any_new_request(tmp_path, monk
         return {"text": "Recovered child", "tool_calls": []}
     monkeypatch.setattr("isycode.tui.provider_complete", complete)
     async def wait_screen(app, pilot, error):
-        for _ in range(200):
-            await pilot.pause(.01)
+        # A failed child reopens the selector after the provider owner denies or
+        # receipts the request; both are journaled and run off the loop, so the
+        # round trip is not bounded by a frame count on a loaded runner.
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            await pilot.pause(.05)
             if isinstance(app.screen, SubagentModelScreen) and bool(app.screen.error) == error:
                 await app.screen.ready.wait()
                 await pilot.pause(.1)

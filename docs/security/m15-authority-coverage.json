@@ -2103,7 +2103,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 3192,
+      "line": 3195,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute_image_read",
       "action": "workspace.files.read",
       "owner": "workspace_read"
@@ -2166,7 +2166,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2996,
+      "line": 2999,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2530,14 +2530,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1191,
+      "line": 1192,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1236,
+      "line": 1237,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"
@@ -2637,7 +2637,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2996,
+      "line": 2999,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
