@@ -65,11 +65,20 @@ async def test_model_button_opens_chatgpt_account_model_picker(tmp_path, monkeyp
     monkeypatch.setattr("isycode.codex_connector.CodexConnector", AccountConnector)
 
     async def wait_for_picker(app, pilot):
-        for _ in range(200):
+        # `entries` is set before the screen recomposes, so a screen whose rows
+        # are still mounting reports the model but has no choices yet (the
+        # compose that fills `choices` runs on a later frame). Wait until the
+        # row is actually there to be clicked.
+        for _ in range(600):
             await pilot.pause(0.05)
-            if (isinstance(app.screen, ModelsScreen)
-                    and any(entry.get("value") == "chatgpt|fixture-chat-model"
-                            for entry in app.screen.entries)):
+            if not isinstance(app.screen, ModelsScreen):
+                continue
+            if not any(entry.get("value") == "chatgpt|fixture-chat-model"
+                       for entry in app.screen.entries):
+                continue
+            rows = [button for button in app.screen.query(".model-choice")
+                    if app.screen.choices.get(button.id, {}).get("value") == "chatgpt|fixture-chat-model"]
+            if rows:
                 return app.screen
         raise AssertionError(("ChatGPT account model picker did not load",
                               catalog_calls, getattr(app, "_account_models_attempted", set()),
@@ -90,8 +99,24 @@ async def test_model_button_opens_chatgpt_account_model_picker(tmp_path, monkeyp
         assert selected_provider_name() == "chatgpt"
         assert resolved_chat_model("chatgpt") == "auto"
 
-        choice = next(button for button in screen.query(".model-choice")
-                      if screen.choices[button.id].get("value") == "chatgpt|fixture-chat-model")
+        def row_for(button):
+            # `choices` is cleared and refilled on every catalog recompose; a
+            # stale button from before the rebuild must not raise here.
+            return screen.choices.get(button.id, {}).get("value")
+
+        def find_choice():
+            for button in screen.query(".model-choice"):
+                if row_for(button) == "chatgpt|fixture-chat-model":
+                    return button
+            return None
+
+        choice = None
+        for _ in range(200):
+            choice = find_choice()
+            if choice is not None:
+                break
+            await pilot.pause(0.05)
+        assert choice is not None, [row_for(b) for b in screen.query(".model-choice")]
         choice.focus()
         await pilot.press("enter")
         for _ in range(100):
