@@ -156,6 +156,7 @@ def test_gus_provider_selection_connects_missing_key_without_changing_chat_provi
     from test_daily_tui import configure
     from isycode.providers import selected_provider_name
     from isycode.tui import TUIApp
+    from isycode.tui_screens_harness import ModelsScreen
     configure(tmp_path, monkeypatch)
     monkeypatch.setenv("OPENAI_API_KEY", "test-chat-key")
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
@@ -171,7 +172,19 @@ def test_gus_provider_selection_connects_missing_key_without_changing_chat_provi
         async with app.run_test(size=(120, 40)) as pilot:
             await app.wait_for_ready()
             app._open_gus_provider("anthropic")
-            await pilot.pause()
+            # The scoped models screen is pushed from the key-connect worker; on a
+            # slow runner a single pause finds the push scheduled and the picker
+            # not yet composed. Wait for the screen and its controls, as its
+            # sibling test does, instead of assuming one frame was enough.
+            async def until_picker_ready():
+                for _ in range(200):
+                    await pilot.pause(.05)
+                    screen = next((s for s in app.screen_stack
+                                   if isinstance(s, ModelsScreen)), None)
+                    if screen is not None and screen.query("#models-add-input"):
+                        return True
+                return False
+            assert await until_picker_ready()
             assert selected_provider_name() == "openai"
             assert gus_slot.provider_credential_state("anthropic") == "session"
             assert app._models_target == "gus" and app._models_scope == "anthropic"

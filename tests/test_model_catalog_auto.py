@@ -18,7 +18,15 @@ def test_open_models_discovers_concrete_catalog_and_model_effort(tmp_path,monkey
         async with app.run_test(size=(120,40)) as pilot:
             await pilot.pause()
             app._render_menu('branch','Models',app._branch_entries('models'))
-            for _ in range(8):await pilot.pause(.1)
+            # The catalog load runs in a worker; eight fixed pauses miss it on a
+            # loaded host. Wait for the load to land, not for the clock.
+            async def until_loaded():
+                for _ in range(200):
+                    await pilot.pause(.05)
+                    if calls==['openai'] and not getattr(app,'_account_models_loading',False):
+                        return True
+                return False
+            assert await until_loaded()
             assert calls==['openai']
             assert {'provider':'openai','model':'concrete-model'} in app._child_model_choices()
             assert isinstance(app.screen,ModelsScreen)
@@ -56,6 +64,23 @@ def test_expanding_another_provider_loads_its_catalog_without_switching(tmp_path
             assert await until(lambda: calls==['openai'] and not getattr(app,'_account_models_loading',False)
                                and app.screen.query_one('#model-provider-nvidia',Collapsible) is not None)
             app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed=False
+            # A catalog rebuild recomposes the screen and recreates the provider
+            # rows; the rebuild can land between this assignment and the Expanded
+            # event, leaving the nvidia row collapsed with its load never started.
+            # Re-open the current row until nvidia's catalog load has really begun.
+            async def until_load_started():
+                for _ in range(200):
+                    try:
+                        if 'nvidia' in calls:
+                            return True
+                        row=app.screen.query_one('#model-provider-nvidia',Collapsible)
+                        if row.collapsed:
+                            row.collapsed=False
+                    except Exception:
+                        pass
+                    await pilot.pause(.05)
+                return False
+            assert await until_load_started()
             assert await until(lambda: 'nvidia|nvidia-concrete' in [e['value'] for e in app.screen.entries if e['kind']=='model']
                                and not app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed)
             assert calls==['openai','nvidia']
