@@ -898,6 +898,7 @@ class SessionMixin:
         async with self._work_refresh_lock:
             while self._work_refresh_again:
                 self._work_refresh_again = False
+                self._reviewed_session_title = None  # titles may have changed
                 sessions = []
                 owner = self._chat_session_owner
                 if owner is not None and self._sessions_enabled():
@@ -1261,6 +1262,30 @@ class SessionMixin:
         state = self._session_state()
         outcome, session_id = owner.record(
             self._active_chat_session_id, role, content, state=state, sent_at=sent_at)
+        self._apply_persisted_message(outcome, session_id)
+
+    async def _persist_chat_message_async(self, role: str, content: str, *,
+                                          sent_at: str | None = None) -> None:
+        """``_persist_chat_message`` with the journaled write off the UI thread.
+
+        Callers await it in order, so a turn's messages keep their sequence.
+        """
+        owner = self._chat_session_owner
+        if owner is None or not self._sessions_enabled():
+            return
+        if self._session_is_diverged(self._active_chat_session_id):
+            return
+        state = self._session_state()
+        target = self._active_chat_session_id
+
+        def apply(result) -> None:
+            if self._active_chat_session_id == target:  # else they switched; keep theirs
+                self._apply_persisted_message(*result)
+
+        await self._journal_off_ui(apply, owner.record, target, role, content,
+                                   state=state, sent_at=sent_at)
+
+    def _apply_persisted_message(self, outcome, session_id) -> None:
         if self._session_is_diverged(session_id):
             self._session_diverged_found(session_id)
             return
@@ -1480,6 +1505,40 @@ class SessionMixin:
                 "state", None, json.dumps(self._session_state()))
         except (OSError, ValueError):
             return
+        self._adopt_lane_session(outcome, sid)
+
+    async def _ensure_lane_session_async(self) -> None:
+        """Same as ``_ensure_lane_session``; the journaled create runs off the UI thread."""
+        if self._active_chat_session_id or not self._sessions_enabled() or self._chat_session_owner is None:
+            return
+        state = json.dumps(self._session_state())
+
+        def adopt(result) -> None:
+            if not self._active_chat_session_id:  # nobody adopted one meanwhile
+                self._adopt_lane_session(*result)
+
+        try:
+            await self._journal_off_ui(adopt, self._chat_session_owner.manage, "state", None, state)
+        except (OSError, ValueError):
+            return
+
+    def _journal_off_ui(self, apply, func, *args, **kwargs):
+        """Run one journaled session write (it ends in fsync) on a worker thread.
+
+        ``apply`` runs on the UI loop as soon as the write lands, even when the
+        awaiting turn was cancelled meanwhile: a session that reached disk is
+        always adopted, never orphaned.
+        """
+        work = asyncio.ensure_future(asyncio.to_thread(func, *args, **kwargs))
+
+        def landed(future) -> None:
+            if not future.cancelled() and future.exception() is None:
+                apply(future.result())
+
+        work.add_done_callback(landed)
+        return asyncio.shield(work)
+
+    def _adopt_lane_session(self, outcome, sid) -> None:
         if getattr(outcome, "decision", None) == "ALLOW" and sid:
             self._active_chat_session_id = sid
             if getattr(self, "is_running", False):

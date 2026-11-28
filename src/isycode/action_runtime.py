@@ -2915,7 +2915,9 @@ class ProviderNetworkOwner:
             return None, ActionOutcome("Provider request denied.", "DENY", None,
                                        "provider request identity is invalid")
 
-        authority, decision = self.gate.authorize(request)
+        # The journal append ends in fsync; under disk pressure that can take
+        # seconds, so it runs off the caller's event loop (the Textual thread).
+        authority, decision = await asyncio.to_thread(self.gate.authorize, request)
         if not decision.allowed:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return None, ActionOutcome("Provider request denied.", "DENY", None,
@@ -2935,7 +2937,8 @@ class ProviderNetworkOwner:
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "provider.request", request.digest,
             "ALLOW", "SUCCESS", hashlib.sha256(result_text.encode("utf-8")).hexdigest())
-        if not receipt.verify(request, result_text) or not self.gate.persist_receipt(request, receipt):
+        if (not receipt.verify(request, result_text)
+                or not await asyncio.to_thread(self.gate.persist_receipt, request, receipt)):
             return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
                                        "durable provider receipt could not be verified or persisted")
         return response, ActionOutcome(result_text, "ALLOW", receipt,

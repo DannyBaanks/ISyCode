@@ -1733,12 +1733,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                     title = row.get("title")
                     if isinstance(title, str) and title.strip():
                         return title
+            # A review is a journaled session.resume (two fsyncs); the tab title asks
+            # often, so remember the answer until the work list reloads.
+            remembered = getattr(self, "_reviewed_session_title", None)
+            if remembered is not None and remembered[0] == sid:
+                return remembered[1]
             owner = getattr(self, "_chat_session_owner", None)
             review = getattr(owner, "review", None)
             if callable(review) and self._sessions_enabled():
                 try:
                     _, session, _ = review(sid)
                     if session is not None and isinstance(session.title, str) and session.title.strip():
+                        self._reviewed_session_title = (sid, session.title)
                         return session.title
                 except (OSError, ValueError):
                     pass

@@ -222,3 +222,45 @@ def test_provider_owner_deny_never_calls_transport(tmp_path, monkeypatch):
     assert outcome.decision == "DENY"
     assert response is None
     assert not sent
+
+
+def test_provider_owner_journals_off_the_event_loop_thread(tmp_path, monkeypatch):
+    """The journal append ends in fsync; it must never run on the UI's event loop."""
+    import threading
+
+    root = tmp_path / "workspace"
+    root.mkdir()
+    state = tmp_path / "state"
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(state))
+    authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+    authority.set_grant("provider.request", enabled=True,
+                        network_hosts=["127.0.0.1:9911"])
+    owner = ProviderNetworkOwner(root, authority)
+    writers: list[int] = []
+    original = ActionAuditJournal._append_once
+
+    def spy(self, body):
+        writers.append(threading.get_ident())
+        return original(self, body)
+
+    monkeypatch.setattr(ActionAuditJournal, "_append_once", spy)
+
+    class FixtureProvider:
+        name = "fixture"
+        model = "fixture-model"
+        base_url = "http://127.0.0.1:9911/v1"
+
+    async def send():
+        return {"text": "fixture answer"}
+
+    async def turn():
+        loop_thread = threading.get_ident()
+        _, outcome = await owner.execute(FixtureProvider(), {"prompt": "hi"}, send)
+        return loop_thread, outcome
+
+    loop_thread, outcome = asyncio.run(turn())
+
+    assert outcome.decision == "ALLOW"
+    assert len(writers) >= 2  # decision + receipt
+    assert loop_thread not in writers
+    _assert_durable_receipt(root, outcome, "provider.request", 1, state)

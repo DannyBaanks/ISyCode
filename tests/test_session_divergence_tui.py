@@ -47,7 +47,9 @@ def _run(tui_env, choice, check):
                 peer.close()
             other_window = owner.store._read_bytes(sid)
             app.run_worker(app._run_chat('A: agrega tests'))
-            assert await _until(pilot, lambda: isinstance(app.screen, SessionDivergedScreen))
+            # Pushed is not mounted: wait for the dialog's buttons before clicking one.
+            assert await _until(pilot, lambda: isinstance(app.screen, SessionDivergedScreen)
+                                and bool(app.screen.query('#diverged-reload')))
             assert owner.store._read_bytes(sid) == other_window  # nothing merged
             if choice == 'reload':
                 await pilot.click('#diverged-reload')

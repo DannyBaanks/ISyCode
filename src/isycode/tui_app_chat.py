@@ -624,7 +624,7 @@ class ChatMixin:
 
     async def _run_chat_turn(self, text: str, *, resume: Any | None = None) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
-        self._ensure_lane_session()
+        await self._ensure_lane_session_async()
         ctx_file = self._session_context_file()
 
         def _write_session_event(writer, *args, **kwargs) -> None:
@@ -1028,10 +1028,12 @@ class ChatMixin:
             thought_started = _time.monotonic()
 
             provider_name = selected_provider_name()
+            # A saved-key read is a journaled credential decision (fsync): off the UI thread.
+            saved_key = await asyncio.to_thread(load_provider_key, provider_name)
             provider = Provider(
                 name=provider_name,
                 model=resolved_chat_model(provider_name),
-                api_key=load_provider_key(provider_name) or None)
+                api_key=saved_key or None)
 
             self._active_chat_provider = (provider.name, provider.model)
             from isycode.flowsight_bridge import build_blind_image_guidance, flowsight_mcp_running
@@ -1690,10 +1692,11 @@ class ChatMixin:
                 _content_line(force=True)
             if full:
                 if not prompt_persisted:
-                    self._persist_chat_message("user", text, sent_at=self._pending_user_sent_at)
+                    await self._persist_chat_message_async(
+                        "user", text, sent_at=self._pending_user_sent_at)
                 self._pending_user_sent_at = None
                 self._history.append({"role": "assistant", "content": full})
-                self._persist_chat_message("assistant", full, sent_at=assistant_sent_at)
+                await self._persist_chat_message_async("assistant", full, sent_at=assistant_sent_at)
                 done_lane = self._active_lane()
                 done_lane.partial = ""
                 done_lane.partial_reason = ""
